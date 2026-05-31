@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: moslie-caddy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    networks:
+      - moslie-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: moslie-dental-lab
+    restart: unless-stopped
+    working_dir: /opt/dental-lab/moslie-dental-lab
+    volumes:
+      - ./storage:/opt/dental-lab/moslie-dental-lab/storage
+      - ./bootstrap/cache:/opt/dental-lab/moslie-dental-lab/bootstrap/cache
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-zoher}
+      - DB_USERNAME=${DB_USERNAME:-zoher}
+      - DB_PASSWORD=${DB_PASSWORD:-secret}
+      - CACHE_DRIVER=redis
+      - SESSION_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=null
+      - REDIS_PORT=6379
+    expose:
+      - "80"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - moslie-network
+
+  db:
+    image: mysql:8.0
+    container_name: moslie-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-zoher}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USERNAME:-zoher}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - db-data:/var/lib/mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - moslie-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: moslie-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - moslie-network
+
+volumes:
+  db-data:
+    driver: local
+  caddy-data:
+    driver: local
+  caddy-config:
+    driver: local
+
+networks:
+  moslie-network:
+    driver: bridge
