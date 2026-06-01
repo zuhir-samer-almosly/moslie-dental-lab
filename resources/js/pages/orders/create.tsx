@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react'
 import { ArrowRight, Plus, Trash2 } from 'lucide-react'
+import DentalChart from '@/components/dental-chart'
 import { useState } from 'react'
 import Heading from '@/components/heading'
 import InputError from '@/components/input-error'
@@ -31,9 +32,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 type OrderItem = {
 	type: string
+	patient_name: string
 	quantity: number
 	price: number
 	notes: string
+	selected_teeth: number[]
 }
 
 export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
@@ -48,7 +51,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	const addItem = () => {
 		setData('items', [
 			...data.items,
-			{ type: WORK_TYPES[0], quantity: 1, price: 0, notes: '' },
+			{ type: WORK_TYPES[0], patient_name: '', quantity: 1, price: 0, notes: '', selected_teeth: [] },
 		])
 	}
 
@@ -63,6 +66,51 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 		const newItems = [...data.items]
 		newItems[index] = { ...newItems[index], [field]: value }
 		setData('items', newItems)
+	}
+
+	const renderTypeInput = (item: OrderItem, index: number) => {
+		const isCustom = item.type !== '' && !WORK_TYPES.includes(item.type as any) && item.type !== 'أخرى'
+
+		if (isCustom || item.type === 'أخرى') {
+			return (
+				<div className="flex gap-2 items-center">
+					<Input
+						value={item.type === 'أخرى' ? '' : item.type}
+						onChange={(e) => updateItem(index, 'type', e.target.value)}
+						placeholder="أدخل النوع..."
+						autoFocus
+					/>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						onClick={() => updateItem(index, 'type', '')}
+						title="العودة للقائمة"
+					>
+						إلغاء
+					</Button>
+				</div>
+			)
+		}
+
+		return (
+			<Select
+				value={item.type}
+				onValueChange={(value) => updateItem(index, 'type', value)}
+			>
+				<SelectTrigger>
+					<SelectValue placeholder="اختر النوع" />
+				</SelectTrigger>
+				<SelectContent>
+					{WORK_TYPES.map((type) => (
+						<SelectItem key={type} value={type}>
+							{type}
+						</SelectItem>
+					))}
+					<SelectItem value="أخرى">أخرى (كتابة)</SelectItem>
+				</SelectContent>
+			</Select>
+		)
 	}
 
 	const total = data.items.reduce((sum, item) => sum + item.quantity * item.price, 0)
@@ -175,25 +223,20 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 										<div className="grid gap-4 sm:grid-cols-2">
 											<div className="grid gap-2">
 												<Label>النوع</Label>
-												<Select
-													value={item.type}
-													onValueChange={(value) => updateItem(index, 'type', value)}
-												>
-													<SelectTrigger>
-														<SelectValue />
-													</SelectTrigger>
-													<SelectContent>
-														{WORK_TYPES.map((type) => (
-															<SelectItem key={type} value={type}>
-																{type}
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
+												{renderTypeInput(item, index)}
 											</div>
 
 											<div className="grid gap-2">
-												<Label>الكمية</Label>
+												<Label>اسم المريض</Label>
+												<Input
+													value={item.patient_name}
+													onChange={(e) => updateItem(index, 'patient_name', e.target.value)}
+													placeholder="أدخل اسم المريض..."
+												/>
+											</div>
+
+											<div className="grid gap-2">
+												<Label>الكمية {item.selected_teeth.length > 0 && <span className="text-xs text-muted-foreground font-normal">(حسب الأسنان المختارة)</span>}</Label>
 												<Input
 													type="number"
 													min="1"
@@ -201,6 +244,8 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 													onChange={(e) =>
 														updateItem(index, 'quantity', parseInt(e.target.value))
 													}
+													readOnly={item.selected_teeth.length > 0}
+													className={item.selected_teeth.length > 0 ? 'bg-muted' : ''}
 												/>
 											</div>
 
@@ -225,8 +270,21 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 											</div>
 										</div>
 
+										<DentalChart
+											selectedTeeth={item.selected_teeth}
+											onSelectionChange={(teeth) => {
+												const newItems = [...data.items]
+												newItems[index] = {
+													...newItems[index],
+													selected_teeth: teeth,
+													quantity: teeth.length > 0 ? teeth.length : newItems[index].quantity,
+												}
+												setData('items', newItems)
+											}}
+										/>
+
 										<p className="text-sm text-muted-foreground">
-											المجموع الفرعي: {(item.quantity * item.price).toLocaleString('ar-SY')}
+											المجموع الفرعي: {(item.quantity * item.price).toLocaleString('en-US')}
 										</p>
 									</div>
 								))}
@@ -237,7 +295,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 
 					<div className="rounded-lg border bg-muted/50 p-4">
 						<p className="text-lg font-semibold">
-							المجموع الكلي: {total.toLocaleString('ar-SY')}
+							المجموع الكلي: {total.toLocaleString('en-US')}
 						</p>
 					</div>
 

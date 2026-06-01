@@ -49,6 +49,10 @@ class OrderController extends Controller
 
         // Create order items
         foreach ($items as $item) {
+            $selectedTeeth = $item['selected_teeth'] ?? [];
+            $patientName = $item['patient_name'] ?? '';
+            unset($item['selected_teeth'], $item['patient_name']);
+            $item['meta'] = ['selected_teeth' => $selectedTeeth, 'patient_name' => $patientName];
             $order->items()->create($item);
         }
 
@@ -96,6 +100,10 @@ class OrderController extends Controller
         // Delete old items and create new ones
         $order->items()->delete();
         foreach ($items as $item) {
+            $selectedTeeth = $item['selected_teeth'] ?? [];
+            $patientName = $item['patient_name'] ?? '';
+            unset($item['selected_teeth'], $item['patient_name']);
+            $item['meta'] = ['selected_teeth' => $selectedTeeth, 'patient_name' => $patientName];
             $order->items()->create($item);
         }
 

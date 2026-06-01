@@ -48,8 +48,10 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 						<TableHeader>
 							<TableRow>
 								<TableHead>اسم الطبيب</TableHead>
+								<TableHead>اسم المريض</TableHead>
 								<TableHead>تاريخ الاستحقاق</TableHead>
 								<TableHead>الحالة</TableHead>
+								<TableHead>الأسنان</TableHead>
 								<TableHead>المبلغ</TableHead>
 								<TableHead className="text-end">الإجراءات</TableHead>
 							</TableRow>
@@ -57,7 +59,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 						<TableBody>
 							{orders.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={5} className="text-center">
+									<TableCell colSpan={7} className="text-center">
 										لا توجد بيانات
 									</TableCell>
 								</TableRow>
@@ -68,12 +70,43 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 											{order.dentist?.name}
 										</TableCell>
 										<TableCell>
-											{new Date(order.due_date).toLocaleDateString('ar-SY')}
+											{(() => {
+												const names = (order.items || [])
+													.map((item) => (item.meta as any)?.patient_name)
+													.filter((name: string) => name && name.trim() !== '')
+													.filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
+												if (names.length === 0) return <span className="text-muted-foreground text-xs">—</span>
+												return names.join('، ')
+											})()}
+										</TableCell>
+										<TableCell>
+											{new Date(order.due_date).toLocaleDateString('en-US')}
 										</TableCell>
 										<TableCell>
 											<Badge>{ORDER_STATUSES[order.status]}</Badge>
 										</TableCell>
-										<TableCell>{order.amount.toLocaleString('ar-SY')}</TableCell>
+										<TableCell>
+											{(() => {
+												const allTeeth = (order.items || [])
+													.flatMap((item) => (item.meta as any)?.selected_teeth || [])
+													.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i)
+													.sort((a: number, b: number) => a - b)
+												if (allTeeth.length === 0) return <span className="text-muted-foreground text-xs">—</span>
+												return (
+													<div className="flex flex-wrap gap-1">
+														{allTeeth.map((tooth: number) => (
+															<span
+																key={tooth}
+																className="inline-flex items-center justify-center min-w-[22px] h-5 px-1 text-[10px] font-semibold rounded bg-primary/10 text-primary"
+															>
+																{tooth}
+															</span>
+														))}
+													</div>
+												)
+											})()}
+										</TableCell>
+										<TableCell>{order.amount.toLocaleString('en-US')}</TableCell>
 										<TableCell className="text-end">
 											<div className="flex justify-end gap-2">
 												<Button asChild variant="outline" size="sm">

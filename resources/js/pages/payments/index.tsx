@@ -64,9 +64,9 @@ export default function PaymentsIndex({ payments }: { payments: DentistPayment[]
 										<TableCell className="font-medium">
 											{payment.dentist?.name}
 										</TableCell>
-										<TableCell>{payment.amount.toLocaleString('ar-SY')}</TableCell>
+										<TableCell>{payment.amount.toLocaleString('en-US')}</TableCell>
 										<TableCell>
-											{new Date(payment.created_at).toLocaleDateString('ar-SY')}
+											{new Date(payment.created_at).toLocaleDateString('en-US')}
 										</TableCell>
 										<TableCell className="text-end">
 											<div className="flex justify-end gap-2">

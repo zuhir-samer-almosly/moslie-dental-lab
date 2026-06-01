@@ -86,7 +86,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{stats.total_orders_amount.toLocaleString('ar-SY')}
+								{stats.total_orders_amount.toLocaleString('en-US')}
 							</div>
 							<p className="text-xs text-muted-foreground">إجمالي قيمة الطلبات</p>
 						</CardContent>
@@ -99,7 +99,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{stats.total_payments_amount.toLocaleString('ar-SY')}
+								{stats.total_payments_amount.toLocaleString('en-US')}
 							</div>
 							<p className="text-xs text-muted-foreground">إجمالي المدفوعات</p>
 						</CardContent>
@@ -111,7 +111,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 							<DollarSign className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold">{stats.balance.toLocaleString('ar-SY')}</div>
+							<div className="text-2xl font-bold">{stats.balance.toLocaleString('en-US')}</div>
 							<p className="text-xs text-muted-foreground">
 								الفرق بين الطلبات والمدفوعات
 							</p>
@@ -159,13 +159,13 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 													</Badge>
 													<span className="text-xs text-muted-foreground">
 														{new Date(order.created_at).toLocaleDateString(
-															'ar-SY'
+															'en-US'
 														)}
 													</span>
 												</div>
 											</div>
 											<div className="text-sm font-semibold">
-												{order.amount.toLocaleString('ar-SY')}
+												{order.amount.toLocaleString('en-US')}
 											</div>
 										</div>
 									))
@@ -208,12 +208,12 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 												</p>
 												<span className="text-xs text-muted-foreground">
 													{new Date(payment.created_at).toLocaleDateString(
-														'ar-SY'
+														'en-US'
 													)}
 												</span>
 											</div>
 											<div className="text-sm font-semibold text-green-600">
-												+{payment.amount.toLocaleString('ar-SY')}
+												+{payment.amount.toLocaleString('en-US')}
 											</div>
 										</div>
 									))
