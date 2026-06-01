@@ -24,10 +24,15 @@ const setCookie = (name: string, value: string, days = 365): void => {
     document.cookie = `${name}=${value};path=/;max-age=${maxAge};SameSite=Lax`;
 };
 
+const isAppearance = (value: string | null): value is Appearance =>
+    value === 'light' || value === 'dark' || value === 'system';
+
 const getStoredAppearance = (): Appearance => {
     if (typeof window === 'undefined') return 'system';
 
-    return (localStorage.getItem('appearance') as Appearance) || 'system';
+    const stored = localStorage.getItem('appearance');
+
+    return isAppearance(stored) ? stored : 'system';
 };
 
 const isDarkMode = (appearance: Appearance): boolean => {
@@ -65,12 +70,12 @@ const handleSystemThemeChange = (): void => {
 export function initializeTheme(): void {
     if (typeof window === 'undefined') return;
 
-    if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
-    }
+    const storedAppearance = getStoredAppearance();
 
-    currentAppearance = getStoredAppearance();
+    localStorage.setItem('appearance', storedAppearance);
+    setCookie('appearance', storedAppearance);
+
+    currentAppearance = storedAppearance;
     applyTheme(currentAppearance);
 
     // Set up system theme change listener
