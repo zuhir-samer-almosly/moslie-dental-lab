@@ -1,7 +1,5 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
 import type { ComponentProps } from 'react';
-import type { Appearance } from '@/hooks/use-appearance';
-import { useAppearance } from '@/hooks/use-appearance';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -10,6 +8,8 @@ import {
     DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import type { Appearance } from '@/hooks/use-appearance';
+import { useAppearance } from '@/hooks/use-appearance';
 import { cn } from '@/lib/utils';
 
 const appearanceOptions: {
