@@ -31,6 +31,9 @@ class UpdateOrderRequest extends FormRequest
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.price' => ['required', 'integer', 'min:0'],
             'items.*.notes' => ['nullable', 'string'],
+            'items.*.patient_name' => ['nullable', 'string', 'max:255'],
+            'items.*.selected_teeth' => ['nullable', 'array'],
+            'items.*.selected_teeth.*' => ['integer', 'min:1', 'max:32'],
         ];
     }
 }

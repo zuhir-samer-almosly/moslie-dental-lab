@@ -151,8 +151,8 @@ export default function InvoicesIndex({
 						<div className="text-center">
 							<h2 className="text-xl font-bold">تقرير الفواتير</h2>
 							<p className="text-sm text-muted-foreground">
-								من {new Date(filters.from!).toLocaleDateString('ar-SY')} إلى{' '}
-								{new Date(filters.to!).toLocaleDateString('ar-SY')}
+								من {new Date(filters.from!).toLocaleDateString('en-US')} إلى{' '}
+								{new Date(filters.to!).toLocaleDateString('en-US')}
 							</p>
 							{filters.dentist_id && (
 								<p className="text-sm text-muted-foreground">
@@ -188,7 +188,7 @@ export default function InvoicesIndex({
 													<TableCell>{order.dentist?.name}</TableCell>
 													<TableCell>
 														{new Date(order.created_at).toLocaleDateString(
-															'ar-SY'
+															'en-US'
 														)}
 													</TableCell>
 													<TableCell>
@@ -201,7 +201,7 @@ export default function InvoicesIndex({
 														</ul>
 													</TableCell>
 													<TableCell>
-														{order.amount.toLocaleString('ar-SY')}
+														{order.amount.toLocaleString('en-US')}
 													</TableCell>
 												</TableRow>
 											))
@@ -236,11 +236,11 @@ export default function InvoicesIndex({
 													<TableCell>{payment.dentist?.name}</TableCell>
 													<TableCell>
 														{new Date(payment.created_at).toLocaleDateString(
-															'ar-SY'
+															'en-US'
 														)}
 													</TableCell>
 													<TableCell>
-														{payment.amount.toLocaleString('ar-SY')}
+														{payment.amount.toLocaleString('en-US')}
 													</TableCell>
 												</TableRow>
 											))
@@ -257,19 +257,19 @@ export default function InvoicesIndex({
 								<div className="flex justify-between">
 									<span>إجمالي الطلبات:</span>
 									<span className="font-semibold">
-										{totals.orders.toLocaleString('ar-SY')}
+										{totals.orders.toLocaleString('en-US')}
 									</span>
 								</div>
 								<div className="flex justify-between">
 									<span>إجمالي المدفوعات:</span>
 									<span className="font-semibold">
-										{totals.payments.toLocaleString('ar-SY')}
+										{totals.payments.toLocaleString('en-US')}
 									</span>
 								</div>
 								<div className="flex justify-between border-t pt-2">
 									<span className="font-bold">الرصيد المتبقي:</span>
 									<span className="font-bold text-lg">
-										{totals.balance.toLocaleString('ar-SY')}
+										{totals.balance.toLocaleString('en-US')}
 									</span>
 								</div>
 							</div>
