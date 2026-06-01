@@ -10,17 +10,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Appearance } from '@/hooks/use-appearance';
 import { useAppearance } from '@/hooks/use-appearance';
+import { useTranslation } from '@/lib/translations';
 import { cn } from '@/lib/utils';
-
-const appearanceOptions: {
-    value: Appearance;
-    label: string;
-    icon: typeof Sun;
-}[] = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-];
 
 type AppearanceMenuProps = {
     className?: string;
@@ -31,9 +22,20 @@ export default function AppearanceMenu({
     className,
     align = 'end',
 }: AppearanceMenuProps) {
+    const { t } = useTranslation();
     const { appearance, updateAppearance } = useAppearance();
     const ActiveIcon =
         appearance === 'dark' ? Moon : appearance === 'light' ? Sun : Monitor;
+
+    const appearanceOptions: {
+        value: Appearance;
+        label: string;
+        icon: typeof Sun;
+    }[] = [
+        { value: 'light', label: t('menu.light'), icon: Sun },
+        { value: 'dark', label: t('menu.dark'), icon: Moon },
+        { value: 'system', label: t('menu.system'), icon: Monitor },
+    ];
 
     return (
         <DropdownMenu>

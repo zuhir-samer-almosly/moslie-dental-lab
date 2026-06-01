@@ -8,13 +8,15 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import type { NavItem } from '@/types';
+import { useTranslation } from '@/lib/translations';
 
 export function NavMain({ items = [] }: { items: NavItem[] }) {
     const { isCurrentUrl } = useCurrentUrl();
+    const { t } = useTranslation();
 
     return (
         <SidebarGroup className="px-2 py-0">
-            <SidebarGroupLabel>القائمة</SidebarGroupLabel>
+            <SidebarGroupLabel>{t('nav.main_menu')}</SidebarGroupLabel>
             <SidebarMenu>
                 {items.map((item) => (
                     <SidebarMenuItem key={item.title}>

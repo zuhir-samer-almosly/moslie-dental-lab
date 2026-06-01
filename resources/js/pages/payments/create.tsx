@@ -14,19 +14,21 @@ import {
 } from '@/components/ui/select'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist } from '@/types'
+import { useTranslation } from '@/lib/translations'
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
 	{
-		title: 'المدفوعات',
+		title: t('payments.title'),
 		href: '/payments',
 	},
 	{
-		title: 'إضافة دفعة',
+		title: t('payments.add_new'),
 		href: '/payments/create',
 	},
 ]
 
 export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
+	const { t } = useTranslation()
 	const { data, setData, post, processing, errors } = useForm({
 		dentist_id: '',
 		amount: '',
@@ -38,26 +40,26 @@ export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
 	}
 
 	return (
-		<AppLayout breadcrumbs={breadcrumbs}>
-			<Head title="إضافة دفعة" />
+		<AppLayout breadcrumbs={getBreadcrumbs(t)}>
+			<Head title={t('payments.add')} />
 
 			<div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
 				<Button variant="ghost" size="sm" className="w-fit" onClick={() => window.history.back()}>
 					<ArrowRight className="h-4 w-4" />
-					رجوع
+					{t('action.back')}
 				</Button>
 
-				<Heading variant="small" title="إضافة دفعة جديدة" />
+				<Heading variant="small" title={t('payments.add_new')} />
 
 				<form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
 					<div className="grid gap-2">
-						<Label htmlFor="dentist_id">الطبيب</Label>
+						<Label htmlFor="dentist_id">{t('order.dentist')}</Label>
 						<Select
 							value={data.dentist_id}
 							onValueChange={(value) => setData('dentist_id', value)}
 						>
 							<SelectTrigger>
-								<SelectValue placeholder="اختر الطبيب" />
+								<SelectValue placeholder={t('order.select_dentist')} />
 							</SelectTrigger>
 							<SelectContent>
 								{dentists.map((dentist) => (
@@ -71,7 +73,7 @@ export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
 					</div>
 
 					<div className="grid gap-2">
-						<Label htmlFor="amount">المبلغ</Label>
+						<Label htmlFor="amount">{t('payment.amount')}</Label>
 						<Input
 							id="amount"
 							type="number"
@@ -84,7 +86,7 @@ export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
 					</div>
 
 					<Button type="submit" disabled={processing}>
-						حفظ
+						{t('action.save')}
 					</Button>
 				</form>
 			</div>

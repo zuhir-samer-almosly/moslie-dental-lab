@@ -15,36 +15,40 @@ import {
 import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
 import { dashboard } from '@/routes';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'لوحة التحكم',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-    {
-        title: 'أطباء الأسنان',
-        href: '/dentists',
-        icon: Users,
-    },
-    {
-        title: 'الطلبات',
-        href: '/orders',
-        icon: ClipboardList,
-    },
-    {
-        title: 'المدفوعات',
-        href: '/payments',
-        icon: CreditCard,
-    },
-    {
-        title: 'الفواتير',
-        href: '/invoices',
-        icon: FileText,
-    },
-];
+import LanguageToggle from './language-toggle';
+import { useTranslation } from '@/lib/translations';
 
 export function AppSidebar() {
+    const { t } = useTranslation();
+
+    const mainNavItems: NavItem[] = [
+        {
+            title: t('nav.dashboard'),
+            href: dashboard(),
+            icon: LayoutGrid,
+        },
+        {
+            title: t('nav.dentists'),
+            href: '/dentists',
+            icon: Users,
+        },
+        {
+            title: t('nav.orders'),
+            href: '/orders',
+            icon: ClipboardList,
+        },
+        {
+            title: t('nav.payments'),
+            href: '/payments',
+            icon: CreditCard,
+        },
+        {
+            title: t('nav.invoices'),
+            href: '/invoices',
+            icon: FileText,
+        },
+    ];
+
     return (
         <Sidebar side="right" collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -64,6 +68,9 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
+                <div className="flex items-center justify-between px-2 pb-2">
+                    <LanguageToggle />
+                </div>
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

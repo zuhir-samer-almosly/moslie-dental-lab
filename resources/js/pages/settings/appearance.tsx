@@ -5,27 +5,30 @@ import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import type { BreadcrumbItem } from '@/types';
 import { edit as editAppearance } from '@/routes/appearance';
+import { useTranslation } from '@/lib/translations';
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
     {
-        title: 'Appearance settings',
+        title: t('settings.appearance'),
         href: editAppearance().url,
     },
 ];
 
 export default function Appearance() {
-    return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Appearance settings" />
+    const { t } = useTranslation();
 
-            <h1 className="sr-only">Appearance Settings</h1>
+    return (
+        <AppLayout breadcrumbs={getBreadcrumbs(t)}>
+            <Head title={t('settings.appearance')} />
+
+            <h1 className="sr-only">{t('settings.appearance')}</h1>
 
             <SettingsLayout>
                 <div className="space-y-6">
                     <Heading
                         variant="small"
-                        title="Appearance settings"
-                        description="Update your account's appearance settings"
+                        title={t('settings.appearance')}
+                        description={t('settings.appearance.desc')}
                     />
                     <AppearanceTabs />
                 </div>

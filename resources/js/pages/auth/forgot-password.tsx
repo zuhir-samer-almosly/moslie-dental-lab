@@ -9,14 +9,16 @@ import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
 import { email } from '@/routes/password';
+import { useTranslation } from '@/lib/translations';
 
 export default function ForgotPassword({ status }: { status?: string }) {
+    const { t } = useTranslation();
     return (
         <AuthLayout
-            title="Forgot password"
-            description="Enter your email to receive a password reset link"
+            title={t('auth.login.forgot')}
+            description={t('auth.password.forgot_desc')}
         >
-            <Head title="Forgot password" />
+            <Head title={t('auth.login.forgot')} />
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
@@ -29,7 +31,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email">{t('auth.login.email')}</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -51,7 +53,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     {processing && (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                     )}
-                                    Email password reset link
+                                    {t('auth.password.send_link')}
                                 </Button>
                             </div>
                         </>

@@ -4,6 +4,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import '../css/app.css';
 import { initializeTheme } from './hooks/use-appearance';
+import { initializeLanguage } from './hooks/use-language';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -30,3 +31,6 @@ createInertiaApp({
 
 // This will set light / dark mode on load...
 initializeTheme();
+
+// This will set language / direction on load...
+initializeLanguage();

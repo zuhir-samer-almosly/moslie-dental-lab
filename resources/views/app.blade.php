@@ -19,6 +19,23 @@
             })();
         </script>
 
+        {{-- Inline script to detect stored language and set dir/lang/font before render --}}
+        <script>
+            (function() {
+                try {
+                    var lang = localStorage.getItem('language');
+                    if (lang === 'en') {
+                        document.documentElement.lang = 'en';
+                        document.documentElement.dir = 'ltr';
+                        document.documentElement.style.setProperty(
+                            '--font-sans',
+                            "'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'"
+                        );
+                    }
+                } catch(e) {}
+            })();
+        </script>
+
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
@@ -37,7 +54,7 @@
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600|inter:400,500,600" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
@@ -47,3 +64,4 @@
         @inertia
     </body>
 </html>
+

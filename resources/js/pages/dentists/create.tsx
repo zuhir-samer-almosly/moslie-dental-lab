@@ -8,19 +8,21 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem } from '@/types'
+import { useTranslation } from '@/lib/translations'
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
 	{
-		title: 'أطباء الأسنان',
+		title: t('dentists.title'),
 		href: '/dentists',
 	},
 	{
-		title: 'إضافة طبيب',
+		title: t('dentists.add_new'),
 		href: '/dentists/create',
 	},
 ]
 
 export default function DentistsCreate() {
+	const { t } = useTranslation()
 	const { data, setData, post, processing, errors } = useForm({
 		name: '',
 		phone: '',
@@ -33,20 +35,20 @@ export default function DentistsCreate() {
 	}
 
 	return (
-		<AppLayout breadcrumbs={breadcrumbs}>
-			<Head title="إضافة طبيب" />
+		<AppLayout breadcrumbs={getBreadcrumbs(t)}>
+			<Head title={t('dentists.add_new')} />
 
 			<div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
 				<Button variant="ghost" size="sm" className="w-fit" onClick={() => window.history.back()}>
 					<ArrowRight className="h-4 w-4" />
-					رجوع
+					{t('action.back')}
 				</Button>
 
-				<Heading variant="small" title="إضافة طبيب جديد" />
+				<Heading variant="small" title={t('dentists.add_new')} />
 
-				<form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
+				<form onSubmit={handleSubmit} className="max-w-xl space-y-6">
 					<div className="grid gap-2">
-						<Label htmlFor="name">الاسم *</Label>
+						<Label htmlFor="name">{t('dentist.name_req')}</Label>
 						<Input
 							id="name"
 							value={data.name}
@@ -57,7 +59,9 @@ export default function DentistsCreate() {
 					</div>
 
 					<div className="grid gap-2">
-						<Label htmlFor="phone">الهاتف</Label>
+						<Label htmlFor="phone">
+							{t('dentist.phone')} <span className="text-muted-foreground">{t('common.optional')}</span>
+						</Label>
 						<Input
 							id="phone"
 							value={data.phone}
@@ -67,18 +71,19 @@ export default function DentistsCreate() {
 					</div>
 
 					<div className="grid gap-2">
-						<Label htmlFor="address">العنوان</Label>
-						<Textarea
+						<Label htmlFor="address">
+							{t('dentist.address')} <span className="text-muted-foreground">{t('common.optional')}</span>
+						</Label>
+						<Input
 							id="address"
 							value={data.address}
 							onChange={(e) => setData('address', e.target.value)}
-							rows={3}
 						/>
 						<InputError message={errors.address} />
 					</div>
 
 					<Button type="submit" disabled={processing}>
-						حفظ
+						{t('action.save')}
 					</Button>
 				</form>
 			</div>

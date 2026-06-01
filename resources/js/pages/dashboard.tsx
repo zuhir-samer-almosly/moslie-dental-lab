@@ -21,10 +21,11 @@ import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, DentistPayment, Order } from '@/types'
 import { ORDER_STATUSES } from '@/types'
 import { dashboard } from '@/routes'
+import { useTranslation } from '@/lib/translations'
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
 	{
-		title: 'لوحة التحكم',
+		title: t('dashboard.title'),
 		href: dashboard().url,
 	},
 ]
@@ -45,75 +46,78 @@ type DashboardProps = {
 }
 
 export default function Dashboard({ stats, recentOrders, recentPayments }: DashboardProps) {
+	const { t, language } = useTranslation()
+	const locale = 'en-US';
+
 	return (
-		<AppLayout breadcrumbs={breadcrumbs}>
-			<Head title="لوحة التحكم" />
+		<AppLayout breadcrumbs={getBreadcrumbs(t)}>
+			<Head title={t('dashboard.title')} />
 			<div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
 				<div className="flex items-center justify-between">
-					<h1 className="text-2xl font-bold">لوحة التحكم</h1>
+					<h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
 				</div>
 
 				{/* Stats Cards */}
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">إجمالي الأطباء</CardTitle>
+							<CardTitle className="text-sm font-medium">{t('dashboard.total_dentists')}</CardTitle>
 							<Users className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">{stats.dentists}</div>
-							<p className="text-xs text-muted-foreground">عدد أطباء الأسنان المسجلين</p>
+							<p className="text-xs text-muted-foreground">{t('dashboard.total_dentists_desc')}</p>
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">إجمالي الطلبات</CardTitle>
+							<CardTitle className="text-sm font-medium">{t('dashboard.total_orders')}</CardTitle>
 							<ClipboardList className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">{stats.orders}</div>
 							<p className="text-xs text-muted-foreground">
-								{stats.pending_orders} قيد الانتظار
+								{stats.pending_orders} {t('dashboard.pending_orders')}
 							</p>
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">قيمة الطلبات</CardTitle>
+							<CardTitle className="text-sm font-medium">{t('dashboard.orders_value')}</CardTitle>
 							<TrendingUp className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{stats.total_orders_amount.toLocaleString('ar-SY')}
+								{stats.total_orders_amount.toLocaleString(locale)}
 							</div>
-							<p className="text-xs text-muted-foreground">إجمالي قيمة الطلبات</p>
+							<p className="text-xs text-muted-foreground">{t('dashboard.orders_value_desc')}</p>
 						</CardContent>
 					</Card>
 
 					<Card>
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">المدفوعات</CardTitle>
+							<CardTitle className="text-sm font-medium">{t('dashboard.total_payments')}</CardTitle>
 							<CreditCard className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{stats.total_payments_amount.toLocaleString('ar-SY')}
+								{stats.total_payments_amount.toLocaleString(locale)}
 							</div>
-							<p className="text-xs text-muted-foreground">إجمالي المدفوعات</p>
+							<p className="text-xs text-muted-foreground">{t('dashboard.total_payments_desc')}</p>
 						</CardContent>
 					</Card>
 
 					<Card className="md:col-span-2">
 						<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-							<CardTitle className="text-sm font-medium">الرصيد المتبقي</CardTitle>
+							<CardTitle className="text-sm font-medium">{t('dashboard.balance')}</CardTitle>
 							<DollarSign className="h-4 w-4 text-muted-foreground" />
 						</CardHeader>
 						<CardContent>
-							<div className="text-2xl font-bold">{stats.balance.toLocaleString('ar-SY')}</div>
+							<div className="text-2xl font-bold">{stats.balance.toLocaleString(locale)}</div>
 							<p className="text-xs text-muted-foreground">
-								الفرق بين الطلبات والمدفوعات
+								{t('dashboard.balance_desc')}
 							</p>
 						</CardContent>
 					</Card>
@@ -126,12 +130,12 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 						<CardHeader>
 							<div className="flex items-center justify-between">
 								<div>
-									<CardTitle>أحدث الطلبات</CardTitle>
-									<CardDescription>آخر 5 طلبات</CardDescription>
+									<CardTitle>{t('dashboard.recent_orders')}</CardTitle>
+									<CardDescription>{t('dashboard.recent_orders_desc')}</CardDescription>
 								</div>
 								<Button asChild variant="ghost" size="sm">
 									<Link href="/orders">
-										عرض الكل
+										{t('action.view_all')}
 										<ArrowUpRight className="h-4 w-4 ms-1" />
 									</Link>
 								</Button>
@@ -141,7 +145,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 							<div className="space-y-4">
 								{recentOrders.length === 0 ? (
 									<p className="text-sm text-muted-foreground text-center py-4">
-										لا توجد طلبات
+										{t('dashboard.no_orders')}
 									</p>
 								) : (
 									recentOrders.map((order) => (
@@ -159,13 +163,13 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 													</Badge>
 													<span className="text-xs text-muted-foreground">
 														{new Date(order.created_at).toLocaleDateString(
-															'ar-SY'
+															locale
 														)}
 													</span>
 												</div>
 											</div>
 											<div className="text-sm font-semibold">
-												{order.amount.toLocaleString('ar-SY')}
+												{order.amount.toLocaleString(locale)}
 											</div>
 										</div>
 									))
@@ -179,12 +183,12 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 						<CardHeader>
 							<div className="flex items-center justify-between">
 								<div>
-									<CardTitle>أحدث المدفوعات</CardTitle>
-									<CardDescription>آخر 5 مدفوعات</CardDescription>
+									<CardTitle>{t('dashboard.recent_payments')}</CardTitle>
+									<CardDescription>{t('dashboard.recent_payments_desc')}</CardDescription>
 								</div>
 								<Button asChild variant="ghost" size="sm">
 									<Link href="/payments">
-										عرض الكل
+										{t('action.view_all')}
 										<ArrowUpRight className="h-4 w-4 ms-1" />
 									</Link>
 								</Button>
@@ -194,7 +198,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 							<div className="space-y-4">
 								{recentPayments.length === 0 ? (
 									<p className="text-sm text-muted-foreground text-center py-4">
-										لا توجد مدفوعات
+										{t('dashboard.no_payments')}
 									</p>
 								) : (
 									recentPayments.map((payment) => (
@@ -208,12 +212,12 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 												</p>
 												<span className="text-xs text-muted-foreground">
 													{new Date(payment.created_at).toLocaleDateString(
-														'ar-SY'
+														locale
 													)}
 												</span>
 											</div>
 											<div className="text-sm font-semibold text-green-600">
-												+{payment.amount.toLocaleString('ar-SY')}
+												+{payment.amount.toLocaleString(locale)}
 											</div>
 										</div>
 									))
@@ -226,33 +230,33 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 				{/* Quick Actions */}
 				<Card>
 					<CardHeader>
-						<CardTitle>إجراءات سريعة</CardTitle>
-						<CardDescription>الإجراءات الأكثر استخداماً</CardDescription>
+						<CardTitle>{t('dashboard.quick_actions')}</CardTitle>
+						<CardDescription>{t('dashboard.quick_actions_desc')}</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
 							<Button asChild variant="outline" className="h-auto flex-col gap-2 p-4">
 								<Link href="/dentists/create">
 									<Users className="h-5 w-5" />
-									<span>إضافة طبيب</span>
+									<span>{t('dashboard.action_add_dentist')}</span>
 								</Link>
 							</Button>
 							<Button asChild variant="outline" className="h-auto flex-col gap-2 p-4">
 								<Link href="/orders/create">
 									<ClipboardList className="h-5 w-5" />
-									<span>إضافة طلب</span>
+									<span>{t('dashboard.action_add_order')}</span>
 								</Link>
 							</Button>
 							<Button asChild variant="outline" className="h-auto flex-col gap-2 p-4">
 								<Link href="/payments/create">
 									<CreditCard className="h-5 w-5" />
-									<span>إضافة دفعة</span>
+									<span>{t('dashboard.action_add_payment')}</span>
 								</Link>
 							</Button>
 							<Button asChild variant="outline" className="h-auto flex-col gap-2 p-4">
 								<Link href="/invoices">
 									<TrendingUp className="h-5 w-5" />
-									<span>عرض الفواتير</span>
+									<span>{t('dashboard.action_view_invoices')}</span>
 								</Link>
 							</Button>
 						</div>

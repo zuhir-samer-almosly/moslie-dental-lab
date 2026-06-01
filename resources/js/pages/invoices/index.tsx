@@ -21,10 +21,11 @@ import {
 } from '@/components/ui/table'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist, DentistPayment, Order } from '@/types'
+import { useTranslation } from '@/lib/translations'
 
-const breadcrumbs: BreadcrumbItem[] = [
+const getBreadcrumbs = (t: any): BreadcrumbItem[] => [
 	{
-		title: 'الفواتير',
+		title: t('invoices.title'),
 		href: '/invoices',
 	},
 ]
@@ -52,6 +53,8 @@ export default function InvoicesIndex({
 	dentists,
 	filters,
 }: InvoiceData) {
+	const { t, language } = useTranslation()
+	const locale = 'en-US';
 	const { data, setData } = useForm({
 		from: filters.from || '',
 		to: filters.to || '',
@@ -68,19 +71,19 @@ export default function InvoicesIndex({
 	}
 
 	return (
-		<AppLayout breadcrumbs={breadcrumbs}>
-			<Head title="الفواتير" />
+		<AppLayout breadcrumbs={getBreadcrumbs(t)}>
+			<Head title={t('invoices.title')} />
 
 			<div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-				<h1 className="text-2xl font-bold">الفواتير</h1>
+				<h1 className="text-2xl font-bold">{t('invoices.title')}</h1>
 
 				{/* Filter Form - Hidden on print */}
 				<form onSubmit={handleView} className="print:hidden space-y-4 rounded-lg border p-4">
-					<Heading variant="small" title="تصفية البيانات" />
+					<Heading variant="small" title={t('invoices.filter_title')} />
 
 					<div className="grid gap-4 sm:grid-cols-3">
 						<div className="grid gap-2">
-							<Label htmlFor="from">من تاريخ</Label>
+							<Label htmlFor="from">{t('invoices.from_date')}</Label>
 							<Input
 								id="from"
 								type="date"
@@ -91,7 +94,7 @@ export default function InvoicesIndex({
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="to">إلى تاريخ</Label>
+							<Label htmlFor="to">{t('invoices.to_date')}</Label>
 							<Input
 								id="to"
 								type="date"
@@ -102,14 +105,14 @@ export default function InvoicesIndex({
 						</div>
 
 						<div className="grid gap-2">
-							<Label htmlFor="dentist_id">الطبيب (اختياري)</Label>
+							<Label htmlFor="dentist_id">{t('order.dentist')} {t('common.optional')}</Label>
 							<div className="flex gap-2">
 								<Select
 									value={data.dentist_id || undefined}
 									onValueChange={(value) => setData('dentist_id', value)}
 								>
 									<SelectTrigger>
-										<SelectValue placeholder="الكل" />
+										<SelectValue placeholder={t('common.all')} />
 									</SelectTrigger>
 									<SelectContent>
 										{dentists.map((dentist) => (
@@ -126,7 +129,7 @@ export default function InvoicesIndex({
 										size="sm"
 										onClick={() => setData('dentist_id', '')}
 									>
-										مسح
+										{t('action.clear')}
 									</Button>
 								)}
 							</div>
@@ -134,11 +137,11 @@ export default function InvoicesIndex({
 					</div>
 
 					<div className="flex gap-2">
-						<Button type="submit">عرض</Button>
+						<Button type="submit">{t('action.show')}</Button>
 						{orders && (
 							<Button type="button" onClick={handlePrint} variant="outline">
 								<Printer className="h-4 w-4" />
-								طباعة
+								{t('action.print')}
 							</Button>
 						)}
 					</div>
@@ -149,14 +152,14 @@ export default function InvoicesIndex({
 					<div className="space-y-6">
 						{/* Header - visible on print */}
 						<div className="text-center">
-							<h2 className="text-xl font-bold">تقرير الفواتير</h2>
+							<h2 className="text-xl font-bold">{t('invoices.report_title')}</h2>
 							<p className="text-sm text-muted-foreground">
-								من {new Date(filters.from!).toLocaleDateString('ar-SY')} إلى{' '}
-								{new Date(filters.to!).toLocaleDateString('ar-SY')}
+								{new Date(filters.from!).toLocaleDateString(locale)} -{' '}
+								{new Date(filters.to!).toLocaleDateString(locale)}
 							</p>
 							{filters.dentist_id && (
 								<p className="text-sm text-muted-foreground">
-									الطبيب:{' '}
+									{t('order.dentist')}:{' '}
 									{dentists.find((d) => d.id.toString() === filters.dentist_id)?.name}
 								</p>
 							)}
@@ -164,22 +167,22 @@ export default function InvoicesIndex({
 
 						{/* Orders Table */}
 						<div className="space-y-2">
-							<h3 className="text-lg font-semibold">الطلبات</h3>
+							<h3 className="text-lg font-semibold">{t('orders.title')}</h3>
 							<div className="rounded-lg border">
 								<Table>
 									<TableHeader>
 										<TableRow>
-											<TableHead>الطبيب</TableHead>
-											<TableHead>التاريخ</TableHead>
-											<TableHead>العناصر</TableHead>
-											<TableHead>المبلغ</TableHead>
+											<TableHead>{t('order.dentist_name')}</TableHead>
+											<TableHead>{t('payment.date')}</TableHead>
+											<TableHead>{t('order.items')}</TableHead>
+											<TableHead>{t('order.amount')}</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
 										{orders.length === 0 ? (
 											<TableRow>
 												<TableCell colSpan={4} className="text-center">
-													لا توجد طلبات
+													{t('common.no_data')}
 												</TableCell>
 											</TableRow>
 										) : (
@@ -188,7 +191,7 @@ export default function InvoicesIndex({
 													<TableCell>{order.dentist?.name}</TableCell>
 													<TableCell>
 														{new Date(order.created_at).toLocaleDateString(
-															'ar-SY'
+															locale
 														)}
 													</TableCell>
 													<TableCell>
@@ -201,7 +204,7 @@ export default function InvoicesIndex({
 														</ul>
 													</TableCell>
 													<TableCell>
-														{order.amount.toLocaleString('ar-SY')}
+														{order.amount.toLocaleString(locale)}
 													</TableCell>
 												</TableRow>
 											))
@@ -213,21 +216,21 @@ export default function InvoicesIndex({
 
 						{/* Payments Table */}
 						<div className="space-y-2">
-							<h3 className="text-lg font-semibold">المدفوعات</h3>
+							<h3 className="text-lg font-semibold">{t('payments.title')}</h3>
 							<div className="rounded-lg border">
 								<Table>
 									<TableHeader>
 										<TableRow>
-											<TableHead>الطبيب</TableHead>
-											<TableHead>التاريخ</TableHead>
-											<TableHead>المبلغ</TableHead>
+											<TableHead>{t('order.dentist_name')}</TableHead>
+											<TableHead>{t('payment.date')}</TableHead>
+											<TableHead>{t('payment.amount')}</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
 										{payments.length === 0 ? (
 											<TableRow>
 												<TableCell colSpan={3} className="text-center">
-													لا توجد مدفوعات
+													{t('common.no_data')}
 												</TableCell>
 											</TableRow>
 										) : (
@@ -236,11 +239,11 @@ export default function InvoicesIndex({
 													<TableCell>{payment.dentist?.name}</TableCell>
 													<TableCell>
 														{new Date(payment.created_at).toLocaleDateString(
-															'ar-SY'
+															locale
 														)}
 													</TableCell>
 													<TableCell>
-														{payment.amount.toLocaleString('ar-SY')}
+														{payment.amount.toLocaleString(locale)}
 													</TableCell>
 												</TableRow>
 											))
@@ -252,24 +255,24 @@ export default function InvoicesIndex({
 
 						{/* Summary */}
 						<div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-							<h3 className="text-lg font-semibold">الملخص</h3>
+							<h3 className="text-lg font-semibold">{t('common.summary')}</h3>
 							<div className="grid gap-2">
 								<div className="flex justify-between">
-									<span>إجمالي الطلبات:</span>
+									<span>{t('invoices.summary_total_orders')}</span>
 									<span className="font-semibold">
-										{totals.orders.toLocaleString('ar-SY')}
+										{totals.orders.toLocaleString(locale)}
 									</span>
 								</div>
 								<div className="flex justify-between">
-									<span>إجمالي المدفوعات:</span>
+									<span>{t('invoices.summary_total_payments')}</span>
 									<span className="font-semibold">
-										{totals.payments.toLocaleString('ar-SY')}
+										{totals.payments.toLocaleString(locale)}
 									</span>
 								</div>
 								<div className="flex justify-between border-t pt-2">
-									<span className="font-bold">الرصيد المتبقي:</span>
+									<span className="font-bold">{t('invoices.summary_balance')}</span>
 									<span className="font-bold text-lg">
-										{totals.balance.toLocaleString('ar-SY')}
+										{totals.balance.toLocaleString(locale)}
 									</span>
 								</div>
 							</div>
