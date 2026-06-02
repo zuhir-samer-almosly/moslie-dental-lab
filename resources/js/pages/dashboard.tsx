@@ -4,7 +4,6 @@ import {
 	CreditCard,
 	TrendingUp,
 	Users,
-	Clock,
 	DollarSign,
 	ArrowUpRight,
 } from 'lucide-react'
@@ -207,7 +206,7 @@ export default function Dashboard({ stats, recentOrders, recentPayments }: Dashb
 													{payment.dentist?.name}
 												</p>
 												<span className="text-xs text-muted-foreground">
-													{new Date(payment.created_at).toLocaleDateString(
+													{new Date(payment.payment_date || payment.created_at).toLocaleDateString(
 														'en-US'
 													)}
 												</span>

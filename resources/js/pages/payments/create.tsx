@@ -30,6 +30,7 @@ export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
 	const { data, setData, post, processing, errors } = useForm({
 		dentist_id: '',
 		amount: '',
+		payment_date: new Date().toISOString().split('T')[0],
 	})
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -81,6 +82,18 @@ export default function PaymentsCreate({ dentists }: { dentists: Dentist[] }) {
 							required
 						/>
 						<InputError message={errors.amount} />
+					</div>
+
+					<div className="grid gap-2">
+						<Label htmlFor="payment_date">التاريخ</Label>
+						<Input
+							id="payment_date"
+							type="date"
+							value={data.payment_date}
+							onChange={(e) => setData('payment_date', e.target.value)}
+							required
+						/>
+						<InputError message={errors.payment_date} />
 					</div>
 
 					<Button type="submit" disabled={processing}>

@@ -60,7 +60,7 @@ export default function InvoicesIndex({
 
 	const handleView = (e: React.FormEvent) => {
 		e.preventDefault()
-		router.get('/invoices', data as any)
+		router.get('/invoices', data as Record<string, string>)
 	}
 
 	const handlePrint = () => {
@@ -170,15 +170,17 @@ export default function InvoicesIndex({
 									<TableHeader>
 										<TableRow>
 											<TableHead>الطبيب</TableHead>
+											<TableHead>اسم المريض</TableHead>
 											<TableHead>التاريخ</TableHead>
 											<TableHead>العناصر</TableHead>
+											<TableHead>الأسنان</TableHead>
 											<TableHead>المبلغ</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
 										{orders.length === 0 ? (
 											<TableRow>
-												<TableCell colSpan={4} className="text-center">
+												<TableCell colSpan={6} className="text-center">
 													لا توجد طلبات
 												</TableCell>
 											</TableRow>
@@ -186,6 +188,16 @@ export default function InvoicesIndex({
 											orders.map((order) => (
 												<TableRow key={order.id}>
 													<TableCell>{order.dentist?.name}</TableCell>
+													<TableCell>
+														{(() => {
+															const names = (order.items || [])
+																.map((item) => (item.meta as Record<string, unknown> | null)?.patient_name as string | undefined)
+																.filter((name): name is string => !!name && name.trim() !== '')
+																.filter((v, i, a) => a.indexOf(v) === i)
+															if (names.length === 0) return <span className="text-muted-foreground text-xs">—</span>
+															return names.join('، ')
+														})()}
+													</TableCell>
 													<TableCell>
 														{new Date(order.created_at).toLocaleDateString(
 															'en-US'
@@ -199,6 +211,27 @@ export default function InvoicesIndex({
 																</li>
 															))}
 														</ul>
+													</TableCell>
+													<TableCell>
+														{(() => {
+															const allTeeth = (order.items || [])
+																.flatMap((item) => ((item.meta as Record<string, unknown> | null)?.selected_teeth as number[]) || [])
+																.filter((v, i, a) => a.indexOf(v) === i)
+																.sort((a, b) => a - b)
+															if (allTeeth.length === 0) return <span className="text-muted-foreground text-xs">—</span>
+															return (
+																<div className="flex flex-wrap gap-1">
+																	{allTeeth.map((tooth: number) => (
+																		<span
+																			key={tooth}
+																			className="inline-flex items-center justify-center min-w-[22px] h-5 px-1 text-[10px] font-semibold rounded bg-primary/10 text-primary"
+																		>
+																			{tooth}
+																		</span>
+																	))}
+																</div>
+															)
+														})()}
 													</TableCell>
 													<TableCell>
 														{order.amount.toLocaleString('en-US')}
@@ -235,7 +268,7 @@ export default function InvoicesIndex({
 												<TableRow key={payment.id}>
 													<TableCell>{payment.dentist?.name}</TableCell>
 													<TableCell>
-														{new Date(payment.created_at).toLocaleDateString(
+														{new Date(payment.payment_date || payment.created_at).toLocaleDateString(
 															'en-US'
 														)}
 													</TableCell>

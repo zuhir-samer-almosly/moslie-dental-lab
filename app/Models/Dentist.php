@@ -15,6 +15,11 @@ class Dentist extends Model
         'email',
         'phone',
         'address',
+        'price_list',
+    ];
+
+    protected $casts = [
+        'price_list' => 'array',
     ];
 
     public function orders()

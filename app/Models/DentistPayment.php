@@ -13,6 +13,7 @@ class DentistPayment extends Model
     protected $fillable = [
         'dentist_id',
         'amount',
+        'payment_date',
     ];
 
     public function dentist()
