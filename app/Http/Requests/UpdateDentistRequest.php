@@ -25,6 +25,8 @@ class UpdateDentistRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', \Illuminate\Validation\Rule::unique('dentists')->ignore($this->dentist)],
             'address' => ['nullable', 'string'],
+            'price_list' => ['nullable', 'array'],
+            'price_list.*' => ['numeric', 'min:0'],
         ];
     }
 }

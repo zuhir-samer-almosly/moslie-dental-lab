@@ -4,6 +4,7 @@ export interface Dentist {
 	email: string | null
 	phone: string | null
 	address: string | null
+	price_list: Record<string, number> | null
 	created_at: string
 	updated_at: string
 }
@@ -39,6 +40,7 @@ export interface DentistPayment {
 	dentist_id: number
 	dentist?: Dentist
 	amount: number
+	payment_date?: string
 	created_at: string
 	updated_at: string
 }

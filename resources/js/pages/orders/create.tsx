@@ -1,7 +1,7 @@
 import { Head, useForm } from '@inertiajs/react'
 import { ArrowRight, Plus, Trash2 } from 'lucide-react'
+import { useCallback } from 'react'
 import DentalChart from '@/components/dental-chart'
-import { useState } from 'react'
 import Heading from '@/components/heading'
 import InputError from '@/components/input-error'
 import { Button } from '@/components/ui/button'
@@ -48,10 +48,40 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 		items: [] as OrderItem[],
 	})
 
+	const getSelectedDentist = useCallback(() => {
+		return dentists.find((d) => d.id.toString() === data.dentist_id)
+	}, [dentists, data.dentist_id])
+
+	const getDentistPrice = useCallback(
+		(type: string): number | null => {
+			const dentist = getSelectedDentist()
+			if (dentist?.price_list && type in dentist.price_list) {
+				return dentist.price_list[type]
+			}
+			return null
+		},
+		[getSelectedDentist]
+	)
+
+	const handleDentistChange = (value: string) => {
+		setData((prev) => {
+			const dentist = dentists.find((d) => d.id.toString() === value)
+			const updatedItems = prev.items.map((item) => {
+				if (dentist?.price_list && item.type in dentist.price_list) {
+					return { ...item, price: dentist.price_list[item.type] }
+				}
+				return item
+			})
+			return { ...prev, dentist_id: value, items: updatedItems }
+		})
+	}
+
 	const addItem = () => {
+		const defaultType = WORK_TYPES[0]
+		const price = getDentistPrice(defaultType) ?? 0
 		setData('items', [
 			...data.items,
-			{ type: WORK_TYPES[0], patient_name: '', quantity: 1, price: 0, notes: '', selected_teeth: [] },
+			{ type: defaultType, patient_name: '', quantity: 1, price, notes: '', selected_teeth: [] },
 		])
 	}
 
@@ -65,11 +95,20 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	const updateItem = (index: number, field: keyof OrderItem, value: string | number) => {
 		const newItems = [...data.items]
 		newItems[index] = { ...newItems[index], [field]: value }
+
+		// Auto-fill price when work type changes
+		if (field === 'type') {
+			const dentistPrice = getDentistPrice(value as string)
+			if (dentistPrice !== null) {
+				newItems[index].price = dentistPrice
+			}
+		}
+
 		setData('items', newItems)
 	}
 
 	const renderTypeInput = (item: OrderItem, index: number) => {
-		const isCustom = item.type !== '' && !WORK_TYPES.includes(item.type as any) && item.type !== 'أخرى'
+		const isCustom = item.type !== '' && !(WORK_TYPES as readonly string[]).includes(item.type) && item.type !== 'أخرى'
 
 		if (isCustom || item.type === 'أخرى') {
 			return (
@@ -120,6 +159,8 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 		post('/orders')
 	}
 
+	const selectedDentist = getSelectedDentist()
+
 	return (
 		<AppLayout breadcrumbs={breadcrumbs}>
 			<Head title="إضافة طلب" />
@@ -137,7 +178,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 						<Label htmlFor="dentist_id">الطبيب</Label>
 						<Select
 							value={data.dentist_id}
-							onValueChange={(value) => setData('dentist_id', value)}
+							onValueChange={handleDentistChange}
 						>
 							<SelectTrigger>
 								<SelectValue placeholder="اختر الطبيب" />
@@ -167,7 +208,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 
 					<div className="grid gap-2">
 						<Label htmlFor="status">الحالة</Label>
-						<Select value={data.status} onValueChange={(value: any) => setData('status', value)}>
+						<Select value={data.status} onValueChange={(value: string) => setData('status', value as typeof data.status)}>
 							<SelectTrigger>
 								<SelectValue />
 							</SelectTrigger>
@@ -201,6 +242,12 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 								إضافة عنصر
 							</Button>
 						</div>
+
+						{selectedDentist?.price_list && Object.keys(selectedDentist.price_list).length > 0 && (
+							<p className="text-sm text-muted-foreground">
+								💡 يتم ملء الأسعار تلقائياً حسب قائمة أسعار الطبيب <span className="font-medium">{selectedDentist.name}</span>
+							</p>
+						)}
 
 						{data.items.length === 0 ? (
 							<p className="text-sm text-muted-foreground">لا توجد عناصر. قم بإضافة عنصر واحد على الأقل.</p>

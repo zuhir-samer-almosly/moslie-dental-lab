@@ -24,6 +24,7 @@ class StoreDentistPaymentRequest extends FormRequest
         return [
             'dentist_id' => ['required', 'exists:dentists,id'],
             'amount' => ['required', 'integer', 'min:1'],
+            'payment_date' => ['required', 'date'],
         ];
     }
 }

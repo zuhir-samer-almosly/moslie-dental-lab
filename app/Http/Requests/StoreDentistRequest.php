@@ -25,6 +25,8 @@ class StoreDentistRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'unique:dentists,phone'],
             'address' => ['nullable', 'string'],
+            'price_list' => ['nullable', 'array'],
+            'price_list.*' => ['numeric', 'min:0'],
         ];
     }
 }

@@ -72,9 +72,9 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 										<TableCell>
 											{(() => {
 												const names = (order.items || [])
-													.map((item) => (item.meta as any)?.patient_name)
-													.filter((name: string) => name && name.trim() !== '')
-													.filter((v: string, i: number, a: string[]) => a.indexOf(v) === i)
+													.map((item) => (item.meta as Record<string, unknown> | null)?.patient_name as string | undefined)
+													.filter((name): name is string => !!name && name.trim() !== '')
+													.filter((v, i, a) => a.indexOf(v) === i)
 												if (names.length === 0) return <span className="text-muted-foreground text-xs">—</span>
 												return names.join('، ')
 											})()}
@@ -88,9 +88,9 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 										<TableCell>
 											{(() => {
 												const allTeeth = (order.items || [])
-													.flatMap((item) => (item.meta as any)?.selected_teeth || [])
-													.filter((v: number, i: number, a: number[]) => a.indexOf(v) === i)
-													.sort((a: number, b: number) => a - b)
+													.flatMap((item) => ((item.meta as Record<string, unknown> | null)?.selected_teeth as number[]) || [])
+													.filter((v, i, a) => a.indexOf(v) === i)
+													.sort((a, b) => a - b)
 												if (allTeeth.length === 0) return <span className="text-muted-foreground text-xs">—</span>
 												return (
 													<div className="flex flex-wrap gap-1">
