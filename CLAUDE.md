@@ -13,10 +13,22 @@ This is a dental lab order management system built with Laravel 12, Inertia.js 2
 composer setup  # Installs dependencies, generates key, runs migrations, builds assets
 ```
 
-### Development
+### Development (Laravel Herd)
+The project uses **Laravel Herd** for local development on Windows. Herd provides PHP, Nginx, Composer, and Node.js as native binaries and automatically serves the app at `http://moslie-dental-lab.test`.
+
 ```bash
-composer dev  # Starts Laravel server, queue worker, pail logs, and Vite dev server concurrently
+# The app is always available at http://moslie-dental-lab.test (Herd serves it via Nginx)
+composer dev  # Starts queue worker, pail logs, and Vite dev server concurrently
 composer dev:ssr  # Same as above but with Inertia SSR enabled
+```
+
+### Herd CLI Commands
+```bash
+herd open          # Open the project in the browser
+herd php -v        # Check which PHP version Herd is using
+herd isolate 8.3   # Pin this project to PHP 8.3
+herd secure        # Enable HTTPS with a trusted local certificate
+herd share         # Share your local site publicly via Expose
 ```
 
 ### Testing
@@ -128,7 +140,11 @@ The application centers around dental lab order management:
 
 ## Notes
 
-- The project uses Laravel Herd for local development (macOS)
+- The project uses **Laravel Herd** for local development on Windows
+- Herd provides native PHP, Nginx, Composer, and Node.js — no need for `php artisan serve`
+- The app is served at `http://moslie-dental-lab.test` (use `herd secure` for HTTPS)
+- Docker setup (Dockerfile, docker-compose.yml) is for **production deployment only**
 - SSR support is available but optional via `composer dev:ssr`
 - Dark mode support is built-in via `resources/js/hooks/use-appearance`
 - Concurrently runs multiple dev processes with color-coded output
+
