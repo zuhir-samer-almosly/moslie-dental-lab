@@ -12,10 +12,17 @@ RUN apk add --no-cache \
     supervisor \
     mysql-client \
     nodejs \
-    npm
+    npm \
+    autoconf \
+    gcc \
+    g++ \
+    make
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo_mysql zip gd
+
+# Install PHP Redis extension
+RUN pecl install redis && docker-php-ext-enable redis
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -48,10 +55,18 @@ RUN chown -R www-data:www-data /opt/dental-lab/moslie-dental-lab \
 # Copy nginx configuration
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
 
+# Make sure directories exist
+RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor
+
 # Copy supervisor configuration
 COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Copy entrypoint script
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Expose port
 EXPOSE 80
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
