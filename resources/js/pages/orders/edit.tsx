@@ -17,7 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist, Order } from '@/types'
-import { ORDER_STATUSES, WORK_TYPES } from '@/types'
+import { ORDER_STATUSES } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
 	{
@@ -36,28 +36,39 @@ type OrderItem = {
 	quantity: number
 	price: number
 	notes: string
+	date: string
 	selected_teeth: number[]
 }
+
+const today = () => new Date().toISOString().slice(0, 10)
 
 export default function OrdersEdit({ order, dentists }: { order: Order; dentists: Dentist[] }) {
 	const { data, setData, put, processing, errors } = useForm({
 		dentist_id: order.dentist_id.toString(),
-		due_date: order.due_date,
 		status: order.status,
 		notes: order.notes || '',
-		items: (order.items || []).map((item) => ({
-			type: item.type,
-			patient_name: (item.meta as Record<string, unknown> | null)?.patient_name as string || '',
-			quantity: item.quantity,
-			price: item.price,
-			notes: item.notes || '',
-			selected_teeth: ((item.meta as Record<string, unknown> | null)?.selected_teeth as number[]) || [],
-		})) as OrderItem[],
+		items: (order.items || []).map((item) => {
+			const meta = item.meta as Record<string, unknown> | null
+			return {
+				type: item.type,
+				patient_name: (meta?.patient_name as string) || '',
+				quantity: item.quantity,
+				price: item.price,
+				notes: item.notes || '',
+				date: (meta?.date as string) || today(),
+				selected_teeth: (meta?.selected_teeth as number[]) || [],
+			}
+		}) as OrderItem[],
 	})
 
 	const getSelectedDentist = useCallback(() => {
 		return dentists.find((d) => d.id.toString() === data.dentist_id)
 	}, [dentists, data.dentist_id])
+
+	// Available work types come from the selected dentist's own price list.
+	const workTypeNames = data.dentist_id
+		? Object.keys(getSelectedDentist()?.price_list ?? {})
+		: []
 
 	const getDentistPrice = useCallback(
 		(type: string): number | null => {
@@ -84,11 +95,11 @@ export default function OrdersEdit({ order, dentists }: { order: Order; dentists
 	}
 
 	const addItem = () => {
-		const defaultType = WORK_TYPES[0]
+		const defaultType = workTypeNames[0] || ''
 		const price = getDentistPrice(defaultType) ?? 0
 		setData('items', [
 			...data.items,
-			{ type: defaultType, patient_name: '', quantity: 1, price, notes: '', selected_teeth: [] },
+			{ type: defaultType, patient_name: '', quantity: 1, price, notes: '', date: today(), selected_teeth: [] },
 		])
 	}
 
@@ -115,7 +126,7 @@ export default function OrdersEdit({ order, dentists }: { order: Order; dentists
 	}
 
 	const renderTypeInput = (item: OrderItem, index: number) => {
-		const isCustom = item.type !== '' && !(WORK_TYPES as readonly string[]).includes(item.type) && item.type !== 'أخرى'
+		const isCustom = item.type !== '' && !workTypeNames.includes(item.type) && item.type !== 'أخرى'
 
 		if (isCustom || item.type === 'أخرى') {
 			return (
@@ -148,7 +159,7 @@ export default function OrdersEdit({ order, dentists }: { order: Order; dentists
 					<SelectValue placeholder="اختر النوع" />
 				</SelectTrigger>
 				<SelectContent>
-					{WORK_TYPES.map((type) => (
+					{workTypeNames.map((type) => (
 						<SelectItem key={type} value={type}>
 							{type}
 						</SelectItem>
@@ -199,18 +210,6 @@ export default function OrdersEdit({ order, dentists }: { order: Order; dentists
 							</SelectContent>
 						</Select>
 						<InputError message={errors.dentist_id} />
-					</div>
-
-					<div className="grid gap-2">
-						<Label htmlFor="due_date">تاريخ الاستحقاق</Label>
-						<Input
-							id="due_date"
-							type="date"
-							value={data.due_date}
-							onChange={(e) => setData('due_date', e.target.value)}
-							required
-						/>
-						<InputError message={errors.due_date} />
 					</div>
 
 					<div className="grid gap-2">
@@ -286,6 +285,16 @@ export default function OrdersEdit({ order, dentists }: { order: Order; dentists
 													value={item.patient_name}
 													onChange={(e) => updateItem(index, 'patient_name', e.target.value)}
 													placeholder="أدخل اسم المريض..."
+												/>
+											</div>
+
+											<div className="grid gap-2">
+												<Label>التاريخ</Label>
+												<Input
+													type="date"
+													value={item.date}
+													onChange={(e) => updateItem(index, 'date', e.target.value)}
+													required
 												/>
 											</div>
 

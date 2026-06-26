@@ -19,8 +19,9 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
+import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import AppLayout from '@/layouts/app-layout'
-import type { BreadcrumbItem, Dentist, DentistPayment, Order } from '@/types'
+import type { BreadcrumbItem, Dentist, DentistPayment, Order, OrderItem } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
 	{
@@ -28,6 +29,35 @@ const breadcrumbs: BreadcrumbItem[] = [
 		href: '/invoices',
 	},
 ]
+
+type DentistGroup = {
+	id: number
+	name: string
+	rows: { order: Order; item: OrderItem | null }[]
+	total: number
+}
+
+/** Group all order item rows by dentist, with a per-dentist total. */
+function groupByDentist(orders: Order[]): DentistGroup[] {
+	const map = new Map<number, DentistGroup>()
+	for (const order of orders) {
+		const group =
+			map.get(order.dentist_id) ??
+			{ id: order.dentist_id, name: order.dentist?.name ?? '—', rows: [], total: 0 }
+		const items = order.items ?? []
+		if (items.length === 0) {
+			group.rows.push({ order, item: null })
+			group.total += order.amount
+		} else {
+			for (const item of items) {
+				group.rows.push({ order, item })
+				group.total += itemAmount(item)
+			}
+		}
+		map.set(order.dentist_id, group)
+	}
+	return [...map.values()]
+}
 
 type InvoiceData = {
 	orders: Order[] | null
@@ -154,94 +184,77 @@ export default function InvoicesIndex({
 								من {new Date(filters.from!).toLocaleDateString('en-US')} إلى{' '}
 								{new Date(filters.to!).toLocaleDateString('en-US')}
 							</p>
-							{filters.dentist_id && (
-								<p className="text-sm text-muted-foreground">
-									الطبيب:{' '}
-									{dentists.find((d) => d.id.toString() === filters.dentist_id)?.name}
-								</p>
-							)}
 						</div>
 
-						{/* Orders Table */}
-						<div className="space-y-2">
+						{/* Orders grouped by dentist */}
+						<div className="space-y-4">
 							<h3 className="text-lg font-semibold">الطلبات</h3>
-							<div className="rounded-lg border">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>الطبيب</TableHead>
-											<TableHead>اسم المريض</TableHead>
-											<TableHead>التاريخ</TableHead>
-											<TableHead>العناصر</TableHead>
-											<TableHead>الأسنان</TableHead>
-											<TableHead>المبلغ</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{orders.length === 0 ? (
-											<TableRow>
-												<TableCell colSpan={6} className="text-center">
-													لا توجد طلبات
-												</TableCell>
-											</TableRow>
-										) : (
-											orders.map((order) => (
-												<TableRow key={order.id}>
-													<TableCell>{order.dentist?.name}</TableCell>
-													<TableCell>
-														{(() => {
-															const names = (order.items || [])
-																.map((item) => (item.meta as Record<string, unknown> | null)?.patient_name as string | undefined)
-																.filter((name): name is string => !!name && name.trim() !== '')
-																.filter((v, i, a) => a.indexOf(v) === i)
-															if (names.length === 0) return <span className="text-muted-foreground text-xs">—</span>
-															return names.join('، ')
-														})()}
-													</TableCell>
-													<TableCell>
-														{new Date(order.created_at).toLocaleDateString(
-															'en-US'
-														)}
-													</TableCell>
-													<TableCell>
-														<ul className="text-sm">
-															{order.items?.map((item, idx) => (
-																<li key={idx}>
-																	{item.type} × {item.quantity}
-																</li>
-															))}
-														</ul>
-													</TableCell>
-													<TableCell>
-														{(() => {
-															const allTeeth = (order.items || [])
-																.flatMap((item) => ((item.meta as Record<string, unknown> | null)?.selected_teeth as number[]) || [])
-																.filter((v, i, a) => a.indexOf(v) === i)
-																.sort((a, b) => a - b)
-															if (allTeeth.length === 0) return <span className="text-muted-foreground text-xs">—</span>
-															return (
-																<div className="flex flex-wrap gap-1">
-																	{allTeeth.map((tooth: number) => (
-																		<span
-																			key={tooth}
-																			className="inline-flex items-center justify-center min-w-[22px] h-5 px-1 text-[10px] font-semibold rounded bg-primary/10 text-primary"
-																		>
-																			{tooth}
-																		</span>
-																	))}
-																</div>
-															)
-														})()}
-													</TableCell>
-													<TableCell>
-														{order.amount.toLocaleString('en-US')}
-													</TableCell>
-												</TableRow>
-											))
-										)}
-									</TableBody>
-								</Table>
-							</div>
+							{orders.length === 0 ? (
+								<div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+									لا توجد طلبات
+								</div>
+							) : (
+								groupByDentist(orders).map((group) => (
+									<div key={group.id} className="space-y-2">
+										<div className="text-center">
+											<h4 className="text-2xl font-bold">
+												الطبيب المحترم : {group.name}
+											</h4>
+										</div>
+										<div className="rounded-lg border">
+											<Table>
+												<TableHeader>
+													<TableRow>
+														<TableHead>اسم المريض</TableHead>
+														<TableHead>التاريخ</TableHead>
+														<TableHead>العنصر</TableHead>
+														<TableHead>الأسنان</TableHead>
+														<TableHead>المبلغ</TableHead>
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{group.rows.map(({ order, item }) =>
+														item ? (
+															<TableRow key={`i-${item.id}`}>
+																<TableCell>{itemPatient(item) || <Dash />}</TableCell>
+																<TableCell className="whitespace-nowrap">
+																	{formatDate(itemDate(item)) || formatDate(order.due_date) || <Dash />}
+																</TableCell>
+																<TableCell className="whitespace-nowrap">
+																	{item.type}{' '}
+																	<span className="text-muted-foreground">× {item.quantity}</span>
+																</TableCell>
+																<TableCell>
+																	<TeethBadges teeth={itemTeeth(item)} />
+																</TableCell>
+																<TableCell className="tabular-nums">
+																	{itemAmount(item).toLocaleString('en-US')}
+																</TableCell>
+															</TableRow>
+														) : (
+															<TableRow key={`o-${order.id}`}>
+																<TableCell><Dash /></TableCell>
+																<TableCell className="whitespace-nowrap">
+																	{formatDate(order.due_date) || <Dash />}
+																</TableCell>
+																<TableCell><Dash /></TableCell>
+																<TableCell><Dash /></TableCell>
+																<TableCell className="tabular-nums">
+																	{order.amount.toLocaleString('en-US')}
+																</TableCell>
+															</TableRow>
+														)
+													)}
+												</TableBody>
+											</Table>
+										</div>
+										<div className="flex items-center justify-between rounded-md bg-muted px-3 py-2 text-sm font-semibold">
+											<span>إجمالي مبلغ الطلبات</span>
+											<span className="tabular-nums">{group.total.toLocaleString('en-US')}</span>
+										</div>
+									</div>
+								))
+							)}
 						</div>
 
 						{/* Payments Table */}

@@ -42,18 +42,14 @@ class OrderController extends Controller
         unset($validated['items']);
 
         // Calculate total from items
-        $amount = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
-        $validated['amount'] = $amount;
+        $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
+        // The order's due date is derived from the earliest item date.
+        $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
         $order = Order::create($validated);
 
-        // Create order items
         foreach ($items as $item) {
-            $selectedTeeth = $item['selected_teeth'] ?? [];
-            $patientName = $item['patient_name'] ?? '';
-            unset($item['selected_teeth'], $item['patient_name']);
-            $item['meta'] = ['selected_teeth' => $selectedTeeth, 'patient_name' => $patientName];
-            $order->items()->create($item);
+            $order->items()->create($this->itemAttributes($item));
         }
 
         return redirect()->route('orders.index')
@@ -92,23 +88,41 @@ class OrderController extends Controller
         unset($validated['items']);
 
         // Calculate total from items
-        $amount = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
-        $validated['amount'] = $amount;
+        $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
+        // The order's due date is derived from the earliest item date.
+        $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
         $order->update($validated);
 
         // Delete old items and create new ones
         $order->items()->delete();
         foreach ($items as $item) {
-            $selectedTeeth = $item['selected_teeth'] ?? [];
-            $patientName = $item['patient_name'] ?? '';
-            unset($item['selected_teeth'], $item['patient_name']);
-            $item['meta'] = ['selected_teeth' => $selectedTeeth, 'patient_name' => $patientName];
-            $order->items()->create($item);
+            $order->items()->create($this->itemAttributes($item));
         }
 
         return redirect()->route('orders.index')
             ->with('success', 'تم تحديث الطلب بنجاح');
+    }
+
+    /**
+     * Map a validated item payload to the stored OrderItem attributes,
+     * folding the per-item date, patient name and selected teeth into meta.
+     *
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
+    private function itemAttributes(array $item): array
+    {
+        $meta = [
+            'selected_teeth' => $item['selected_teeth'] ?? [],
+            'patient_name' => $item['patient_name'] ?? '',
+            'date' => $item['date'] ?? null,
+        ];
+
+        unset($item['selected_teeth'], $item['patient_name'], $item['date']);
+        $item['meta'] = $meta;
+
+        return $item;
     }
 
     /**

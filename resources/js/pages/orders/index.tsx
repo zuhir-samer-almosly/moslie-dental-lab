@@ -10,6 +10,7 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
+import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Order } from '@/types'
 import { ORDER_STATUSES } from '@/types'
@@ -49,9 +50,10 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 							<TableRow>
 								<TableHead>اسم الطبيب</TableHead>
 								<TableHead>اسم المريض</TableHead>
-								<TableHead>تاريخ الاستحقاق</TableHead>
-								<TableHead>الحالة</TableHead>
+								<TableHead>العنصر</TableHead>
 								<TableHead>الأسنان</TableHead>
+								<TableHead>التاريخ</TableHead>
+								<TableHead>الحالة</TableHead>
 								<TableHead>المبلغ</TableHead>
 								<TableHead className="text-end">الإجراءات</TableHead>
 							</TableRow>
@@ -59,55 +61,29 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 						<TableBody>
 							{orders.length === 0 ? (
 								<TableRow>
-									<TableCell colSpan={7} className="text-center">
+									<TableCell colSpan={8} className="text-center">
 										لا توجد بيانات
 									</TableCell>
 								</TableRow>
 							) : (
-								orders.map((order) => (
-									<TableRow key={order.id}>
-										<TableCell className="font-medium">
+								orders.map((order) => {
+									const items = order.items ?? []
+									const span = Math.max(items.length, 1)
+
+									// Order-level cells are rendered once and span all the
+									// order's item rows (dentist / status / amount / actions).
+									const dentistCell = (
+										<TableCell rowSpan={span} className="border-s align-middle font-medium">
 											{order.dentist?.name}
 										</TableCell>
-										<TableCell>
-											{(() => {
-												const names = (order.items || [])
-													.map((item) => (item.meta as Record<string, unknown> | null)?.patient_name as string | undefined)
-													.filter((name): name is string => !!name && name.trim() !== '')
-													.filter((v, i, a) => a.indexOf(v) === i)
-												if (names.length === 0) return <span className="text-muted-foreground text-xs">—</span>
-												return names.join('، ')
-											})()}
-										</TableCell>
-										<TableCell>
-											{new Date(order.due_date).toLocaleDateString('en-US')}
-										</TableCell>
-										<TableCell>
+									)
+									const statusCell = (
+										<TableCell rowSpan={span} className="border-s align-middle">
 											<Badge>{ORDER_STATUSES[order.status]}</Badge>
 										</TableCell>
-										<TableCell>
-											{(() => {
-												const allTeeth = (order.items || [])
-													.flatMap((item) => ((item.meta as Record<string, unknown> | null)?.selected_teeth as number[]) || [])
-													.filter((v, i, a) => a.indexOf(v) === i)
-													.sort((a, b) => a - b)
-												if (allTeeth.length === 0) return <span className="text-muted-foreground text-xs">—</span>
-												return (
-													<div className="flex flex-wrap gap-1">
-														{allTeeth.map((tooth: number) => (
-															<span
-																key={tooth}
-																className="inline-flex items-center justify-center min-w-[22px] h-5 px-1 text-[10px] font-semibold rounded bg-primary/10 text-primary"
-															>
-																{tooth}
-															</span>
-														))}
-													</div>
-												)
-											})()}
-										</TableCell>
-										<TableCell>{order.amount.toLocaleString('en-US')}</TableCell>
-										<TableCell className="text-end">
+									)
+									const actionsCell = (
+										<TableCell rowSpan={span} className="align-middle text-end">
 											<div className="flex justify-end gap-2">
 												<Button asChild variant="outline" size="sm">
 													<Link href={`/orders/${order.id}/edit`}>
@@ -123,8 +99,49 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
 												</Button>
 											</div>
 										</TableCell>
-									</TableRow>
-								))
+									)
+
+									if (items.length === 0) {
+										return (
+											<TableRow key={order.id}>
+												{dentistCell}
+												<TableCell><Dash /></TableCell>
+												<TableCell><Dash /></TableCell>
+												<TableCell><Dash /></TableCell>
+												<TableCell className="whitespace-nowrap">
+													{formatDate(order.due_date) || <Dash />}
+												</TableCell>
+												{statusCell}
+												<TableCell className="tabular-nums">
+													{order.amount.toLocaleString('en-US')}
+												</TableCell>
+												{actionsCell}
+											</TableRow>
+										)
+									}
+
+									return items.map((item, index) => (
+										<TableRow key={item.id}>
+											{index === 0 && dentistCell}
+											<TableCell>{itemPatient(item) || <Dash />}</TableCell>
+											<TableCell className="whitespace-nowrap">
+												{item.type}{' '}
+												<span className="text-muted-foreground">× {item.quantity}</span>
+											</TableCell>
+											<TableCell>
+												<TeethBadges teeth={itemTeeth(item)} />
+											</TableCell>
+											<TableCell className="whitespace-nowrap">
+												{formatDate(itemDate(item)) || formatDate(order.due_date) || <Dash />}
+											</TableCell>
+											{index === 0 && statusCell}
+											<TableCell className="tabular-nums">
+												{itemAmount(item).toLocaleString('en-US')}
+											</TableCell>
+											{index === 0 && actionsCell}
+										</TableRow>
+									))
+								})
 							)}
 						</TableBody>
 					</Table>
