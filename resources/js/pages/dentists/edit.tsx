@@ -2,13 +2,13 @@ import { Head, useForm } from '@inertiajs/react'
 import { ArrowRight } from 'lucide-react'
 import Heading from '@/components/heading'
 import InputError from '@/components/input-error'
+import PriceListEditor, { type PriceRow } from '@/components/price-list-editor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist } from '@/types'
-import { WORK_TYPES } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
 	{
@@ -22,17 +22,24 @@ const breadcrumbs: BreadcrumbItem[] = [
 ]
 
 export default function DentistsEdit({ dentist }: { dentist: Dentist }) {
-	const { data, setData, put, processing, errors } = useForm({
+	const { data, setData, transform, put, processing, errors } = useForm({
 		name: dentist.name,
 		phone: dentist.phone || '',
 		address: dentist.address || '',
-		price_list: (dentist.price_list || {}) as Record<string, number>,
+		price_list: Object.entries(dentist.price_list || {}).map(([name, price]) => ({
+			name,
+			price,
+		})) as PriceRow[],
 	})
 
-	const updatePrice = (type: string, value: string) => {
-		const numValue = value === '' ? 0 : parseFloat(value)
-		setData('price_list', { ...data.price_list, [type]: numValue })
-	}
+	transform((payload) => ({
+		...payload,
+		price_list: Object.fromEntries(
+			payload.price_list
+				.filter((row) => row.name.trim() !== '')
+				.map((row) => [row.name.trim(), row.price])
+		),
+	}))
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault()
@@ -87,26 +94,12 @@ export default function DentistsEdit({ dentist }: { dentist: Dentist }) {
 					<div className="space-y-3">
 						<Label>قائمة الأسعار</Label>
 						<p className="text-sm text-muted-foreground">
-							حدد السعر الافتراضي لكل نوع عمل لهذا الطبيب. سيتم ملء السعر تلقائياً عند إنشاء الطلبات.
+							حدد أنواع العمل وأسعارها لهذا الطبيب. ستظهر هذه الأنواع عند إضافة عناصر الطلب ويُملأ سعرها تلقائياً.
 						</p>
-						<div className="rounded-lg border">
-							{WORK_TYPES.map((type, index) => (
-								<div
-									key={type}
-									className={`flex items-center justify-between gap-4 px-4 py-3 ${index < WORK_TYPES.length - 1 ? 'border-b' : ''}`}
-								>
-									<span className="text-sm font-medium min-w-[120px]">{type}</span>
-									<Input
-										type="number"
-										min="0"
-										className="w-32"
-										placeholder="0"
-										value={data.price_list[type] || ''}
-										onChange={(e) => updatePrice(type, e.target.value)}
-									/>
-								</div>
-							))}
-						</div>
+						<PriceListEditor
+							value={data.price_list}
+							onChange={(rows) => setData('price_list', rows)}
+						/>
 						<InputError message={errors.price_list} />
 					</div>
 
