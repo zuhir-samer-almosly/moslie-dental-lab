@@ -47,7 +47,7 @@ docker-compose -f docker-compose.local.yml exec app php artisan optimize
 
 echo ""
 echo "✅ Done! Application is running locally at:"
-echo "🌐 http://localhost:8080 (direct to app)"
+echo "🌐 http://dental.test  (add '127.0.0.1 dental.test' to your hosts file)"
 echo ""
 echo "📝 To view logs:"
 echo "   - App:    docker-compose -f docker-compose.local.yml logs -f app"
