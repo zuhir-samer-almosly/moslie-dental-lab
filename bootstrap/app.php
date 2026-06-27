@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // TLS is terminated at the Caddy reverse proxy, which forwards over
+        // plain HTTP on the internal network. Trust its X-Forwarded-* headers
+        // so Laravel knows the original request was HTTPS and generates
+        // https:// URLs/assets (otherwise the browser blocks mixed content).
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
