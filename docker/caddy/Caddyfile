@@ -1,10 +1,10 @@
 {
     # Email for Let's Encrypt notifications
-    email admin@joory.chat
+    email zohermoslie0@gmail.com
 }
 
 # Production configuration with automatic HTTPS
-dental-lab.joory.chat {
+dental-lab.zoher-moslie.me {
     reverse_proxy app:80
 
     encode gzip zstd

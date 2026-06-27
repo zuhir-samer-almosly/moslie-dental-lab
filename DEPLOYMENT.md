@@ -1,4 +1,4 @@
-# Deployment Guide for dental-lab.joory.chat
+# Deployment Guide for dental-lab.zoher-moslie.me
 
 ## Pre-Deployment Checklist
 
@@ -6,8 +6,8 @@
 Ensure your DNS is pointing to your server:
 ```bash
 # Test DNS resolution
-nslookup dental-lab.joory.chat
-dig dental-lab.joory.chat
+nslookup dental-lab.zoher-moslie.me
+dig dental-lab.zoher-moslie.me
 ```
 
 Should point to your server's IP address.
@@ -100,7 +100,7 @@ docker-compose exec app chmod -R 755 /opt/dental-lab/moslie-dental-lab/storage
 
 ## Verify Deployment
 
-1. Visit: **https://dental-lab.joory.chat**
+1. Visit: **https://dental-lab.zoher-moslie.me**
 2. Check SSL certificate (should show valid Let's Encrypt cert)
 3. Register a test user account
 4. Test all features:
@@ -313,7 +313,7 @@ For issues or questions:
 ## Success! 🎉
 
 Your dental lab management system is now live at:
-**https://dental-lab.joory.chat**
+**https://dental-lab.zoher-moslie.me**
 
 The system includes:
 - ✅ Automatic HTTPS (Let's Encrypt)
