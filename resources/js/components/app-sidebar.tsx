@@ -1,5 +1,11 @@
 import { Link } from '@inertiajs/react';
-import { ClipboardList, CreditCard, FileText, LayoutGrid, Users } from 'lucide-react';
+import {
+    ClipboardList,
+    CreditCard,
+    FileText,
+    LayoutGrid,
+    Users,
+} from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
