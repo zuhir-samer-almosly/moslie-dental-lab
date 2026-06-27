@@ -9,6 +9,7 @@ import {
     PiggyBank,
     UserCog,
     Users,
+    Wallet,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -50,6 +51,11 @@ const mainNavItems: NavItem[] = [
         title: 'الفواتير',
         href: '/invoices',
         icon: FileText,
+    },
+    {
+        title: 'الأرصدة المستحقة',
+        href: '/outstanding',
+        icon: Wallet,
     },
     {
         title: 'الموظفون',

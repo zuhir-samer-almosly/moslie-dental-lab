@@ -47,32 +47,74 @@ const breadcrumbs: BreadcrumbItem[] = [
 type DentistGroup = {
     id: number;
     name: string;
+    opening: number;
     rows: { order: Order; item: OrderItem | null }[];
-    total: number;
+    ordersTotal: number;
+    paymentsTotal: number;
+    due: number;
 };
 
-/** Group all order item rows by dentist, with a per-dentist total. */
-function groupByDentist(orders: Order[]): DentistGroup[] {
+/**
+ * Build a per-dentist statement: previous (opening) balance carried from
+ * earlier months + this period's orders − this period's payments = amount due.
+ * Dentists with only a carried-over balance (no new orders) still appear.
+ */
+function groupByDentist(
+    orders: Order[],
+    payments: DentistPayment[],
+    openingByDentist: Record<string, number>,
+    dentists: Dentist[],
+): DentistGroup[] {
     const map = new Map<number, DentistGroup>();
+    const nameFor = (id: number) =>
+        dentists.find((d) => d.id === id)?.name ?? '—';
+
+    const ensure = (id: number, name?: string): DentistGroup => {
+        let group = map.get(id);
+        if (!group) {
+            group = {
+                id,
+                name: name ?? nameFor(id),
+                opening: 0,
+                rows: [],
+                ordersTotal: 0,
+                paymentsTotal: 0,
+                due: 0,
+            };
+            map.set(id, group);
+        }
+        return group;
+    };
+
+    // Seed groups with any carried-over balance first, so dentists who owe
+    // from last month show up even with no orders this period.
+    for (const [id, opening] of Object.entries(openingByDentist)) {
+        ensure(Number(id)).opening = opening;
+    }
+
     for (const order of orders) {
-        const group = map.get(order.dentist_id) ?? {
-            id: order.dentist_id,
-            name: order.dentist?.name ?? '—',
-            rows: [],
-            total: 0,
-        };
+        const group = ensure(order.dentist_id, order.dentist?.name);
         const items = order.items ?? [];
         if (items.length === 0) {
             group.rows.push({ order, item: null });
-            group.total += order.amount;
+            group.ordersTotal += order.amount;
         } else {
             for (const item of items) {
                 group.rows.push({ order, item });
-                group.total += itemAmount(item);
+                group.ordersTotal += itemAmount(item);
             }
         }
-        map.set(order.dentist_id, group);
     }
+
+    for (const payment of payments) {
+        ensure(payment.dentist_id, payment.dentist?.name).paymentsTotal +=
+            payment.amount;
+    }
+
+    for (const group of map.values()) {
+        group.due = group.opening + group.ordersTotal - group.paymentsTotal;
+    }
+
     return [...map.values()];
 }
 
@@ -80,10 +122,12 @@ type InvoiceData = {
     orders: Order[] | null;
     payments: DentistPayment[] | null;
     totals: {
+        opening: number;
         orders: number;
         payments: number;
         balance: number;
     } | null;
+    openingByDentist: Record<string, number>;
     dentists: Dentist[];
     filters: {
         from: string | null;
@@ -96,6 +140,7 @@ export default function InvoicesIndex({
     orders,
     payments,
     totals,
+    openingByDentist,
     dentists,
     filters,
 }: InvoiceData) {
@@ -104,6 +149,11 @@ export default function InvoicesIndex({
         to: filters.to || '',
         dentist_id: filters.dentist_id || '',
     });
+
+    const groups =
+        orders && payments
+            ? groupByDentist(orders, payments, openingByDentist, dentists)
+            : [];
 
     const handleView = (e: React.FormEvent) => {
         e.preventDefault();
@@ -238,12 +288,12 @@ export default function InvoicesIndex({
                         {/* Orders grouped by dentist */}
                         <div className="space-y-4">
                             <h3 className="text-lg font-semibold">الطلبات</h3>
-                            {orders.length === 0 ? (
+                            {groups.length === 0 ? (
                                 <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
                                     لا توجد طلبات
                                 </div>
                             ) : (
-                                groupByDentist(orders).map((group) => (
+                                groups.map((group) => (
                                     <div key={group.id} className="space-y-2">
                                         <div className="text-center">
                                             <h4 className="text-2xl font-bold">
@@ -272,6 +322,19 @@ export default function InvoicesIndex({
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
+                                                    {group.rows.length ===
+                                                        0 && (
+                                                        <TableRow>
+                                                            <TableCell
+                                                                colSpan={5}
+                                                                className="text-center text-muted-foreground"
+                                                            >
+                                                                لا توجد طلبات
+                                                                جديدة في هذه
+                                                                الفترة
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
                                                     {group.rows.map(
                                                         ({ order, item }) =>
                                                             item ? (
@@ -354,13 +417,48 @@ export default function InvoicesIndex({
                                                 </TableBody>
                                             </Table>
                                         </div>
-                                        <div className="flex items-center justify-between rounded-md bg-muted px-3 py-2 text-sm font-semibold">
-                                            <span>إجمالي مبلغ الطلبات</span>
-                                            <span className="tabular-nums">
-                                                {group.total.toLocaleString(
-                                                    'en-US',
-                                                )}
-                                            </span>
+                                        <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                                            {group.opening !== 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>
+                                                        رصيد سابق (مستحق من قبل)
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {group.opening.toLocaleString(
+                                                            'en-US',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between">
+                                                <span>إجمالي طلبات الفترة</span>
+                                                <span className="tabular-nums">
+                                                    {group.ordersTotal.toLocaleString(
+                                                        'en-US',
+                                                    )}
+                                                </span>
+                                            </div>
+                                            {group.paymentsTotal !== 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>
+                                                        مدفوعات الفترة
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        −
+                                                        {group.paymentsTotal.toLocaleString(
+                                                            'en-US',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between border-t pt-1 text-base font-bold">
+                                                <span>الإجمالي المستحق</span>
+                                                <span className="tabular-nums">
+                                                    {group.due.toLocaleString(
+                                                        'en-US',
+                                                    )}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 ))
@@ -420,6 +518,16 @@ export default function InvoicesIndex({
                         <div className="space-y-2 rounded-lg border bg-muted/50 p-4">
                             <h3 className="text-lg font-semibold">الملخص</h3>
                             <div className="grid gap-2">
+                                {totals.opening !== 0 && (
+                                    <div className="flex justify-between">
+                                        <span>رصيد سابق (مستحق من قبل):</span>
+                                        <span className="font-semibold">
+                                            {totals.opening.toLocaleString(
+                                                'en-US',
+                                            )}
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between">
                                     <span>إجمالي الطلبات:</span>
                                     <span className="font-semibold">

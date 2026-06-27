@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignIdFor(Dentist::class, 'dentist_id')->constrained()->cascadeOnDelete();
             $table->date('due_date');
             $table->integer('amount');
-            $table->enum('status', ['pending', 'completed','cancelled', 'recieved'])->default('pending');
+            $table->enum('status', ['pending', 'completed', 'cancelled', 'recieved'])->default('pending');
             $table->longText('notes')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();

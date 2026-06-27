@@ -58,6 +58,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('payments', App\Http\Controllers\DentistPaymentController::class)
         ->parameters(['payments' => 'dentistPayment']);
     Route::get('invoices', [App\Http\Controllers\InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('outstanding', [App\Http\Controllers\OutstandingController::class, 'index'])->name('outstanding.index');
 
     Route::resource('employees', App\Http\Controllers\EmployeeController::class)
         ->except('show');
