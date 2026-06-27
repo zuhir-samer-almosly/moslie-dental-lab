@@ -12,14 +12,6 @@ interface DentalChartProps {
 // Lower left:   31, 32, 33, 34, 35, 36, 37, 38
 // Lower right:  48, 47, 46, 45, 44, 43, 42, 41
 
-// All valid FDI tooth numbers
-const ALL_FDI_TEETH = [
-	18, 17, 16, 15, 14, 13, 12, 11,
-	21, 22, 23, 24, 25, 26, 27, 28,
-	31, 32, 33, 34, 35, 36, 37, 38,
-	48, 47, 46, 45, 44, 43, 42, 41,
-]
-
 // Upper jaw teeth (displayed left to right in chart)
 const UPPER_TEETH = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28]
 // Lower jaw teeth (displayed left to right in chart)
@@ -41,11 +33,6 @@ function getToothType(fdiNumber: number): 'molar' | 'premolar' | 'canine' | 'inc
 	if (lastDigit >= 4) return 'premolar'    // 4, 5
 	if (lastDigit === 3) return 'canine'     // 3
 	return 'incisor'                          // 1, 2
-}
-
-function isUpperTooth(fdiNumber: number): boolean {
-	const quadrant = Math.floor(fdiNumber / 10)
-	return quadrant === 1 || quadrant === 2
 }
 
 // Tooth shape path generator - creates a realistic tooth outline
