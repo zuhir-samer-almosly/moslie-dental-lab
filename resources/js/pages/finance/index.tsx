@@ -46,6 +46,7 @@ type FinanceProps = {
     categories: Category[];
     incomeByDentist: NamedTotal[];
     expensesByEmployee: NamedTotal[];
+    expensesByMaterial: NamedTotal[];
     trend: TrendRow[];
 };
 
@@ -72,6 +73,7 @@ export default function FinanceIndex({
     categories,
     incomeByDentist,
     expensesByEmployee,
+    expensesByMaterial,
     trend,
 }: FinanceProps) {
     const goToMonth = (next: string) => {
@@ -197,7 +199,7 @@ export default function FinanceIndex({
                 </Card>
 
                 {/* Breakdown lists */}
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-3">
                     <BreakdownCard
                         title="الدخل حسب الطبيب"
                         rows={incomeByDentist}
@@ -208,6 +210,12 @@ export default function FinanceIndex({
                         title="الرواتب حسب الموظف"
                         rows={expensesByEmployee}
                         emptyText="لا توجد رواتب في هذا الشهر"
+                        tone="rose"
+                    />
+                    <BreakdownCard
+                        title="المصروفات حسب المادة"
+                        rows={expensesByMaterial}
+                        emptyText="لا توجد مواد في هذا الشهر"
                         tone="rose"
                     />
                 </div>

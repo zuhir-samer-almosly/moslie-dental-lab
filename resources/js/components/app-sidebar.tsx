@@ -5,6 +5,7 @@ import {
     FileText,
     HandCoins,
     LayoutGrid,
+    Package,
     PiggyBank,
     UserCog,
     Users,
@@ -59,6 +60,11 @@ const mainNavItems: NavItem[] = [
         title: 'الرواتب',
         href: '/employee-payments',
         icon: HandCoins,
+    },
+    {
+        title: 'المواد',
+        href: '/material-purchases',
+        icon: Package,
     },
     {
         title: 'المالية',

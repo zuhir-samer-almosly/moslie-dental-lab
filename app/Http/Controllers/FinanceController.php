@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
+use App\Models\MaterialPurchase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +20,14 @@ class FinanceController extends Controller
 
         [$income, $incomeByDentist] = $this->incomeForMonth($month);
         $salaries = $this->salariesForMonth($month);
+        $materials = $this->materialsForMonth($month);
         $expensesByEmployee = $this->expensesByEmployee($month);
+        $expensesByMaterial = $this->expensesByMaterial($month);
 
-        // Expense categories — materials slots in here later as another entry.
+        // Expense categories — extend here to add new expense buckets.
         $categories = [
             ['key' => 'salaries', 'label' => 'الرواتب', 'total' => $salaries],
+            ['key' => 'materials', 'label' => 'المواد', 'total' => $materials],
         ];
         $expenses = array_sum(array_column($categories, 'total'));
 
@@ -35,6 +39,7 @@ class FinanceController extends Controller
             'categories' => $categories,
             'incomeByDentist' => $incomeByDentist,
             'expensesByEmployee' => $expensesByEmployee,
+            'expensesByMaterial' => $expensesByMaterial,
             'trend' => $this->trend($month),
         ]);
     }
@@ -85,6 +90,28 @@ class FinanceController extends Controller
             ->map(fn ($row) => ['name' => $row->name, 'total' => (int) $row->total]);
     }
 
+    private function materialsForMonth(Carbon $month): int
+    {
+        [$start, $end] = $this->range($month);
+
+        return (int) MaterialPurchase::query()
+            ->whereBetween('purchase_date', [$start, $end])
+            ->sum('amount');
+    }
+
+    private function expensesByMaterial(Carbon $month): \Illuminate\Support\Collection
+    {
+        [$start, $end] = $this->range($month);
+
+        return DB::table('material_purchases')
+            ->whereBetween('purchase_date', [$start, $end])
+            ->groupBy('name')
+            ->orderByDesc('total')
+            ->select('name', DB::raw('SUM(amount) as total'))
+            ->get()
+            ->map(fn ($row) => ['name' => $row->name, 'total' => (int) $row->total]);
+    }
+
     /**
      * Last 6 months of income/expenses/net, oldest first.
      */
@@ -95,7 +122,7 @@ class FinanceController extends Controller
         for ($i = 5; $i >= 0; $i--) {
             $m = $month->copy()->subMonths($i);
             $income = $this->incomeForMonth($m)[0];
-            $expenses = $this->salariesForMonth($m);
+            $expenses = $this->salariesForMonth($m) + $this->materialsForMonth($m);
 
             $trend[] = [
                 'month' => $m->format('Y-m'),

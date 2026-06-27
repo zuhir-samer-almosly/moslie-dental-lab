@@ -68,6 +68,18 @@ export interface EmployeePayment {
     updated_at: string;
 }
 
+export interface MaterialPurchase {
+    id: number;
+    name: string;
+    supplier: string | null;
+    quantity: string | null;
+    amount: number;
+    purchase_date?: string;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export const ORDER_STATUSES: Record<Order['status'], string> = {
     pending: 'قيد الانتظار',
     completed: 'مكتمل',
