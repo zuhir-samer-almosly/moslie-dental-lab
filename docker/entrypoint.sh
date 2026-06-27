@@ -14,17 +14,20 @@ cd /opt/dental-lab/moslie-dental-lab
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     # Wait for the database to accept connections (it may still be starting).
     echo "Waiting for database..."
+    # Up to ~3 minutes: a fresh MySQL volume can take well over a minute to
+    # initialize on a small (1 vCPU) host before it accepts connections.
+    max_tries=90
     tries=0
     until php artisan migrate:status >/dev/null 2>&1; do
         tries=$((tries + 1))
-        if [ "$tries" -ge 30 ]; then
-            echo "Database not reachable after 30 attempts; skipping migrations." >&2
+        if [ "$tries" -ge "$max_tries" ]; then
+            echo "Database not reachable after $max_tries attempts; skipping migrations." >&2
             break
         fi
         sleep 2
     done
 
-    if [ "$tries" -lt 30 ]; then
+    if [ "$tries" -lt "$max_tries" ]; then
         echo "Running migrations..."
         php artisan migrate --force
     fi

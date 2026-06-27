@@ -144,7 +144,10 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Public self-registration is disabled: this is a single-business app
+        // with shared data, so anyone signing up would see all real data.
+        // Create accounts for staff with `php artisan app:create-user` instead.
+        // Features::registration(),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([
