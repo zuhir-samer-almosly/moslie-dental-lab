@@ -2,6 +2,11 @@
 # Unattended backup wrapper for scheduled runs.
 # Ensures Docker Desktop + the DB container are up, then runs db-backup.sh.
 # Logs to backups/auto-backup.log. Safe to run when Docker is already running.
+#
+# ⚠️  LOCAL DEV ONLY (Windows + WSL + Docker Desktop). Do NOT run this on the
+# Linux VPS: it launches "Docker Desktop.exe", targets the *-local containers,
+# and pushes to OneDrive/Google Drive. For server backups use the cron-based
+# script in DEPLOYMENT.md ("Set Up Automatic Backups") instead.
 set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
