@@ -20,10 +20,12 @@ class InvoiceController extends Controller
 
         if ($from && $to) {
             $ordersQuery = Order::with(['dentist', 'items'])
-                ->whereBetween('created_at', [$from, $to]);
+                ->whereBetween('created_at', [$from, $to])
+                ->orderBy('due_date');
 
             $paymentsQuery = DentistPayment::with('dentist')
-                ->whereBetween('created_at', [$from, $to]);
+                ->whereBetween('created_at', [$from, $to])
+                ->orderBy('payment_date');
 
             if ($dentistId) {
                 $ordersQuery->where('dentist_id', $dentistId);
