@@ -16,9 +16,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import AppLayout from '@/layouts/app-layout'
 import { cn } from '@/lib/utils'
+import { dashboard } from '@/routes'
 import type { BreadcrumbItem, DentistPayment, Order } from '@/types'
 import { ORDER_STATUSES } from '@/types'
-import { dashboard } from '@/routes'
 
 const breadcrumbs: BreadcrumbItem[] = [
 	{

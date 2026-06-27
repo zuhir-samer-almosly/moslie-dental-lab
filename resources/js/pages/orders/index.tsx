@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,7 +11,6 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
-import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Order } from '@/types'
 import { ORDER_STATUSES } from '@/types'

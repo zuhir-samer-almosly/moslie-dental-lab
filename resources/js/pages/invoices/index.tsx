@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react'
 import { Printer } from 'lucide-react'
 import Heading from '@/components/heading'
+import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +20,6 @@ import {
 	TableHeader,
 	TableRow,
 } from '@/components/ui/table'
-import { Dash, formatDate, itemAmount, itemDate, itemPatient, itemTeeth, TeethBadges } from '@/components/order-display'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist, DentistPayment, Order, OrderItem } from '@/types'
 
