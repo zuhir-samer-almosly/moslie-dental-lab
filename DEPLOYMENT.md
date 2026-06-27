@@ -94,8 +94,8 @@ docker-compose exec app php artisan view:cache
 
 ### 7. Set Permissions
 ```bash
-docker-compose exec app chown -R www-data:www-data /var/www/html/storage
-docker-compose exec app chmod -R 755 /var/www/html/storage
+docker-compose exec app chown -R www-data:www-data /opt/dental-lab/moslie-dental-lab/storage
+docker-compose exec app chmod -R 755 /opt/dental-lab/moslie-dental-lab/storage
 ```
 
 ## Verify Deployment
@@ -113,6 +113,10 @@ docker-compose exec app chmod -R 755 /var/www/html/storage
 ## Post-Deployment
 
 ### Set Up Automatic Backups
+
+> **Note:** The `db-backup.sh` / `db-backup-auto.sh` scripts in the repo root are for
+> **local dev only** (Windows + WSL + Docker Desktop, with OneDrive/Google Drive sync).
+> Do **not** use them on the VPS — use the cron-based script below.
 
 Create backup script:
 ```bash
@@ -243,8 +247,8 @@ docker-compose exec db mysql -u zoher -p
 
 Fix permissions:
 ```bash
-docker-compose exec app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-docker-compose exec app chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
+docker-compose exec app chown -R www-data:www-data /opt/dental-lab/moslie-dental-lab/storage /opt/dental-lab/moslie-dental-lab/bootstrap/cache
+docker-compose exec app chmod -R 755 /opt/dental-lab/moslie-dental-lab/storage /opt/dental-lab/moslie-dental-lab/bootstrap/cache
 ```
 
 ## Maintenance Commands

@@ -60,8 +60,12 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
     volumes:
       - db-data:/var/lib/mysql
-    ports:
-      - "${DB_PORT:-3306}:3306"
+    # Not published to the host: the app reaches MySQL over the internal
+    # moslie-network. Docker bypasses UFW, so publishing this would expose
+    # the database to the internet on a public VPS. Uncomment the 127.0.0.1
+    # binding below only if you need local host access (never use 0.0.0.0).
+    # ports:
+    #   - "127.0.0.1:${DB_PORT:-3306}:3306"
     networks:
       - moslie-network
 
@@ -69,8 +73,12 @@ services:
     image: redis:7-alpine
     container_name: moslie-redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # Not published to the host: Redis has no password, so exposing it on a
+    # public VPS = unauthenticated remote access. The app reaches it over the
+    # internal moslie-network. Uncomment the 127.0.0.1 binding below only if
+    # you need local host access (never use 0.0.0.0).
+    # ports:
+    #   - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     networks:
       - moslie-network
 
