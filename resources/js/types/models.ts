@@ -45,17 +45,6 @@ export interface DentistPayment {
 	updated_at: string
 }
 
-export const WORK_TYPES = [
-	'تركيبة زيركون',
-	'تركيبة خزف',
-	'تلبيسة',
-	'جسر',
-	'طقم أسنان',
-	'فينير',
-	'زرعة',
-	'تقويم',
-] as const
-
 export const ORDER_STATUSES: Record<Order['status'], string> = {
 	pending: 'قيد الانتظار',
 	completed: 'مكتمل',

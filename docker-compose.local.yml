@@ -31,12 +31,40 @@ services:
       - REDIS_HOST=redis
       - REDIS_PASSWORD=null
       - REDIS_PORT=6379
+      - APP_URL=http://dental.test
     ports:
-      # TODO(security): Bind to localhost (127.0.0.1) for secure local testing
-      - "127.0.0.1:${APP_PORT:-8080}:80"
+      # Serve on http://dental.test (add "127.0.0.1 dental.test" to your hosts file)
+      - "127.0.0.1:${APP_PORT:-80}:80"
     depends_on:
       - db
       - redis
+    networks:
+      - moslie-network
+
+  # Vite dev server — gives instant hot-reload for frontend (.tsx/.css) changes.
+  # It writes public/hot (shared via the code mount) so Laravel's @vite directive
+  # points the browser at this dev server instead of the pre-built assets.
+  vite:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: moslie-vite-local
+    restart: unless-stopped
+    working_dir: /opt/dental-lab/moslie-dental-lab
+    command: npm run dev -- --host 0.0.0.0
+    environment:
+      - VITE_DOCKER=true
+      # HMR client (in the browser) connects back to the dev server via this host
+      - VITE_HMR_HOST=dental.test
+    volumes:
+      - .:/opt/dental-lab/moslie-dental-lab
+      # Keep the container's node_modules and vendor (installed at image build)
+      # intact — the host copies are built for a different PHP/arch and would
+      # break artisan (which Wayfinder runs to generate route helpers).
+      - /opt/dental-lab/moslie-dental-lab/node_modules
+      - /opt/dental-lab/moslie-dental-lab/vendor
+    ports:
+      - "127.0.0.1:5173:5173"
     networks:
       - moslie-network
 

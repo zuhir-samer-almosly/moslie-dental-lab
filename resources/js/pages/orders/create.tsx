@@ -17,7 +17,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import AppLayout from '@/layouts/app-layout'
 import type { BreadcrumbItem, Dentist } from '@/types'
-import { ORDER_STATUSES, WORK_TYPES } from '@/types'
+import { ORDER_STATUSES } from '@/types'
 
 const breadcrumbs: BreadcrumbItem[] = [
 	{
@@ -36,13 +36,15 @@ type OrderItem = {
 	quantity: number
 	price: number
 	notes: string
+	date: string
 	selected_teeth: number[]
 }
+
+const today = () => new Date().toISOString().slice(0, 10)
 
 export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	const { data, setData, post, processing, errors } = useForm({
 		dentist_id: '',
-		due_date: '',
 		status: 'pending' as const,
 		notes: '',
 		items: [] as OrderItem[],
@@ -51,6 +53,11 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	const getSelectedDentist = useCallback(() => {
 		return dentists.find((d) => d.id.toString() === data.dentist_id)
 	}, [dentists, data.dentist_id])
+
+	// Available work types come from the selected dentist's own price list.
+	const workTypeNames = data.dentist_id
+		? Object.keys(getSelectedDentist()?.price_list ?? {})
+		: []
 
 	const getDentistPrice = useCallback(
 		(type: string): number | null => {
@@ -77,11 +84,11 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	}
 
 	const addItem = () => {
-		const defaultType = WORK_TYPES[0]
+		const defaultType = workTypeNames[0] || ''
 		const price = getDentistPrice(defaultType) ?? 0
 		setData('items', [
 			...data.items,
-			{ type: defaultType, patient_name: '', quantity: 1, price, notes: '', selected_teeth: [] },
+			{ type: defaultType, patient_name: '', quantity: 1, price, notes: '', date: today(), selected_teeth: [] },
 		])
 	}
 
@@ -108,7 +115,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 	}
 
 	const renderTypeInput = (item: OrderItem, index: number) => {
-		const isCustom = item.type !== '' && !(WORK_TYPES as readonly string[]).includes(item.type) && item.type !== 'أخرى'
+		const isCustom = item.type !== '' && !workTypeNames.includes(item.type) && item.type !== 'أخرى'
 
 		if (isCustom || item.type === 'أخرى') {
 			return (
@@ -141,7 +148,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 					<SelectValue placeholder="اختر النوع" />
 				</SelectTrigger>
 				<SelectContent>
-					{WORK_TYPES.map((type) => (
+					{workTypeNames.map((type) => (
 						<SelectItem key={type} value={type}>
 							{type}
 						</SelectItem>
@@ -192,18 +199,6 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 							</SelectContent>
 						</Select>
 						<InputError message={errors.dentist_id} />
-					</div>
-
-					<div className="grid gap-2">
-						<Label htmlFor="due_date">تاريخ الاستحقاق</Label>
-						<Input
-							id="due_date"
-							type="date"
-							value={data.due_date}
-							onChange={(e) => setData('due_date', e.target.value)}
-							required
-						/>
-						<InputError message={errors.due_date} />
 					</div>
 
 					<div className="grid gap-2">
@@ -279,6 +274,16 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 													value={item.patient_name}
 													onChange={(e) => updateItem(index, 'patient_name', e.target.value)}
 													placeholder="أدخل اسم المريض..."
+												/>
+											</div>
+
+											<div className="grid gap-2">
+												<Label>التاريخ</Label>
+												<Input
+													type="date"
+													value={item.date}
+													onChange={(e) => updateItem(index, 'date', e.target.value)}
+													required
 												/>
 											</div>
 
