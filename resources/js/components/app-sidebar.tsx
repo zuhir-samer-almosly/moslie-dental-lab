@@ -3,7 +3,10 @@ import {
     ClipboardList,
     CreditCard,
     FileText,
+    HandCoins,
     LayoutGrid,
+    PiggyBank,
+    UserCog,
     Users,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
@@ -46,6 +49,21 @@ const mainNavItems: NavItem[] = [
         title: 'الفواتير',
         href: '/invoices',
         icon: FileText,
+    },
+    {
+        title: 'الموظفون',
+        href: '/employees',
+        icon: UserCog,
+    },
+    {
+        title: 'الرواتب',
+        href: '/employee-payments',
+        icon: HandCoins,
+    },
+    {
+        title: 'المالية',
+        href: '/finance',
+        icon: PiggyBank,
     },
 ];
 

@@ -48,6 +48,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('payments', App\Http\Controllers\DentistPaymentController::class)
         ->parameters(['payments' => 'dentistPayment']);
     Route::get('invoices', [App\Http\Controllers\InvoiceController::class, 'index'])->name('invoices.index');
+
+    Route::resource('employees', App\Http\Controllers\EmployeeController::class)
+        ->except('show');
+    Route::resource('employee-payments', App\Http\Controllers\EmployeePaymentController::class)
+        ->except('show')
+        ->parameters(['employee-payments' => 'employeePayment']);
+    Route::get('finance', [App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
 });
 
 require __DIR__.'/settings.php';

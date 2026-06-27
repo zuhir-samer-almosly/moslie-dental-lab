@@ -45,6 +45,29 @@ export interface DentistPayment {
     updated_at: string;
 }
 
+export interface Employee {
+    id: number;
+    name: string;
+    role: string | null;
+    phone: string | null;
+    notes: string | null;
+    is_active: boolean;
+    payments_sum_amount?: number | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EmployeePayment {
+    id: number;
+    employee_id: number;
+    employee?: Employee;
+    amount: number;
+    payment_date?: string;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
 export const ORDER_STATUSES: Record<Order['status'], string> = {
     pending: 'قيد الانتظار',
     completed: 'مكتمل',
