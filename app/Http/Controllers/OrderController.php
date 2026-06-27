@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
+use App\Models\DentistPayment;
 use App\Models\Order;
 
 class OrderController extends Controller
@@ -14,6 +15,26 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::with(['dentist', 'items'])->latest()->get();
+
+        // Per order, the dentist's outstanding balance carried in from BEFORE
+        // this order's date: their earlier orders minus their earlier payments.
+        $payments = DentistPayment::all(['dentist_id', 'amount', 'payment_date', 'created_at']);
+
+        $orders->each(function (Order $order) use ($orders, $payments) {
+            $cutoff = $order->due_date;
+
+            $priorOrders = $orders
+                ->where('dentist_id', $order->dentist_id)
+                ->filter(fn (Order $o) => $o->due_date < $cutoff)
+                ->sum('amount');
+
+            $priorPayments = $payments
+                ->where('dentist_id', $order->dentist_id)
+                ->filter(fn (DentistPayment $p) => \Illuminate\Support\Carbon::parse($p->payment_date ?? $p->created_at)->lt($cutoff))
+                ->sum('amount');
+
+            $order->previous_balance = (int) $priorOrders - (int) $priorPayments;
+        });
 
         return inertia('orders/index', [
             'orders' => $orders,

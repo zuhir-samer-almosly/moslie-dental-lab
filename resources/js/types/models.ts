@@ -19,6 +19,8 @@ export interface Order {
     notes: string | null;
     meta: Record<string, unknown> | null;
     items?: OrderItem[];
+    /** Dentist's outstanding balance carried in from before this order's date. */
+    previous_balance?: number;
     created_at: string;
     updated_at: string;
 }

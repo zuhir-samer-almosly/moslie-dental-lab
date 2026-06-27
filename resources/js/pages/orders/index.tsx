@@ -105,6 +105,16 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                                 rowSpan={span}
                                                 className="border-s align-middle font-medium"
                                             >
+                                                {!!order.previous_balance && (
+                                                    <span className="mb-1 block text-[11px] font-normal text-muted-foreground">
+                                                        رصيد سابق مستحق من قبل:{' '}
+                                                        <span className="font-semibold tabular-nums text-foreground">
+                                                            {order.previous_balance.toLocaleString(
+                                                                'en-US',
+                                                            )}
+                                                        </span>
+                                                    </span>
+                                                )}
                                                 {order.dentist?.name}
                                             </TableCell>
                                         );

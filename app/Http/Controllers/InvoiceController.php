@@ -21,12 +21,15 @@ class InvoiceController extends Controller
         $openingByDentist = [];
 
         if ($from && $to) {
+            // Filter by the order's own date (due_date) and the payment's
+            // date, NOT created_at — an order can be entered today but dated
+            // for a different month, and it belongs in that month's invoice.
             $ordersQuery = Order::with(['dentist', 'items'])
-                ->whereBetween('created_at', [$from, $to])
+                ->whereBetween('due_date', [$from, $to])
                 ->orderBy('due_date');
 
             $paymentsQuery = DentistPayment::with('dentist')
-                ->whereBetween('created_at', [$from, $to])
+                ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
                 ->orderBy('payment_date');
 
             if ($dentistId) {
@@ -42,13 +45,13 @@ class InvoiceController extends Controller
             // unpaid leftovers from earlier months carry into this invoice.
             // Alias must not be `total` — the Order model has a `total`
             // accessor that Eloquent's pluck would apply, clobbering the SUM.
-            $priorOrders = Order::where('created_at', '<', $from)
+            $priorOrders = Order::where('due_date', '<', $from)
                 ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
                 ->selectRaw('dentist_id, SUM(amount) as amount_sum')
                 ->groupBy('dentist_id')
                 ->pluck('amount_sum', 'dentist_id');
 
-            $priorPayments = DentistPayment::where('created_at', '<', $from)
+            $priorPayments = DentistPayment::whereRaw('DATE(COALESCE(payment_date, created_at)) < ?', [$from])
                 ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
                 ->selectRaw('dentist_id, SUM(amount) as amount_sum')
                 ->groupBy('dentist_id')
