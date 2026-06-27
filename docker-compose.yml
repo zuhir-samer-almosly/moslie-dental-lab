@@ -26,6 +26,10 @@ services:
     restart: unless-stopped
     working_dir: /opt/dental-lab/moslie-dental-lab
     volumes:
+      # .env is excluded from the image via .dockerignore, so mount it in.
+      # Laravel reads APP_KEY/APP_URL/etc. from here at runtime. Must exist on
+      # the host before `up` (cp .env.docker .env) or Docker creates a dir.
+      - ./.env:/opt/dental-lab/moslie-dental-lab/.env
       - ./storage:/opt/dental-lab/moslie-dental-lab/storage
       - ./bootstrap/cache:/opt/dental-lab/moslie-dental-lab/bootstrap/cache
     environment:
