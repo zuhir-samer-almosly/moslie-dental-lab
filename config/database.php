@@ -61,6 +61,15 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
+            // Used by spatie/laravel-backup's mysqldump: a single transaction
+            // gives a consistent snapshot of InnoDB tables without locking the
+            // live database during the nightly backup. skip_ssl avoids
+            // mysqldump's TLS handshake — the DB is only reachable over the
+            // private Docker network, never the public internet.
+            'dump' => [
+                'useSingleTransaction' => true,
+                'skip_ssl' => true,
+            ],
         ],
 
         'mariadb' => [

@@ -57,6 +57,11 @@ services:
     image: mysql:8.0
     container_name: moslie-db
     restart: unless-stopped
+    # Use the classic auth plugin so the (MariaDB-based) mysqldump client in
+    # the app image can connect for nightly backups. MySQL 8's default
+    # caching_sha2_password isn't supported by that client over a plain
+    # (non-TLS) internal connection.
+    command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-zoher}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}

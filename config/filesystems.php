@@ -60,6 +60,19 @@ return [
             'report' => false,
         ],
 
+        // Off-site backup target. The driver is registered in
+        // App\Providers\AppServiceProvider via Storage::extend('google').
+        'google' => [
+            'driver' => 'google',
+            'clientId' => env('GOOGLE_DRIVE_CLIENT_ID'),
+            'clientSecret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+            'refreshToken' => env('GOOGLE_DRIVE_REFRESH_TOKEN'),
+            // ID of the Drive folder to store backups in (optional; root if null).
+            'folderId' => env('GOOGLE_DRIVE_FOLDER_ID'),
+            'throw' => true,
+            'report' => false,
+        ],
+
     ],
 
     /*

@@ -14,7 +14,9 @@
         "laravel/fortify": "^1.30",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "laravel/wayfinder": "^0.1.9"
+        "laravel/wayfinder": "^0.1.9",
+        "masbug/flysystem-google-drive-ext": "^2.0",
+        "spatie/laravel-backup": "^9.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -93,6 +95,9 @@
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
+        "platform": {
+            "php": "8.3"
+        },
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
