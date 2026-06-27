@@ -12,12 +12,18 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        $dentistsCount = \App\Models\Dentist::count();
-        $ordersCount = \App\Models\Order::count();
-        $pendingOrdersCount = \App\Models\Order::where('status', 'pending')->count();
-        $totalOrdersAmount = \App\Models\Order::sum('amount');
-        $totalPaymentsAmount = \App\Models\DentistPayment::sum('amount');
-        $balance = $totalOrdersAmount - $totalPaymentsAmount;
+        $now = \Illuminate\Support\Carbon::now();
+        $start = $now->copy()->startOfMonth()->toDateString();
+        $end = $now->copy()->endOfMonth()->toDateString();
+
+        // This month's money
+        $income = (int) \App\Models\DentistPayment::whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$start, $end])->sum('amount');
+        $salaries = (int) \App\Models\EmployeePayment::whereBetween('payment_date', [$start, $end])->sum('amount');
+        $materials = (int) \App\Models\MaterialPurchase::whereBetween('purchase_date', [$start, $end])->sum('amount');
+        $expenses = $salaries + $materials;
+
+        // Outstanding receivables (all time)
+        $outstanding = (int) \App\Models\Order::sum('amount') - (int) \App\Models\DentistPayment::sum('amount');
 
         $recentOrders = \App\Models\Order::with(['dentist', 'items'])
             ->latest()
@@ -31,12 +37,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         return Inertia::render('dashboard', [
             'stats' => [
-                'dentists' => $dentistsCount,
-                'orders' => $ordersCount,
-                'pending_orders' => $pendingOrdersCount,
-                'total_orders_amount' => $totalOrdersAmount,
-                'total_payments_amount' => $totalPaymentsAmount,
-                'balance' => $balance,
+                'month' => $now->format('Y-m'),
+                'income' => $income,
+                'expenses' => $expenses,
+                'net' => $income - $expenses,
+                'salaries' => $salaries,
+                'materials' => $materials,
+                'outstanding' => $outstanding,
+                'pending_orders' => \App\Models\Order::where('status', 'pending')->count(),
+                'dentists' => \App\Models\Dentist::count(),
+                'employees' => \App\Models\Employee::count(),
             ],
             'recentOrders' => $recentOrders,
             'recentPayments' => $recentPayments,

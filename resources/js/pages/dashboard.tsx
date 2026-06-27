@@ -2,11 +2,14 @@ import { Head, Link } from '@inertiajs/react';
 import {
     ArrowUpRight,
     ClipboardList,
+    Coins,
     CreditCard,
-    DollarSign,
-    FileText,
+    HandCoins,
+    Package,
     Plus,
+    TrendingDown,
     TrendingUp,
+    UserCog,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -28,12 +31,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 type DashboardStats = {
-    dentists: number;
-    orders: number;
+    month: string;
+    income: number;
+    expenses: number;
+    net: number;
+    salaries: number;
+    materials: number;
+    outstanding: number;
     pending_orders: number;
-    total_orders_amount: number;
-    total_payments_amount: number;
-    balance: number;
+    dentists: number;
+    employees: number;
 };
 
 type DashboardProps = {
@@ -45,10 +52,15 @@ type DashboardProps = {
 const nf = (value: number) => value.toLocaleString('en-US');
 const formatDate = (value: string) =>
     new Date(value).toLocaleDateString('en-US');
+const monthLabel = (month: string) =>
+    new Date(`${month}-01T00:00:00`).toLocaleDateString('ar-SY', {
+        month: 'long',
+        year: 'numeric',
+    });
 
-type StatTone = 'blue' | 'amber' | 'violet' | 'emerald' | 'rose';
+type Tone = 'blue' | 'amber' | 'violet' | 'emerald' | 'rose';
 
-const toneStyles: Record<StatTone, { icon: string; ring: string }> = {
+const toneStyles: Record<Tone, { icon: string; ring: string }> = {
     blue: {
         icon: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
         ring: 'hover:border-blue-500/40',
@@ -71,44 +83,42 @@ const toneStyles: Record<StatTone, { icon: string; ring: string }> = {
     },
 };
 
-function StatCard({
+function MoneyCard({
     title,
     value,
     hint,
     icon: Icon,
     tone,
-    className,
+    valueClassName,
 }: {
     title: string;
-    value: string | number;
+    value: number;
     hint: string;
     icon: LucideIcon;
-    tone: StatTone;
-    className?: string;
+    tone: Tone;
+    valueClassName?: string;
 }) {
-    const styles = toneStyles[tone];
     return (
-        <Card
-            className={cn(
-                'group gap-0 py-0 transition-colors duration-200',
-                styles.ring,
-                className,
-            )}
-        >
+        <Card className="gap-0 py-0">
             <CardContent className="flex items-start justify-between gap-4 p-5">
                 <div className="space-y-2">
                     <p className="text-sm font-medium text-muted-foreground">
                         {title}
                     </p>
-                    <p className="text-3xl font-bold tracking-tight tabular-nums">
-                        {value}
+                    <p
+                        className={cn(
+                            'text-3xl font-bold tracking-tight tabular-nums',
+                            valueClassName,
+                        )}
+                    >
+                        {nf(value)}
                     </p>
                     <p className="text-xs text-muted-foreground">{hint}</p>
                 </div>
                 <div
                     className={cn(
-                        'flex size-11 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105',
-                        styles.icon,
+                        'flex size-11 shrink-0 items-center justify-center rounded-xl',
+                        toneStyles[tone].icon,
                     )}
                 >
                     <Icon className="size-5" />
@@ -118,36 +128,64 @@ function StatCard({
     );
 }
 
+function MiniStat({
+    title,
+    value,
+    icon: Icon,
+    tone,
+    href,
+    valueClassName,
+}: {
+    title: string;
+    value: number;
+    icon: LucideIcon;
+    tone: Tone;
+    href: string;
+    valueClassName?: string;
+}) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                'group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors',
+                toneStyles[tone].ring,
+            )}
+        >
+            <span
+                className={cn(
+                    'flex size-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105',
+                    toneStyles[tone].icon,
+                )}
+            >
+                <Icon className="size-5" />
+            </span>
+            <div className="min-w-0 space-y-0.5">
+                <p
+                    className={cn(
+                        'text-xl font-bold tabular-nums leading-none',
+                        valueClassName,
+                    )}
+                >
+                    {nf(value)}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                    {title}
+                </p>
+            </div>
+        </Link>
+    );
+}
+
 const quickActions: {
     href: string;
     label: string;
     icon: LucideIcon;
-    tone: StatTone;
+    tone: Tone;
 }[] = [
-    {
-        href: '/dentists/create',
-        label: 'إضافة طبيب',
-        icon: Users,
-        tone: 'blue',
-    },
-    {
-        href: '/orders/create',
-        label: 'إضافة طلب',
-        icon: ClipboardList,
-        tone: 'amber',
-    },
-    {
-        href: '/payments/create',
-        label: 'إضافة دفعة',
-        icon: CreditCard,
-        tone: 'emerald',
-    },
-    {
-        href: '/invoices',
-        label: 'عرض الفواتير',
-        icon: FileText,
-        tone: 'violet',
-    },
+    { href: '/orders/create', label: 'إضافة طلب', icon: ClipboardList, tone: 'amber' },
+    { href: '/payments/create', label: 'إضافة دفعة', icon: CreditCard, tone: 'emerald' },
+    { href: '/employee-payments/create', label: 'تسجيل راتب', icon: HandCoins, tone: 'rose' },
+    { href: '/material-purchases/create', label: 'تسجيل مادة', icon: Package, tone: 'violet' },
 ];
 
 export default function Dashboard({
@@ -155,7 +193,7 @@ export default function Dashboard({
     recentOrders,
     recentPayments,
 }: DashboardProps) {
-    const balanceNegative = stats.balance < 0;
+    const netNegative = stats.net < 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -179,70 +217,96 @@ export default function Dashboard({
                     </Button>
                 </div>
 
-                {/* Stats */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <StatCard
+                {/* This month's money */}
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                            <h2 className="font-semibold">
+                                ملخص {monthLabel(stats.month)}
+                            </h2>
+                            <p className="text-xs text-muted-foreground">
+                                الدخل والمصروفات وصافي الربح لهذا الشهر
+                            </p>
+                        </div>
+                        <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-muted-foreground"
+                        >
+                            <Link href="/finance">
+                                التفاصيل
+                                <ArrowUpRight className="size-4" />
+                            </Link>
+                        </Button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                        <MoneyCard
+                            title="الدخل"
+                            value={stats.income}
+                            hint="مدفوعات الأطباء هذا الشهر"
+                            icon={TrendingUp}
+                            tone="emerald"
+                            valueClassName="text-emerald-600 dark:text-emerald-400"
+                        />
+                        <MoneyCard
+                            title="المصروفات"
+                            value={stats.expenses}
+                            hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)}`}
+                            icon={TrendingDown}
+                            tone="rose"
+                            valueClassName="text-rose-600 dark:text-rose-400"
+                        />
+                        <MoneyCard
+                            title="صافي الربح"
+                            value={stats.net}
+                            hint={netNegative ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
+                            icon={Wallet}
+                            tone={netNegative ? 'rose' : 'blue'}
+                            valueClassName={
+                                netNegative
+                                    ? 'text-rose-600 dark:text-rose-400'
+                                    : undefined
+                            }
+                        />
+                    </div>
+                </div>
+
+                {/* Operational numbers */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <MiniStat
+                        title="الرصيد المتبقي على الأطباء"
+                        value={stats.outstanding}
+                        icon={Coins}
+                        tone="amber"
+                        href="/invoices"
+                        valueClassName={
+                            stats.outstanding < 0
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : undefined
+                        }
+                    />
+                    <MiniStat
+                        title="طلبات قيد الانتظار"
+                        value={stats.pending_orders}
+                        icon={ClipboardList}
+                        tone="violet"
+                        href="/orders"
+                    />
+                    <MiniStat
                         title="إجمالي الأطباء"
-                        value={nf(stats.dentists)}
-                        hint="عدد أطباء الأسنان المسجلين"
+                        value={stats.dentists}
                         icon={Users}
                         tone="blue"
+                        href="/dentists"
                     />
-                    <StatCard
-                        title="إجمالي الطلبات"
-                        value={nf(stats.orders)}
-                        hint={`${nf(stats.pending_orders)} قيد الانتظار`}
-                        icon={ClipboardList}
-                        tone="amber"
-                    />
-                    <StatCard
-                        title="قيمة الطلبات"
-                        value={nf(stats.total_orders_amount)}
-                        hint="إجمالي قيمة الطلبات"
-                        icon={TrendingUp}
-                        tone="violet"
-                    />
-                    <StatCard
-                        title="المدفوعات"
-                        value={nf(stats.total_payments_amount)}
-                        hint="إجمالي المدفوعات المستلمة"
-                        icon={Wallet}
+                    <MiniStat
+                        title="إجمالي الموظفين"
+                        value={stats.employees}
+                        icon={UserCog}
                         tone="emerald"
+                        href="/employees"
                     />
-
-                    {/* Balance — highlighted */}
-                    <Card className="gap-0 py-0 sm:col-span-2 lg:col-span-1">
-                        <CardContent className="flex h-full items-center justify-between gap-4 bg-gradient-to-bl from-primary/5 to-transparent p-5">
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-muted-foreground">
-                                    الرصيد المتبقي
-                                </p>
-                                <p
-                                    className={cn(
-                                        'text-3xl font-bold tracking-tight tabular-nums',
-                                        balanceNegative
-                                            ? 'text-rose-600 dark:text-rose-400'
-                                            : 'text-foreground',
-                                    )}
-                                >
-                                    {nf(stats.balance)}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                    الفرق بين الطلبات والمدفوعات
-                                </p>
-                            </div>
-                            <div
-                                className={cn(
-                                    'flex size-11 shrink-0 items-center justify-center rounded-xl',
-                                    balanceNegative
-                                        ? toneStyles.rose.icon
-                                        : 'bg-primary/10 text-primary',
-                                )}
-                            >
-                                <DollarSign className="size-5" />
-                            </div>
-                        </CardContent>
-                    </Card>
                 </div>
 
                 {/* Recent activity */}
@@ -395,31 +459,28 @@ export default function Dashboard({
                         </p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {quickActions.map((action) => {
-                            const styles = toneStyles[action.tone];
-                            return (
-                                <Link
-                                    key={action.href}
-                                    href={action.href}
+                        {quickActions.map((action) => (
+                            <Link
+                                key={action.href}
+                                href={action.href}
+                                className={cn(
+                                    'group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors',
+                                    toneStyles[action.tone].ring,
+                                )}
+                            >
+                                <span
                                     className={cn(
-                                        'group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors',
-                                        styles.ring,
+                                        'flex size-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105',
+                                        toneStyles[action.tone].icon,
                                     )}
                                 >
-                                    <span
-                                        className={cn(
-                                            'flex size-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105',
-                                            styles.icon,
-                                        )}
-                                    >
-                                        <action.icon className="size-5" />
-                                    </span>
-                                    <span className="text-sm font-medium">
-                                        {action.label}
-                                    </span>
-                                </Link>
-                            );
-                        })}
+                                    <action.icon className="size-5" />
+                                </span>
+                                <span className="text-sm font-medium">
+                                    {action.label}
+                                </span>
+                            </Link>
+                        ))}
                     </div>
                 </div>
             </div>
