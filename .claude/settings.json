@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "laravel@laravel": true,
+    "laravel-nightwatch@laravel": true
+  }
+}
