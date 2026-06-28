@@ -13,3 +13,10 @@ Artisan::command('inspire', function () {
 // (the `laravel-schedule` supervisor program in production).
 Schedule::command('backup:clean')->daily()->at('01:00');
 Schedule::command('backup:run')->daily()->at('01:30');
+
+// Mid-morning health check. A failing `backup:run` notifies on its own, but a
+// night the scheduler never ran (e.g. a deploy restarted it across 01:30) is
+// silent — backup:monitor catches that. Against the MaximumAgeInDays => 1 rule
+// in config/backup.php, a missed overnight backup reads as stale by 09:00
+// (~31h old) and fires UnhealthyBackupWasFound to BACKUP_NOTIFICATION_EMAIL.
+Schedule::command('backup:monitor')->daily()->at('09:00');
