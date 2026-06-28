@@ -68,6 +68,30 @@ test('a dentist with a fully settled history has no opening balance', function (
         );
 });
 
+test('cancelled orders are excluded from invoice totals and opening balance', function () {
+    $this->actingAs(User::factory()->create());
+
+    $dentist = Dentist::create(['name' => 'د. ملغى']);
+
+    // Prior month: a real order and a cancelled one — only the real 30,000
+    // should carry forward as opening balance.
+    makeOrder($dentist->id, 30000, '2026-05-10');
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-05-11', 'amount' => 99000, 'status' => 'cancelled']);
+
+    // This month: a real order and a cancelled one — totals.orders is 20,000.
+    makeOrder($dentist->id, 20000, '2026-06-12');
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-13', 'amount' => 77000, 'status' => 'cancelled']);
+
+    $this->get(route('invoices.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->where('totals.opening', 30000)
+                ->where('totals.orders', 20000)
+                ->where('totals.balance', 50000)
+        );
+});
+
 test('guests cannot access invoices', function () {
     $this->get(route('invoices.index'))->assertRedirect(route('login'));
 });

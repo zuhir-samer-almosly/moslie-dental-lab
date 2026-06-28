@@ -28,6 +28,23 @@ test('the outstanding page lists each dentist net balance, highest first', funct
         );
 });
 
+test('cancelled orders are excluded from the outstanding balance', function () {
+    $this->actingAs(User::factory()->create());
+
+    $dentist = Dentist::create(['name' => 'د. ملغى']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-01', 'amount' => 40000, 'status' => 'pending']);
+    // This one is cancelled — it must not count toward what's owed.
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-02', 'amount' => 100000, 'status' => 'cancelled']);
+
+    $this->get(route('outstanding.index'))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->where('totalOutstanding', 40000)
+                ->where('dentists.0.outstanding', 40000)
+        );
+});
+
 test('guests cannot access the outstanding page', function () {
     $this->get(route('outstanding.index'))->assertRedirect(route('login'));
 });
