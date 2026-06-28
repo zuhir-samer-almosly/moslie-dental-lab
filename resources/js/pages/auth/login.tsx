@@ -30,8 +30,8 @@ type Lang = 'ar' | 'en';
 const copy = {
     ar: {
         dir: 'rtl' as const,
-        brandName: 'مختبر زهير للأسنان',
-        brandTagline: 'نظام إدارة مختبر الأسنان',
+        brandName: 'مخبر زهير للأسنان',
+        brandTagline: 'نظام إدارة مخبر الأسنان',
         brandDesc: 'إدارة الأطباء والطلبات والمدفوعات في مكانٍ واحد.',
         welcome: 'مرحباً بعودتك',
         subtitle: 'سجّل الدخول للمتابعة إلى لوحة التحكم',
