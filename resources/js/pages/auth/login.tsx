@@ -30,7 +30,7 @@ type Lang = 'ar' | 'en';
 const copy = {
     ar: {
         dir: 'rtl' as const,
-        brandName: 'مخبر زهير للأسنان',
+        brandName: 'مخبر الموصلي',
         brandTagline: 'نظام إدارة مخبر الأسنان',
         brandDesc: 'إدارة الأطباء والطلبات والمدفوعات في مكانٍ واحد.',
         welcome: 'مرحباً بعودتك',
@@ -48,7 +48,7 @@ const copy = {
     },
     en: {
         dir: 'ltr' as const,
-        brandName: 'Zoher Dental Lab',
+        brandName: 'Almouslie Dental Lab',
         brandTagline: 'Dental Lab Management System',
         brandDesc: 'Manage dentists, orders, and payments in one place.',
         welcome: 'Welcome back',
