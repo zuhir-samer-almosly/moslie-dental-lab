@@ -7,6 +7,13 @@ import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -69,8 +76,7 @@ export default function Login({ status, canResetPassword }: Props) {
 
     const t = copy[lang];
 
-    const toggleLang = () => {
-        const next: Lang = lang === 'ar' ? 'en' : 'ar';
+    const selectLang = (next: Lang) => {
         setLang(next);
         localStorage.setItem('login_lang', next);
     };
@@ -79,64 +85,45 @@ export default function Login({ status, canResetPassword }: Props) {
         <>
             <Head title={t.submit} />
 
-            <div
-                dir={t.dir}
-                className="grid min-h-svh bg-background lg:grid-cols-2"
-            >
-                {/* Brand / visual panel */}
-                <div className="relative hidden overflow-hidden bg-gradient-to-br from-teal-600 via-cyan-700 to-slate-900 lg:flex lg:flex-col lg:justify-between lg:p-12">
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 [background-image:radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] [background-size:22px_22px] opacity-20"
-                    />
-                    <div
-                        aria-hidden
-                        className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-white/10 blur-3xl"
-                    />
-
-                    <div className="relative flex items-center gap-3 text-white">
-                        <div className="flex size-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-                            <AppLogoIcon className="size-6 fill-current text-white" />
-                        </div>
-                        <span className="text-lg font-semibold">
-                            {t.brandName}
-                        </span>
-                    </div>
-
-                    <div className="relative max-w-md text-white">
-                        <h2 className="text-3xl leading-snug font-bold">
-                            {t.brandTagline}
-                        </h2>
-                        <p className="mt-4 text-base text-white/80">
-                            {t.brandDesc}
-                        </p>
-                    </div>
-
-                    <p className="relative text-sm text-white/60">
-                        © {new Date().getFullYear()} {t.brandName}
-                    </p>
+            <div dir={t.dir} className="min-h-svh bg-background">
+                {/* Top bar */}
+                <div className="absolute top-4 inline-flex items-center gap-1 ltr:right-4 rtl:left-4">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-2">
+                                <Languages className="size-4" />
+                                {lang === 'ar' ? 'العربية' : 'English'}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            align={t.dir === 'rtl' ? 'start' : 'end'}
+                            className="w-36"
+                        >
+                            <DropdownMenuRadioGroup
+                                value={lang}
+                                onValueChange={(value) =>
+                                    selectLang(value as Lang)
+                                }
+                            >
+                                <DropdownMenuRadioItem value="ar">
+                                    العربية
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="en">
+                                    English
+                                </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <AppearanceMenu />
                 </div>
 
-                {/* Form panel */}
-                <div className="relative flex flex-col items-center justify-center p-6 sm:p-10">
-                    <div className="absolute top-4 inline-flex items-center gap-1 ltr:right-4 rtl:left-4">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-2"
-                            onClick={toggleLang}
-                        >
-                            <Languages className="size-4" />
-                            {t.switchLang}
-                        </Button>
-                        <AppearanceMenu />
-                    </div>
-
+                {/* Form */}
+                <div className="flex min-h-svh flex-col items-center justify-center p-6 sm:p-10">
                     <div className="w-full max-w-sm">
-                        {/* Mobile brand */}
-                        <div className="mb-8 flex flex-col items-center gap-3 lg:hidden">
-                            <div className="flex size-12 items-center justify-center rounded-xl bg-gradient-to-br from-teal-600 to-cyan-700">
-                                <AppLogoIcon className="size-6 fill-current text-white" />
+                        {/* Brand */}
+                        <div className="mb-8 flex flex-col items-center gap-3">
+                            <div className="flex size-12 items-center justify-center rounded-xl border bg-card">
+                                <AppLogoIcon className="size-6 fill-current text-foreground" />
                             </div>
                             <span className="text-lg font-semibold">
                                 {t.brandName}
