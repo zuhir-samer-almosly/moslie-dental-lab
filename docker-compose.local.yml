@@ -83,7 +83,8 @@ services:
     volumes:
       - db-local-data:/var/lib/mysql
     ports:
-      # TODO(security): Bind to localhost (127.0.0.1) to avoid exposing MySQL publicly
+      # Bound to localhost only. Kept exposed so host tools (e.g. Laravel Boost's
+      # DB introspection) can reach MySQL at 127.0.0.1:3306.
       - "127.0.0.1:${DB_PORT:-3306}:3306"
     networks:
       - moslie-network
@@ -92,9 +93,8 @@ services:
     image: redis:7-alpine
     container_name: moslie-redis-local
     restart: unless-stopped
-    ports:
-      # TODO(security): Bind to localhost (127.0.0.1) to avoid exposing Redis publicly
-      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    # No host port: the app reaches Redis over the internal Docker network
+    # (REDIS_HOST=redis), so there's no reason to expose it to the host.
     networks:
       - moslie-network
 
