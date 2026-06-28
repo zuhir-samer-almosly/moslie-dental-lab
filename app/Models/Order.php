@@ -34,6 +34,15 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
+    /**
+     * Orders that count as money owed. Cancelled orders are excluded from
+     * all receivable/invoice/finance totals.
+     */
+    public function scopeBillable($query)
+    {
+        return $query->where('status', '!=', 'cancelled');
+    }
+
     protected function total(): \Illuminate\Database\Eloquent\Casts\Attribute
     {
         return \Illuminate\Database\Eloquent\Casts\Attribute::make(

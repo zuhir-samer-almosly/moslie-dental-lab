@@ -79,13 +79,18 @@ The application centers around dental lab order management:
 
 **Dentist** (`app/Models/Dentist.php`)
 - Has many Orders and DentistPayments
-- Fields: name, email (unique), phone (unique), address
+- Fields: name, phone (unique), address, price_list (JSON)
 
 **Order** (`app/Models/Order.php`)
 - Belongs to Dentist
 - Has many OrderItems (implicit via order_items table)
 - Fields: dentist_id, due_date, amount, status, notes, meta (JSON)
 - Status enum: 'pending', 'completed', 'cancelled', 'recieved'
+  - **Known issue:** `recieved` is a misspelling of `received`. It is baked
+    into the DB `enum` column and the `in:` validation rules, so renaming it
+    requires a data migration plus updating the requests and frontend. Left
+    as-is for now; don't "fix" the spelling piecemeal.
+  - Cancelled orders are excluded from all money totals via `Order::billable()`.
 - Foreign key cascades on delete
 
 **OrderItem** (`app/Models/OrderItem.php`)

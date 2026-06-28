@@ -12,7 +12,6 @@ class Dentist extends Model
 
     protected $fillable = [
         'name',
-        'email',
         'phone',
         'address',
         'price_list',

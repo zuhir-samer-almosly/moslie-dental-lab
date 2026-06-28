@@ -9,7 +9,7 @@ class OutstandingController extends Controller
     public function index()
     {
         $dentists = Dentist::query()
-            ->withSum('orders as orders_total', 'amount')
+            ->withSum(['orders as orders_total' => fn ($q) => $q->billable()], 'amount')
             ->withSum('payments as payments_total', 'amount')
             ->get()
             ->map(fn (Dentist $dentist) => [

@@ -114,18 +114,44 @@ class FinanceController extends Controller
 
     /**
      * Last 6 months of income/expenses/net, oldest first.
+     *
+     * One query per source over the whole 6-month window, then bucketed by
+     * month in PHP. This avoids per-month round-trips and stays portable
+     * across sqlite (tests) and MySQL (prod) — unlike a GROUP BY on a
+     * driver-specific month function.
      */
     private function trend(Carbon $month): array
     {
+        $start = $month->copy()->subMonths(5)->startOfMonth()->toDateString();
+        $end = $month->copy()->endOfMonth()->toDateString();
+
+        $incomeByMonth = DentistPayment::query()
+            ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$start, $end])
+            ->get(['amount', 'payment_date', 'created_at'])
+            ->groupBy(fn ($p) => Carbon::parse($p->payment_date ?? $p->created_at)->format('Y-m'))
+            ->map(fn ($rows) => (int) $rows->sum('amount'));
+
+        $salariesByMonth = EmployeePayment::query()
+            ->whereBetween('payment_date', [$start, $end])
+            ->get(['amount', 'payment_date'])
+            ->groupBy(fn ($p) => Carbon::parse($p->payment_date)->format('Y-m'))
+            ->map(fn ($rows) => (int) $rows->sum('amount'));
+
+        $materialsByMonth = MaterialPurchase::query()
+            ->whereBetween('purchase_date', [$start, $end])
+            ->get(['amount', 'purchase_date'])
+            ->groupBy(fn ($p) => Carbon::parse($p->purchase_date)->format('Y-m'))
+            ->map(fn ($rows) => (int) $rows->sum('amount'));
+
         $trend = [];
 
         for ($i = 5; $i >= 0; $i--) {
-            $m = $month->copy()->subMonths($i);
-            $income = $this->incomeForMonth($m)[0];
-            $expenses = $this->salariesForMonth($m) + $this->materialsForMonth($m);
+            $key = $month->copy()->subMonths($i)->format('Y-m');
+            $income = $incomeByMonth[$key] ?? 0;
+            $expenses = ($salariesByMonth[$key] ?? 0) + ($materialsByMonth[$key] ?? 0);
 
             $trend[] = [
-                'month' => $m->format('Y-m'),
+                'month' => $key,
                 'income' => $income,
                 'expenses' => $expenses,
                 'net' => $income - $expenses,

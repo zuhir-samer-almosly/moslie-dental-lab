@@ -6,6 +6,7 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -25,6 +26,7 @@ class OrderController extends Controller
 
             $priorOrders = $orders
                 ->where('dentist_id', $order->dentist_id)
+                ->where('status', '!=', 'cancelled')
                 ->filter(fn (Order $o) => $o->due_date < $cutoff)
                 ->sum('amount');
 
@@ -67,11 +69,13 @@ class OrderController extends Controller
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        $order = Order::create($validated);
+        DB::transaction(function () use ($validated, $items) {
+            $order = Order::create($validated);
 
-        foreach ($items as $item) {
-            $order->items()->create($this->itemAttributes($item));
-        }
+            foreach ($items as $item) {
+                $order->items()->create($this->itemAttributes($item));
+            }
+        });
 
         return redirect()->route('orders.index')
             ->with('success', 'تم إضافة الطلب بنجاح');
@@ -113,13 +117,15 @@ class OrderController extends Controller
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        $order->update($validated);
+        DB::transaction(function () use ($order, $validated, $items) {
+            $order->update($validated);
 
-        // Delete old items and create new ones
-        $order->items()->delete();
-        foreach ($items as $item) {
-            $order->items()->create($this->itemAttributes($item));
-        }
+            // Delete old items and create new ones
+            $order->items()->delete();
+            foreach ($items as $item) {
+                $order->items()->create($this->itemAttributes($item));
+            }
+        });
 
         return redirect()->route('orders.index')
             ->with('success', 'تم تحديث الطلب بنجاح');
