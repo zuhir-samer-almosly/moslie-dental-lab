@@ -317,6 +317,9 @@ export default function InvoicesIndex({
                                                             الأسنان
                                                         </TableHead>
                                                         <TableHead>
+                                                            السعر
+                                                        </TableHead>
+                                                        <TableHead>
                                                             المبلغ
                                                         </TableHead>
                                                     </TableRow>
@@ -326,7 +329,7 @@ export default function InvoicesIndex({
                                                         0 && (
                                                         <TableRow>
                                                             <TableCell
-                                                                colSpan={5}
+                                                                colSpan={6}
                                                                 className="text-center text-muted-foreground"
                                                             >
                                                                 لا توجد طلبات
@@ -378,6 +381,19 @@ export default function InvoicesIndex({
                                                                             )}
                                                                         />
                                                                     </TableCell>
+                                                                    <TableCell className="tabular-nums whitespace-nowrap">
+                                                                        {(
+                                                                            item.price ??
+                                                                            0
+                                                                        ).toLocaleString(
+                                                                            'en-US',
+                                                                        )}{' '}
+                                                                        <span className="text-muted-foreground">
+                                                                            ×{' '}
+                                                                            {item.quantity ??
+                                                                                0}
+                                                                        </span>
+                                                                    </TableCell>
                                                                     <TableCell className="tabular-nums">
                                                                         {itemAmount(
                                                                             item,
@@ -406,6 +422,9 @@ export default function InvoicesIndex({
                                                                     <TableCell>
                                                                         <Dash />
                                                                     </TableCell>
+                                                                    <TableCell>
+                                                                        <Dash />
+                                                                    </TableCell>
                                                                     <TableCell className="tabular-nums">
                                                                         {order.amount.toLocaleString(
                                                                             'en-US',
@@ -418,18 +437,6 @@ export default function InvoicesIndex({
                                             </Table>
                                         </div>
                                         <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
-                                            {group.opening !== 0 && (
-                                                <div className="flex items-center justify-between">
-                                                    <span>
-                                                        رصيد سابق (مستحق من قبل)
-                                                    </span>
-                                                    <span className="tabular-nums">
-                                                        {group.opening.toLocaleString(
-                                                            'en-US',
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
                                             <div className="flex items-center justify-between">
                                                 <span>إجمالي طلبات الفترة</span>
                                                 <span className="tabular-nums">
@@ -446,6 +453,18 @@ export default function InvoicesIndex({
                                                     <span className="tabular-nums">
                                                         −
                                                         {group.paymentsTotal.toLocaleString(
+                                                            'en-US',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {group.opening !== 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>
+                                                        رصيد سابق (مستحق من قبل)
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {group.opening.toLocaleString(
                                                             'en-US',
                                                         )}
                                                     </span>
