@@ -164,6 +164,20 @@
         padding: 1.5cm !important;
     }
 
+    /* Scroll containers render their scrollbar track on the printed page.
+       Let everything flow naturally so no scrollbars appear in the output. */
+    html,
+    body,
+    main,
+    [data-slot='sidebar-inset'],
+    .overflow-x-auto,
+    .overflow-x-hidden,
+    .overflow-y-auto,
+    .overflow-auto {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
     table {
         border-collapse: collapse;
         width: 100%;

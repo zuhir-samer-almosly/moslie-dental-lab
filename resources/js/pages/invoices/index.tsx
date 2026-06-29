@@ -168,7 +168,7 @@ export default function InvoicesIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="الفواتير" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6">
+            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6 print:overflow-visible">
                 {/* Header */}
                 <div className="space-y-1 print:hidden">
                     <h1 className="text-2xl font-bold tracking-tight">
@@ -509,7 +509,7 @@ export default function InvoicesIndex({
                         </div>
 
                         {/* Summary */}
-                        <div className="space-y-2 rounded-lg border bg-muted/50 p-4">
+                        <div className="space-y-2 rounded-lg border bg-muted/50 p-4 print:break-inside-avoid">
                             <h3 className="text-lg font-semibold">الملخص</h3>
                             <div className="grid gap-2">
                                 {totals.opening !== 0 && (
