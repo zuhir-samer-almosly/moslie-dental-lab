@@ -437,43 +437,10 @@ export default function InvoicesIndex({
                                             </Table>
                                         </div>
                                         <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
-                                            <div className="flex items-center justify-between">
+                                            <div className="flex items-center justify-between font-semibold">
                                                 <span>إجمالي طلبات الفترة</span>
                                                 <span className="tabular-nums">
                                                     {group.ordersTotal.toLocaleString(
-                                                        'en-US',
-                                                    )}
-                                                </span>
-                                            </div>
-                                            {group.paymentsTotal !== 0 && (
-                                                <div className="flex items-center justify-between">
-                                                    <span>
-                                                        مدفوعات الفترة
-                                                    </span>
-                                                    <span className="tabular-nums">
-                                                        −
-                                                        {group.paymentsTotal.toLocaleString(
-                                                            'en-US',
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {group.opening !== 0 && (
-                                                <div className="flex items-center justify-between">
-                                                    <span>
-                                                        رصيد سابق (مستحق من قبل)
-                                                    </span>
-                                                    <span className="tabular-nums">
-                                                        {group.opening.toLocaleString(
-                                                            'en-US',
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className="flex items-center justify-between border-t pt-1 text-base font-bold">
-                                                <span>الإجمالي المستحق</span>
-                                                <span className="tabular-nums">
-                                                    {group.due.toLocaleString(
                                                         'en-US',
                                                     )}
                                                 </span>
@@ -531,6 +498,14 @@ export default function InvoicesIndex({
                                     </TableBody>
                                 </Table>
                             </div>
+                            <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                                <div className="flex items-center justify-between font-semibold">
+                                    <span>إجمالي مدفوعات الفترة</span>
+                                    <span className="tabular-nums">
+                                        {totals.payments.toLocaleString('en-US')}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Summary */}
@@ -547,23 +522,9 @@ export default function InvoicesIndex({
                                         </span>
                                     </div>
                                 )}
-                                <div className="flex justify-between">
-                                    <span>إجمالي الطلبات:</span>
-                                    <span className="font-semibold">
-                                        {totals.orders.toLocaleString('en-US')}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>إجمالي المدفوعات:</span>
-                                    <span className="font-semibold">
-                                        {totals.payments.toLocaleString(
-                                            'en-US',
-                                        )}
-                                    </span>
-                                </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-bold">
-                                        الرصيد المتبقي:
+                                        الإجمالي المستحق:
                                     </span>
                                     <span className="text-lg font-bold">
                                         {totals.balance.toLocaleString('en-US')}

@@ -142,6 +142,13 @@
     }
 }
 
+/* Drop the browser's print header/footer (date, page title, URL, page number).
+   Chrome only omits them when the printed page has zero margin; we restore the
+   visual margin via padding on <main> below. */
+@page {
+    margin: 0;
+}
+
 @media print {
     .sidebar,
     .app-header,
@@ -154,7 +161,7 @@
     main {
         width: 100% !important;
         margin: 0 !important;
-        padding: 1rem !important;
+        padding: 1.5cm !important;
     }
 
     table {
