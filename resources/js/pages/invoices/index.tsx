@@ -514,19 +514,33 @@ export default function InvoicesIndex({
                             <div className="grid gap-2">
                                 {totals.opening !== 0 && (
                                     <div className="flex justify-between">
-                                        <span>رصيد سابق (مستحق من قبل):</span>
-                                        <span className="font-semibold">
+                                        <span>
+                                            رصيد مستحق من الفاتورة الماضية:
+                                        </span>
+                                        <span className="font-semibold tabular-nums">
                                             {totals.opening.toLocaleString(
                                                 'en-US',
                                             )}
                                         </span>
                                     </div>
                                 )}
+                                <div className="flex justify-between">
+                                    <span>إجمالي الطلبات:</span>
+                                    <span className="font-semibold tabular-nums">
+                                        {totals.orders.toLocaleString('en-US')}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>إجمالي المدفوعات:</span>
+                                    <span className="font-semibold tabular-nums">
+                                        −{totals.payments.toLocaleString('en-US')}
+                                    </span>
+                                </div>
                                 <div className="flex justify-between border-t pt-2">
                                     <span className="font-bold">
                                         الإجمالي المستحق:
                                     </span>
-                                    <span className="text-lg font-bold">
+                                    <span className="text-lg font-bold tabular-nums">
                                         {totals.balance.toLocaleString('en-US')}
                                     </span>
                                 </div>
