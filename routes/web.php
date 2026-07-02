@@ -20,9 +20,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('outstanding', [App\Http\Controllers\OutstandingController::class, 'index'])->name('outstanding.index');
 
     Route::resource('employees', App\Http\Controllers\EmployeeController::class)
-        ->except('show');
+        ->only(['index', 'store', 'update', 'destroy']);
     Route::resource('employee-payments', App\Http\Controllers\EmployeePaymentController::class)
-        ->except('show')
+        ->only(['store', 'update', 'destroy'])
         ->parameters(['employee-payments' => 'employeePayment']);
     Route::resource('material-purchases', App\Http\Controllers\MaterialPurchaseController::class)
         ->except('show')

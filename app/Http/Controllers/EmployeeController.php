@@ -5,27 +5,35 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
+use App\Models\EmployeePayment;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class EmployeeController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display the merged employees + monthly salaries page.
      */
-    public function index()
+    public function index(Request $request)
     {
         $employees = Employee::withSum('payments', 'amount')->latest()->get();
 
+        $month = $this->resolveMonth($request->query('month'));
+        $start = $month->copy()->startOfMonth()->toDateString();
+        $end = $month->copy()->endOfMonth()->toDateString();
+
+        $payments = EmployeePayment::with('employee')
+            ->whereBetween('payment_date', [$start, $end])
+            ->orderByDesc('payment_date')
+            ->orderByDesc('id')
+            ->get();
+
         return inertia('employees/index', [
             'employees' => $employees,
+            'payments' => $payments,
+            'month' => $month->format('Y-m'),
+            'total' => (int) $payments->sum('amount'),
         ]);
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return inertia('employees/create');
     }
 
     /**
@@ -35,18 +43,8 @@ class EmployeeController extends Controller
     {
         Employee::create($request->validated());
 
-        return redirect()->route('employees.index')
+        return redirect()->back()
             ->with('success', 'تم إضافة الموظف بنجاح');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Employee $employee)
-    {
-        return inertia('employees/edit', [
-            'employee' => $employee,
-        ]);
     }
 
     /**
@@ -56,7 +54,7 @@ class EmployeeController extends Controller
     {
         $employee->update($request->validated());
 
-        return redirect()->route('employees.index')
+        return redirect()->back()
             ->with('success', 'تم تحديث الموظف بنجاح');
     }
 
@@ -67,7 +65,26 @@ class EmployeeController extends Controller
     {
         $employee->delete();
 
-        return redirect()->route('employees.index')
+        return redirect()->back()
             ->with('success', 'تم حذف الموظف بنجاح');
+    }
+
+    /**
+     * Parse a "Y-m" month string, falling back to the current month.
+     */
+    private function resolveMonth(?string $month): Carbon
+    {
+        if ($month) {
+            try {
+                // `!` resets unspecified parts (day, time) instead of filling
+                // them from "now" — without it, parsing "2026-06" on July 31
+                // produces June 31 → overflows into July.
+                return Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
+            } catch (\Throwable) {
+                // fall through to current month
+            }
+        }
+
+        return Carbon::now()->startOfMonth();
     }
 }

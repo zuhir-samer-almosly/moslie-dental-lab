@@ -8,11 +8,11 @@ test('a salary payment can be recorded', function () {
     $this->actingAs(User::factory()->create());
     $employee = Employee::factory()->create();
 
-    $this->post(route('employee-payments.store'), [
+    $this->from(route('employees.index'))->post(route('employee-payments.store'), [
         'employee_id' => $employee->id,
         'amount' => 30000,
         'payment_date' => '2026-06-10',
-    ])->assertRedirect(route('employee-payments.index'));
+    ])->assertRedirect(route('employees.index'));
 
     $this->assertDatabaseHas('employee_payments', [
         'employee_id' => $employee->id,
@@ -20,7 +20,7 @@ test('a salary payment can be recorded', function () {
     ]);
 });
 
-test('the salary index filters by month', function () {
+test('the employees page filters salaries by month', function () {
     $this->actingAs(User::factory()->create());
     $employee = Employee::factory()->create();
 
@@ -35,11 +35,11 @@ test('the salary index filters by month', function () {
         'payment_date' => '2026-05-05',
     ]);
 
-    $this->get(route('employee-payments.index', ['month' => '2026-06']))
+    $this->get(route('employees.index', ['month' => '2026-06']))
         ->assertOk()
         ->assertInertia(
             fn ($page) => $page
-                ->component('employee-payments/index')
+                ->component('employees/index')
                 ->where('total', 10000)
                 ->has('payments', 1)
         );

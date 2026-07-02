@@ -194,7 +194,7 @@ const quickActions: {
         tone: 'emerald',
     },
     {
-        href: '/employee-payments/create',
+        href: '/employees',
         label: 'تسجيل راتب',
         icon: HandCoins,
         tone: 'rose',

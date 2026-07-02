@@ -3,7 +3,6 @@ import {
     ClipboardList,
     CreditCard,
     FileText,
-    HandCoins,
     LayoutGrid,
     Package,
     PiggyBank,
@@ -61,11 +60,6 @@ const mainNavItems: NavItem[] = [
         title: 'الموظفون',
         href: '/employees',
         icon: UserCog,
-    },
-    {
-        title: 'الرواتب',
-        href: '/employee-payments',
-        icon: HandCoins,
     },
     {
         title: 'المواد',
