@@ -13,8 +13,13 @@ export const itemDate = (item: OrderItem) =>
 export const itemAmount = (item: OrderItem) =>
     (item.price ?? 0) * (item.quantity ?? 0);
 
-export const formatDate = (value: string) =>
-    value ? new Date(value).toLocaleDateString('en-US') : '';
+/** Render a date as D/M/YYYY (day-first), the format used across the app. */
+export const formatDate = (value: string | null | undefined) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+};
 
 export const Dash = () => (
     <span className="text-xs text-muted-foreground">—</span>

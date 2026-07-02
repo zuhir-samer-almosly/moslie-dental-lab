@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react';
+import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -95,10 +96,10 @@ export default function PaymentsIndex({
                                                 )}
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
-                                                {new Date(
+                                                {formatDate(
                                                     payment.payment_date ||
                                                         payment.created_at,
-                                                ).toLocaleDateString('en-US')}
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-end">
                                                 <div className="flex justify-end gap-2">
