@@ -274,14 +274,8 @@ export default function InvoicesIndex({
                                 تقرير الفواتير
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                من{' '}
-                                {new Date(filters.from!).toLocaleDateString(
-                                    'en-US',
-                                )}{' '}
-                                إلى{' '}
-                                {new Date(filters.to!).toLocaleDateString(
-                                    'en-US',
-                                )}
+                                من {formatDate(filters.from)} إلى{' '}
+                                {formatDate(filters.to)}
                             </p>
                         </div>
 
@@ -381,7 +375,7 @@ export default function InvoicesIndex({
                                                                             )}
                                                                         />
                                                                     </TableCell>
-                                                                    <TableCell className="tabular-nums whitespace-nowrap">
+                                                                    <TableCell className="whitespace-nowrap tabular-nums">
                                                                         {(
                                                                             item.price ??
                                                                             0
@@ -480,11 +474,9 @@ export default function InvoicesIndex({
                                                         {payment.dentist?.name}
                                                     </TableCell>
                                                     <TableCell>
-                                                        {new Date(
+                                                        {formatDate(
                                                             payment.payment_date ||
                                                                 payment.created_at,
-                                                        ).toLocaleDateString(
-                                                            'en-US',
                                                         )}
                                                     </TableCell>
                                                     <TableCell>
@@ -502,7 +494,9 @@ export default function InvoicesIndex({
                                 <div className="flex items-center justify-between font-semibold">
                                     <span>إجمالي مدفوعات الفترة</span>
                                     <span className="tabular-nums">
-                                        {totals.payments.toLocaleString('en-US')}
+                                        {totals.payments.toLocaleString(
+                                            'en-US',
+                                        )}
                                     </span>
                                 </div>
                             </div>
@@ -533,7 +527,10 @@ export default function InvoicesIndex({
                                 <div className="flex justify-between">
                                     <span>إجمالي المدفوعات:</span>
                                     <span className="font-semibold tabular-nums">
-                                        −{totals.payments.toLocaleString('en-US')}
+                                        −
+                                        {totals.payments.toLocaleString(
+                                            'en-US',
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex justify-between border-t pt-2">

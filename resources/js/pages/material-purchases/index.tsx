@@ -7,6 +7,7 @@ import {
     Plus,
     Trash2,
 } from 'lucide-react';
+import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -117,7 +118,7 @@ export default function MaterialPurchasesIndex({
                             <span className="text-sm text-muted-foreground">
                                 إجمالي مشتريات {MONTH_LABEL(month)}
                             </span>
-                            <span className="text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">
+                            <span className="text-lg font-bold text-rose-600 tabular-nums dark:text-rose-400">
                                 {total.toLocaleString('en-US')}
                             </span>
                         </CardContent>
@@ -159,16 +160,16 @@ export default function MaterialPurchasesIndex({
                                             <TableCell className="text-muted-foreground">
                                                 {purchase.quantity || '-'}
                                             </TableCell>
-                                            <TableCell className="font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                                            <TableCell className="font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                                                 {purchase.amount.toLocaleString(
                                                     'en-US',
                                                 )}
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
-                                                {new Date(
+                                                {formatDate(
                                                     purchase.purchase_date ||
                                                         purchase.created_at,
-                                                ).toLocaleDateString('en-US')}
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
                                                 {purchase.notes || '-'}

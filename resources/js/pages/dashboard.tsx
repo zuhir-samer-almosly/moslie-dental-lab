@@ -14,6 +14,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { formatDate } from '@/components/order-display';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,8 +51,6 @@ type DashboardProps = {
 };
 
 const nf = (value: number) => value.toLocaleString('en-US');
-const formatDate = (value: string) =>
-    new Date(value).toLocaleDateString('en-US');
 const monthLabel = (month: string) =>
     new Date(`${month}-01T00:00:00`).toLocaleDateString('ar-SY', {
         month: 'long',
@@ -162,7 +161,7 @@ function MiniStat({
             <div className="min-w-0 space-y-0.5">
                 <p
                     className={cn(
-                        'text-xl font-bold tabular-nums leading-none',
+                        'text-xl leading-none font-bold tabular-nums',
                         valueClassName,
                     )}
                 >
@@ -182,10 +181,30 @@ const quickActions: {
     icon: LucideIcon;
     tone: Tone;
 }[] = [
-    { href: '/orders/create', label: 'إضافة طلب', icon: ClipboardList, tone: 'amber' },
-    { href: '/payments/create', label: 'إضافة دفعة', icon: CreditCard, tone: 'emerald' },
-    { href: '/employee-payments/create', label: 'تسجيل راتب', icon: HandCoins, tone: 'rose' },
-    { href: '/material-purchases/create', label: 'تسجيل مادة', icon: Package, tone: 'violet' },
+    {
+        href: '/orders/create',
+        label: 'إضافة طلب',
+        icon: ClipboardList,
+        tone: 'amber',
+    },
+    {
+        href: '/payments/create',
+        label: 'إضافة دفعة',
+        icon: CreditCard,
+        tone: 'emerald',
+    },
+    {
+        href: '/employee-payments/create',
+        label: 'تسجيل راتب',
+        icon: HandCoins,
+        tone: 'rose',
+    },
+    {
+        href: '/material-purchases/create',
+        label: 'تسجيل مادة',
+        icon: Package,
+        tone: 'violet',
+    },
 ];
 
 export default function Dashboard({
@@ -260,7 +279,11 @@ export default function Dashboard({
                         <MoneyCard
                             title="صافي الربح"
                             value={stats.net}
-                            hint={netNegative ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
+                            hint={
+                                netNegative
+                                    ? 'خسارة هذا الشهر'
+                                    : 'ربح هذا الشهر'
+                            }
                             icon={Wallet}
                             tone={netNegative ? 'rose' : 'blue'}
                             valueClassName={
