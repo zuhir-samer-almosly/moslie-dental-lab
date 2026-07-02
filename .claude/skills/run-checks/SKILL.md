@@ -11,15 +11,19 @@ has a gotcha that breaks the obvious commands — follow this exactly.
 ## Why the obvious commands fail
 - `php artisan test` **in the container** → "Command not defined": the app image
   is built `--no-dev` (PHP 8.3; the dev tools need PHP 8.4), so Pest/Pint aren't there.
-- `php artisan` / `vendor/bin/pest` **on the host** → fails two ways: (1) the shared
+- `php artisan` / `vendor/bin/pest` **on the host** → fails three ways: (1) the shared
   `bootstrap/cache/{packages,services}.php` references `laravel/passkeys`, which is
   only in the container's vendor, not the host's; (2) `storage/` and `bootstrap/cache`
   are bind-mounted and owned by the container user (uid 82), so the host user can't
-  write compiled views / logs / sessions there.
+  write compiled views / logs / sessions there; (3) the container may have run
+  `config:cache` / `route:cache`, leaving `bootstrap/cache/config.php` behind — a
+  cached config makes Laravel **ignore phpunit.xml's sqlite env** and try the mysql
+  driver the host doesn't have ("PDOException: could not find driver", all tests fail).
 
 The host **does** have PHP 8.4 + full dev deps (Pest, Pint). The fix: run Pest on the
-host with writes redirected to a scratchpad and the passkeys cache bypassed via the
-framework's env hooks (`LARAVEL_STORAGE_PATH`, `APP_PACKAGES_CACHE`, `APP_SERVICES_CACHE`).
+host with writes redirected to a scratchpad and ALL the shared bootstrap caches
+bypassed via the framework's env hooks (`LARAVEL_STORAGE_PATH`, `APP_PACKAGES_CACHE`,
+`APP_SERVICES_CACHE`, `APP_CONFIG_CACHE`, `APP_EVENTS_CACHE`, `APP_ROUTES_CACHE`).
 
 ## 1. PHP tests (Pest) — run on the HOST
 Tests use in-memory sqlite (see `phpunit.xml`), so they never touch real data.
@@ -31,6 +35,9 @@ mkdir -p "$S/storage/framework/views" "$S/storage/framework/cache/data" \
 LARAVEL_STORAGE_PATH="$S/storage" \
 APP_PACKAGES_CACHE="$S/bootcache/packages.php" \
 APP_SERVICES_CACHE="$S/bootcache/services.php" \
+APP_CONFIG_CACHE="$S/bootcache/config.php" \
+APP_EVENTS_CACHE="$S/bootcache/events.php" \
+APP_ROUTES_CACHE="$S/bootcache/routes-v7.php" \
 SESSION_DRIVER=array CACHE_STORE=array LOG_CHANNEL=single \
 vendor/bin/pest
 ```

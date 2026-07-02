@@ -30,9 +30,7 @@ export default function PriceListEditor({
             ...next[index],
             [field]:
                 field === 'price'
-                    ? fieldValue === ''
-                        ? 0
-                        : parseFloat(fieldValue)
+                    ? Math.round(parseFloat(fieldValue)) || 0
                     : fieldValue,
         };
         onChange(next);

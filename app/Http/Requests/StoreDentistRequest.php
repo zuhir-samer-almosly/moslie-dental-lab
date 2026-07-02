@@ -26,7 +26,9 @@ class StoreDentistRequest extends FormRequest
             'phone' => ['nullable', 'string', 'unique:dentists,phone'],
             'address' => ['nullable', 'string'],
             'price_list' => ['nullable', 'array'],
-            'price_list.*' => ['numeric', 'min:0'],
+            // Integer to match order items' price rule — a decimal here would
+            // auto-fill into the order form and then fail its validation.
+            'price_list.*' => ['integer', 'min:0'],
         ];
     }
 }

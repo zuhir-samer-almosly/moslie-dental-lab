@@ -98,7 +98,7 @@ export default function EmployeesIndex({
     };
 
     const handleDeleteEmployee = (id: number) => {
-        if (confirm('هل أنت متأكد من حذف هذا الموظف؟ سيتم حذف رواتبه أيضاً.')) {
+        if (confirm('هل أنت متأكد من حذف هذا الموظف؟')) {
             router.delete(`/employees/${id}`, { preserveScroll: true });
         }
     };

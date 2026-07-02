@@ -80,7 +80,9 @@ export default function OrdersEdit({
         (type: string): number | null => {
             const dentist = getSelectedDentist();
             if (dentist?.price_list && type in dentist.price_list) {
-                return dentist.price_list[type];
+                // Round: legacy price lists may hold decimals, but the server
+                // only accepts integer item prices.
+                return Math.round(dentist.price_list[type]);
             }
             return null;
         },
@@ -92,13 +94,23 @@ export default function OrdersEdit({
             const dentist = dentists.find((d) => d.id.toString() === value);
             const updatedItems = prev.items.map((item) => {
                 if (dentist?.price_list && item.type in dentist.price_list) {
-                    return { ...item, price: dentist.price_list[item.type] };
+                    return {
+                        ...item,
+                        price: Math.round(dentist.price_list[item.type]),
+                    };
                 }
                 return item;
             });
             return { ...prev, dentist_id: value, items: updatedItems };
         });
     };
+
+    // Server-side errors for item fields arrive keyed as `items.<i>.<field>`,
+    // which the useForm error type doesn't know about.
+    const itemError = (index: number, field: string) =>
+        (errors as Record<string, string | undefined>)[
+            `items.${index}.${field}`
+        ];
 
     const addItem = () => {
         const defaultType = workTypeNames[0] || '';
@@ -347,6 +359,12 @@ export default function OrdersEdit({
                                             <div className="grid gap-2">
                                                 <Label>النوع</Label>
                                                 {renderTypeInput(item, index)}
+                                                <InputError
+                                                    message={itemError(
+                                                        index,
+                                                        'type',
+                                                    )}
+                                                />
                                             </div>
 
                                             <div className="grid gap-2">
@@ -362,6 +380,12 @@ export default function OrdersEdit({
                                                     }
                                                     placeholder="أدخل اسم المريض..."
                                                 />
+                                                <InputError
+                                                    message={itemError(
+                                                        index,
+                                                        'patient_name',
+                                                    )}
+                                                />
                                             </div>
 
                                             <div className="grid gap-2">
@@ -376,6 +400,12 @@ export default function OrdersEdit({
                                                         )
                                                     }
                                                     required
+                                                />
+                                                <InputError
+                                                    message={itemError(
+                                                        index,
+                                                        'date',
+                                                    )}
                                                 />
                                             </div>
 
@@ -393,14 +423,17 @@ export default function OrdersEdit({
                                                 <Input
                                                     type="number"
                                                     min="1"
-                                                    value={item.quantity}
+                                                    value={item.quantity || ''}
                                                     onChange={(e) =>
                                                         updateItem(
                                                             index,
                                                             'quantity',
+                                                            // NaN guard: an emptied
+                                                            // field must not poison
+                                                            // the totals.
                                                             parseInt(
                                                                 e.target.value,
-                                                            ),
+                                                            ) || 0,
                                                         )
                                                     }
                                                     readOnly={
@@ -414,6 +447,12 @@ export default function OrdersEdit({
                                                             : ''
                                                     }
                                                 />
+                                                <InputError
+                                                    message={itemError(
+                                                        index,
+                                                        'quantity',
+                                                    )}
+                                                />
                                             </div>
 
                                             <div className="grid gap-2">
@@ -421,16 +460,22 @@ export default function OrdersEdit({
                                                 <Input
                                                     type="number"
                                                     min="0"
-                                                    value={item.price}
+                                                    value={item.price || ''}
                                                     onChange={(e) =>
                                                         updateItem(
                                                             index,
                                                             'price',
                                                             parseInt(
                                                                 e.target.value,
-                                                            ),
+                                                            ) || 0,
                                                         )
                                                     }
+                                                />
+                                                <InputError
+                                                    message={itemError(
+                                                        index,
+                                                        'price',
+                                                    )}
                                                 />
                                             </div>
 

@@ -180,7 +180,7 @@ export default function FinanceIndex({
                                         <TableCell className="font-medium">
                                             {c.label}
                                         </TableCell>
-                                        <TableCell className="text-end font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+                                        <TableCell className="text-end font-semibold text-rose-600 tabular-nums dark:text-rose-400">
                                             {nf(c.total)}
                                         </TableCell>
                                     </TableRow>

@@ -176,7 +176,10 @@ class FinanceController extends Controller
     {
         if ($month) {
             try {
-                return Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+                // `!` resets unspecified parts (day, time) instead of filling
+                // them from "now" — without it, parsing "2026-06" on July 31
+                // produces June 31 → overflows into July.
+                return Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
             } catch (\Throwable) {
                 // fall through to current month
             }

@@ -63,6 +63,14 @@ class EmployeeController extends Controller
      */
     public function destroy(Employee $employee)
     {
+        // The FK cascades: deleting an employee would wipe their salary
+        // history and retroactively change past finance reports. Block it —
+        // deactivating (is_active) is the supported way to retire someone.
+        if ($employee->payments()->exists()) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن حذف الموظف لوجود رواتب مسجلة له. يمكنك إلغاء تفعيله بدلاً من ذلك.');
+        }
+
         $employee->delete();
 
         return redirect()->back()

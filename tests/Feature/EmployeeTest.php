@@ -84,3 +84,20 @@ test('an employee can be deleted', function () {
 
     $this->assertDatabaseMissing('employees', ['id' => $employee->id]);
 });
+
+test('an employee with salary payments cannot be deleted', function () {
+    $this->actingAs(User::factory()->create());
+    $employee = Employee::factory()->create();
+    \App\Models\EmployeePayment::factory()->create([
+        'employee_id' => $employee->id,
+        'amount' => 50000,
+        'payment_date' => '2026-06-15',
+    ]);
+
+    $this->from(route('employees.index'))->delete(route('employees.destroy', $employee))
+        ->assertRedirect(route('employees.index'))
+        ->assertSessionHas('error');
+
+    $this->assertDatabaseHas('employees', ['id' => $employee->id]);
+    $this->assertDatabaseHas('employee_payments', ['employee_id' => $employee->id]);
+});

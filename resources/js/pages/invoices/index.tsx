@@ -1,5 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
+import { useState } from 'react';
 import Heading from '@/components/heading';
 import {
     Dash,
@@ -150,6 +151,28 @@ export default function InvoicesIndex({
         dentist_id: filters.dentist_id || '',
     });
 
+    // Quick "whole month" shortcut. Defaults to the currently filtered
+    // month, or the current month if none is selected yet.
+    const [month, setMonth] = useState(
+        filters.from?.slice(0, 7) || new Date().toISOString().slice(0, 7),
+    );
+
+    const handleViewMonth = () => {
+        const m = /^(\d{4})-(\d{2})$/.exec(month);
+        if (!m) return;
+        const year = Number(m[1]);
+        const mon = Number(m[2]);
+        const from = `${m[1]}-${m[2]}-01`;
+        // Last day of the month: day 0 of the next month.
+        const lastDay = new Date(year, mon, 0).getDate();
+        const to = `${m[1]}-${m[2]}-${String(lastDay).padStart(2, '0')}`;
+        router.get('/invoices', {
+            from,
+            to,
+            ...(data.dentist_id ? { dentist_id: data.dentist_id } : {}),
+        });
+    };
+
     const groups =
         orders && payments
             ? groupByDentist(orders, payments, openingByDentist, dentists)
@@ -244,6 +267,27 @@ export default function InvoicesIndex({
                                 )}
                             </div>
                         </div>
+                    </div>
+
+                    {/* Quick shortcut: pick a month and view the whole month */}
+                    <div className="flex flex-wrap items-end gap-3 border-t pt-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="month">شهر كامل</Label>
+                            <input
+                                id="month"
+                                type="month"
+                                value={month}
+                                onChange={(e) => setMonth(e.target.value)}
+                                className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 md:text-sm"
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleViewMonth}
+                        >
+                            عرض الشهر كامل
+                        </Button>
                     </div>
 
                     <div className="flex gap-2">

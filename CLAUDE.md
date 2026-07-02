@@ -4,39 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a dental lab order management system built with Laravel 12, Inertia.js 2.0, React 19, and TypeScript. The application manages dentists, their orders, order items, and payments.
+This is a dental lab order management system built with Laravel 12, Inertia.js 2.0, React 19, and TypeScript. The UI is **Arabic and RTL** (`<html lang="ar-SY" dir="rtl">`, translations in `lang/ar/`). It manages dentists/orders/payments plus an expense side (employees, salaries, material purchases) and rolls both up into financial reports (finance, invoices, outstanding balances).
 
 ## Development Commands
 
-### Setup
+> **Environment:** This machine is Linux/WSL2 and runs the app via **Docker**, *not* Laravel Herd. The Herd instructions that previously lived here did not apply — ignore any leftover Herd references in older docs. See `docker-compose.local.yml` and the `local-runs-via-docker-not-herd` project memory.
+
+### Local dev (Docker)
 ```bash
-composer setup  # Installs dependencies, generates key, runs migrations, builds assets
+./docker-start-local.sh                                  # Bring up app + db + redis + vite (http://dental.test)
+docker compose -f docker-compose.local.yml up -d         # Equivalent manual start
+docker compose -f docker-compose.local.yml exec app php artisan migrate   # Run artisan INSIDE the container
+```
+The Vite dev server runs in its own container and writes `public/hot`, so the `@vite` directive serves hot-reloaded assets. `composer dev` / `composer setup` (Herd-era helpers) are not the local workflow here.
+
+### Testing & type checks
+Pest must run **on the host** (the container is read-only PHP 8.3; the host is 8.4) with storage/cache redirected to a writable path — the bare `php artisan test` fails here. Use the **`run-checks` skill**, which encodes the correct invocation, or replicate its env redirects. Other checks:
+```bash
+php artisan test --filter=TestName   # Single test (with the run-checks env redirects)
+npm run types                        # TypeScript type checking (tsc --noEmit)
 ```
 
-### Development (Laravel Herd)
-The project uses **Laravel Herd** for local development on Windows. Herd provides PHP, Nginx, Composer, and Node.js as native binaries and automatically serves the app at `http://moslie-dental-lab.test`.
-
+### User accounts
+Public registration is **disabled** (single shared dataset, no per-user scoping). Create/reset logins via:
 ```bash
-# The app is always available at http://moslie-dental-lab.test (Herd serves it via Nginx)
-composer dev  # Starts queue worker, pail logs, and Vite dev server concurrently
-composer dev:ssr  # Same as above but with Inertia SSR enabled
-```
-
-### Herd CLI Commands
-```bash
-herd open          # Open the project in the browser
-herd php -v        # Check which PHP version Herd is using
-herd isolate 8.3   # Pin this project to PHP 8.3
-herd secure        # Enable HTTPS with a trusted local certificate
-herd share         # Share your local site publicly via Expose
-```
-
-### Testing
-```bash
-composer test  # Runs Pint linter check + Pest tests
-php artisan test  # Run Pest tests only
-php artisan test --filter=TestName  # Run specific test
-npm run types  # TypeScript type checking
+php artisan app:create-user          # or use the manage-users skill
 ```
 
 ### Linting & Formatting
@@ -100,7 +92,29 @@ The application centers around dental lab order management:
 
 **DentistPayment** (`app/Models/DentistPayment.php`)
 - Belongs to Dentist
-- Fields: dentist_id, amount
+- Fields: dentist_id, amount (income side)
+
+**Employee** (`app/Models/Employee.php`)
+- Has many EmployeePayments
+- Fields: name, role, phone, notes, is_active
+
+**EmployeePayment** (`app/Models/EmployeePayment.php`)
+- Belongs to Employee; represents a salary payout (expense side)
+- Fields: employee_id, amount, payment_date, notes
+
+**MaterialPurchase** (`app/Models/MaterialPurchase.php`)
+- Standalone purchase record (expense side)
+- Fields: name, supplier, quantity, amount, purchase_date, notes
+
+### Reporting layer
+
+Several read-only controllers aggregate the models above into reports; no models of their own:
+- **DashboardController** — top-level KPIs.
+- **InvoiceController** (`invoices`) — per-dentist billing built on `Order::billable()`.
+- **OutstandingController** (`outstanding`) — unpaid balances (orders billed minus payments), also via `billable()`.
+- **FinanceController** (`finance`) — monthly income (dentist payments) vs. expenses (salaries + materials) vs. net. Expense buckets are an explicit `$categories` array in the controller — add new expense types there.
+
+`Order::billable()` is the canonical scope excluding cancelled orders; use it for any money total. When adding a new CRUD section, follow the existing pattern via the **`add-section` skill** (Arabic/RTL list + create/edit + optional finance roll-up).
 
 ### Frontend Structure
 
@@ -108,7 +122,8 @@ The application centers around dental lab order management:
 - Inertia pages are auto-resolved from `./pages/{name}.tsx`
 - Auth pages: login, register, forgot-password, reset-password, verify-email, two-factor-challenge
 - Settings pages: profile, password, two-factor, appearance
-- Main pages: welcome, dashboard
+- Domain pages (one dir each): dentists, orders, payments, employees, employee-payments, material-purchases
+- Reporting pages: dashboard, finance, invoices, outstanding
 
 **Components** (`resources/js/components/`)
 - `app-shell.tsx`: Root layout wrapper supporting header or sidebar variants
@@ -130,8 +145,8 @@ The application centers around dental lab order management:
 
 - Feature tests in `tests/Feature/` use RefreshDatabase trait
 - Test structure mirrors app structure: Auth/, Settings/
-- Run tests with `composer test` which includes linting checks
 - Tests are configured in `tests/Pest.php` with custom expectations available
+- Run them via the `run-checks` skill (host execution with storage/cache env redirects), not bare `php artisan test`
 
 ## Key Conventions
 
@@ -145,11 +160,11 @@ The application centers around dental lab order management:
 
 ## Notes
 
-- The project uses **Laravel Herd** for local development on Windows
-- Herd provides native PHP, Nginx, Composer, and Node.js — no need for `php artisan serve`
-- The app is served at `http://moslie-dental-lab.test` (use `herd secure` for HTTPS)
-- Docker setup (Dockerfile, docker-compose.yml) is for **production deployment only**
-- SSR support is available but optional via `composer dev:ssr`
-- Dark mode support is built-in via `resources/js/hooks/use-appearance`
-- Concurrently runs multiple dev processes with color-coded output
+- **Local** dev runs in Docker via `docker-compose.local.yml` (`./docker-start-local.sh`, served at `http://dental.test`). Run artisan/migrations inside the `app` container.
+- **Production** runs on a DigitalOcean VPS via Docker (`docker-compose.yml`) at `dental-lab.zoher-moslie.me`; a code change requires a rebuild. See `DEPLOYMENT.md`.
+- Single-tenant by design: one shared dataset, no per-user data scoping, public registration disabled.
+- Nightly off-site DB backups go to Google Drive (spatie/laravel-backup); see `BACKUPS.md` and the `backups` skill.
+- Laravel Boost MCP works only through the project `.mcp.json` env overrides (`APP_ENV=local`, `DB_HOST=127.0.0.1`, array session/cache); the plugin default is broken here.
+- Dark mode support is built-in via `resources/js/hooks/use-appearance`.
+- SSR support is available but optional.
 

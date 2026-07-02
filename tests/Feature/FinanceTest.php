@@ -56,6 +56,36 @@ test('finance summary computes net = income - (salaries + materials) for the mon
         );
 });
 
+test('requested month is honored even on day 31 (no day-overflow into the next month)', function () {
+    // Regression: Carbon::createFromFormat('Y-m', ...) fills the missing day
+    // from "now", so parsing "2026-06" on July 31 overflowed to July 1 and
+    // the report silently showed the wrong month's numbers.
+    $this->travelTo('2026-07-31 10:00:00');
+    $this->actingAs(User::factory()->create());
+
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+    DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'amount' => 40000,
+        'payment_date' => '2026-06-10',
+    ]);
+    // July payment — must NOT leak into June's report.
+    DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'amount' => 11111,
+        'payment_date' => '2026-07-10',
+    ]);
+
+    $this->get(route('finance.index', ['month' => '2026-06']))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('finance/index')
+                ->where('month', '2026-06')
+                ->where('income', 40000)
+        );
+});
+
 test('guests cannot access the finance page', function () {
     $this->get(route('finance.index'))->assertRedirect(route('login'));
 });

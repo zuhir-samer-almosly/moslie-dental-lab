@@ -73,6 +73,13 @@ class DentistController extends Controller
      */
     public function destroy(Dentist $dentist)
     {
+        // The FKs cascade: deleting a dentist would wipe all their orders and
+        // payments. Never allow that once financial history exists.
+        if ($dentist->orders()->exists() || $dentist->payments()->exists()) {
+            return redirect()->route('dentists.index')
+                ->with('error', 'لا يمكن حذف الطبيب لوجود طلبات أو دفعات مسجلة باسمه.');
+        }
+
         $dentist->delete();
 
         return redirect()->route('dentists.index')
