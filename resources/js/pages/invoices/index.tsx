@@ -11,7 +11,7 @@ import {
     TeethOdontogram,
 } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -189,24 +189,20 @@ export default function InvoicesIndex({
                     <div className="grid gap-4 sm:grid-cols-3">
                         <div className="grid gap-2">
                             <Label htmlFor="from">من تاريخ</Label>
-                            <Input
+                            <DateInput
                                 id="from"
-                                type="date"
                                 value={data.from}
-                                onChange={(e) =>
-                                    setData('from', e.target.value)
-                                }
+                                onChange={(value) => setData('from', value)}
                                 required
                             />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="to">إلى تاريخ</Label>
-                            <Input
+                            <DateInput
                                 id="to"
-                                type="date"
                                 value={data.to}
-                                onChange={(e) => setData('to', e.target.value)}
+                                onChange={(value) => setData('to', value)}
                                 required
                             />
                         </div>

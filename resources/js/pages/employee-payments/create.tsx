@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -119,12 +120,11 @@ export default function EmployeePaymentsCreate({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="payment_date">التاريخ</Label>
-                                <Input
+                                <DateInput
                                     id="payment_date"
-                                    type="date"
                                     value={data.payment_date}
-                                    onChange={(e) =>
-                                        setData('payment_date', e.target.value)
+                                    onChange={(value) =>
+                                        setData('payment_date', value)
                                     }
                                     required
                                 />

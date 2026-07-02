@@ -4,6 +4,7 @@ import { useCallback } from 'react';
 import DentalChart from '@/components/dental-chart';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -365,14 +366,13 @@ export default function OrdersEdit({
 
                                             <div className="grid gap-2">
                                                 <Label>التاريخ</Label>
-                                                <Input
-                                                    type="date"
+                                                <DateInput
                                                     value={item.date}
-                                                    onChange={(e) =>
+                                                    onChange={(value) =>
                                                         updateItem(
                                                             index,
                                                             'date',
-                                                            e.target.value,
+                                                            value,
                                                         )
                                                     }
                                                     required

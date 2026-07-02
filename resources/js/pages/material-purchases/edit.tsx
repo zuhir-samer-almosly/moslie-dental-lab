@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -123,12 +124,11 @@ export default function MaterialPurchasesEdit({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="purchase_date">التاريخ</Label>
-                                <Input
+                                <DateInput
                                     id="purchase_date"
-                                    type="date"
                                     value={data.purchase_date}
-                                    onChange={(e) =>
-                                        setData('purchase_date', e.target.value)
+                                    onChange={(value) =>
+                                        setData('purchase_date', value)
                                     }
                                     required
                                 />
