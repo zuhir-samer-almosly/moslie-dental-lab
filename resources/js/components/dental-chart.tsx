@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getToothType, LOWER_TEETH, UPPER_TEETH } from '@/lib/teeth';
 
 interface DentalChartProps {
     selectedTeeth: number[];
@@ -6,44 +7,9 @@ interface DentalChartProps {
     disabled?: boolean;
 }
 
-// FDI (ISO 3950) Numbering System
-// Upper right:  18, 17, 16, 15, 14, 13, 12, 11
-// Upper left:   21, 22, 23, 24, 25, 26, 27, 28
-// Lower left:   31, 32, 33, 34, 35, 36, 37, 38
-// Lower right:  48, 47, 46, 45, 44, 43, 42, 41
-
-// Upper jaw teeth (displayed left to right in chart)
-const UPPER_TEETH = [
-    18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28,
-];
-// Lower jaw teeth (displayed left to right in chart)
-const LOWER_TEETH = [
-    48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38,
-];
-
-// Upper jaw FDI numbers for quick-select
-const UPPER_JAW = [
-    18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28,
-];
-// Lower jaw FDI numbers for quick-select
-const LOWER_JAW = [
-    48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38,
-];
-
-// Classify teeth by type using FDI numbers
-// In FDI: last digit determines tooth type
-// 1 = central incisor, 2 = lateral incisor, 3 = canine,
-// 4 = first premolar, 5 = second premolar,
-// 6 = first molar, 7 = second molar, 8 = third molar (wisdom)
-function getToothType(
-    fdiNumber: number,
-): 'molar' | 'premolar' | 'canine' | 'incisor' {
-    const lastDigit = fdiNumber % 10;
-    if (lastDigit >= 6) return 'molar'; // 6, 7, 8
-    if (lastDigit >= 4) return 'premolar'; // 4, 5
-    if (lastDigit === 3) return 'canine'; // 3
-    return 'incisor'; // 1, 2
-}
+// Quick-select jaws are the same FDI arrays, aliased for readability.
+const UPPER_JAW = UPPER_TEETH;
+const LOWER_JAW = LOWER_TEETH;
 
 // Tooth shape path generator - creates a realistic tooth outline
 function getToothPath(toothNumber: number): string {

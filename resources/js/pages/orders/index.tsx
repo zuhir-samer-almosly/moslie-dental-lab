@@ -7,7 +7,7 @@ import {
     itemDate,
     itemPatient,
     itemTeeth,
-    TeethBadges,
+    TeethOdontogram,
 } from '@/components/order-display';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,6 +88,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                         <TableHead>التاريخ</TableHead>
                                         <TableHead>الحالة</TableHead>
                                         <TableHead>المبلغ</TableHead>
+                                        <TableHead>ملاحظات</TableHead>
                                         <TableHead className="text-end">
                                             الإجراءات
                                         </TableHead>
@@ -108,7 +109,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                                 {!!order.previous_balance && (
                                                     <span className="mb-1 block text-[11px] font-normal text-muted-foreground">
                                                         رصيد سابق مستحق من قبل:{' '}
-                                                        <span className="font-semibold tabular-nums text-foreground">
+                                                        <span className="font-semibold text-foreground tabular-nums">
                                                             {order.previous_balance.toLocaleString(
                                                                 'en-US',
                                                             )}
@@ -188,6 +189,11 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                                             'en-US',
                                                         )}
                                                     </TableCell>
+                                                    <TableCell className="whitespace-pre-line">
+                                                        {order.notes || (
+                                                            <Dash />
+                                                        )}
+                                                    </TableCell>
                                                     {actionsCell}
                                                 </TableRow>
                                             );
@@ -208,7 +214,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <TeethBadges
+                                                    <TeethOdontogram
                                                         teeth={itemTeeth(item)}
                                                     />
                                                 </TableCell>
@@ -225,6 +231,9 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                                                     {itemAmount(
                                                         item,
                                                     ).toLocaleString('en-US')}
+                                                </TableCell>
+                                                <TableCell className="whitespace-pre-line">
+                                                    {item.notes || <Dash />}
                                                 </TableCell>
                                                 {index === 0 && actionsCell}
                                             </TableRow>

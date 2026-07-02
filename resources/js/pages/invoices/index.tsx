@@ -8,7 +8,7 @@ import {
     itemDate,
     itemPatient,
     itemTeeth,
-    TeethBadges,
+    TeethOdontogram,
 } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -291,7 +291,7 @@ export default function InvoicesIndex({
                                     <div key={group.id} className="space-y-2">
                                         <div className="text-center">
                                             <h4 className="text-2xl font-bold">
-                                                الطبيب المحترم : {group.name}
+                                                الطبيب : {group.name} المحترم
                                             </h4>
                                         </div>
                                         <div className="rounded-lg border">
@@ -316,6 +316,9 @@ export default function InvoicesIndex({
                                                         <TableHead>
                                                             المبلغ
                                                         </TableHead>
+                                                        <TableHead>
+                                                            ملاحظات
+                                                        </TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
@@ -323,7 +326,7 @@ export default function InvoicesIndex({
                                                         0 && (
                                                         <TableRow>
                                                             <TableCell
-                                                                colSpan={6}
+                                                                colSpan={7}
                                                                 className="text-center text-muted-foreground"
                                                             >
                                                                 لا توجد طلبات
@@ -369,7 +372,7 @@ export default function InvoicesIndex({
                                                                         </span>
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        <TeethBadges
+                                                                        <TeethOdontogram
                                                                             teeth={itemTeeth(
                                                                                 item,
                                                                             )}
@@ -393,6 +396,11 @@ export default function InvoicesIndex({
                                                                             item,
                                                                         ).toLocaleString(
                                                                             'en-US',
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="whitespace-pre-line">
+                                                                        {item.notes || (
+                                                                            <Dash />
                                                                         )}
                                                                     </TableCell>
                                                                 </TableRow>
@@ -422,6 +430,11 @@ export default function InvoicesIndex({
                                                                     <TableCell className="tabular-nums">
                                                                         {order.amount.toLocaleString(
                                                                             'en-US',
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell className="whitespace-pre-line">
+                                                                        {order.notes || (
+                                                                            <Dash />
                                                                         )}
                                                                     </TableCell>
                                                                 </TableRow>

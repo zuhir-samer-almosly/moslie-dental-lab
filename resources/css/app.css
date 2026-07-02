@@ -150,6 +150,13 @@
 }
 
 @media print {
+    /* The invoice's tooth-map table is wide; print sideways so every column
+       fits. The invoice is the only page with a print flow, so a global
+       landscape page is effectively scoped to it. */
+    @page {
+        size: A4 landscape;
+    }
+
     .sidebar,
     .app-header,
     nav,
