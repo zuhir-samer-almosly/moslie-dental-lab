@@ -1,11 +1,11 @@
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <div className="flex aspect-square size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
                 {/* Tooth glyph (lucide has no tooth icon). */}
                 <svg
-                    width="22"
-                    height="22"
+                    width="28"
+                    height="28"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -18,10 +18,10 @@ export default function AppLogo() {
                 </svg>
             </div>
             <div className="grid flex-1 text-right leading-tight">
-                <span className="truncate text-[15px] font-bold text-foreground">
+                <span className="truncate text-[18px] font-bold text-foreground">
                     مخبر الموصلي
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate text-[13px] text-muted-foreground">
                     إدارة مالية المختبر
                 </span>
             </div>
