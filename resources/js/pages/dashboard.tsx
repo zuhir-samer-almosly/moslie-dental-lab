@@ -38,6 +38,7 @@ type DashboardStats = {
     net: number;
     salaries: number;
     materials: number;
+    general_expenses: number;
     outstanding: number;
     pending_orders: number;
     dentists: number;
@@ -271,7 +272,7 @@ export default function Dashboard({
                         <MoneyCard
                             title="المصروفات"
                             value={stats.expenses}
-                            hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)}`}
+                            hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)} + مصاريف ${nf(stats.general_expenses)}`}
                             icon={TrendingDown}
                             tone="rose"
                             valueClassName="text-rose-600 dark:text-rose-400"

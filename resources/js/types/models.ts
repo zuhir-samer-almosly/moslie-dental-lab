@@ -82,6 +82,28 @@ export interface MaterialPurchase {
     updated_at: string;
 }
 
+export interface Expense {
+    id: number;
+    category: string;
+    description: string | null;
+    amount: number;
+    expense_date?: string;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+// General-expense categories: key => Arabic label. Keep in sync with
+// Expense::CATEGORIES in app/Models/Expense.php.
+export const EXPENSE_CATEGORIES: Record<string, string> = {
+    transport: 'مواصلات وسفر',
+    taxes: 'ضرائب',
+    rent: 'إيجار',
+    utilities: 'كهرباء وماء',
+    maintenance: 'صيانة',
+    other: 'أخرى',
+};
+
 export const ORDER_STATUSES: Record<Order['status'], string> = {
     pending: 'قيد الانتظار',
     completed: 'مكتمل',

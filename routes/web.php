@@ -27,6 +27,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('material-purchases', App\Http\Controllers\MaterialPurchaseController::class)
         ->except('show')
         ->parameters(['material-purchases' => 'materialPurchase']);
+    Route::resource('expenses', App\Http\Controllers\ExpenseController::class)
+        ->except('show');
     Route::get('finance', [App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
 });
 

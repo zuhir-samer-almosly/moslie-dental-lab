@@ -4,10 +4,11 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
+use App\Models\Expense;
 use App\Models\MaterialPurchase;
 use App\Models\User;
 
-test('finance summary computes net = income - (salaries + materials) for the month', function () {
+test('finance summary computes net = income - (salaries + materials + expenses) for the month', function () {
     $this->actingAs(User::factory()->create());
 
     $dentist = Dentist::create(['name' => 'د. سامر']);
@@ -41,17 +42,30 @@ test('finance summary computes net = income - (salaries + materials) for the mon
         'purchase_date' => '2026-05-18',
     ]);
 
+    Expense::factory()->create([
+        'category' => 'transport',
+        'amount' => 2000,
+        'expense_date' => '2026-06-22',
+    ]);
+    // Different month — must be excluded.
+    Expense::factory()->create([
+        'amount' => 3333,
+        'expense_date' => '2026-05-22',
+    ]);
+
     $this->get(route('finance.index', ['month' => '2026-06']))
         ->assertOk()
         ->assertInertia(
             fn ($page) => $page
                 ->component('finance/index')
                 ->where('income', 60000)
-                ->where('expenses', 35000)
-                ->where('net', 25000)
+                ->where('expenses', 37000)
+                ->where('net', 23000)
                 ->where('month', '2026-06')
                 ->where('expensesByMaterial.0.name', 'خزف')
                 ->where('expensesByMaterial.0.total', 5000)
+                ->where('expensesByCategory.0.name', 'مواصلات وسفر')
+                ->where('expensesByCategory.0.total', 2000)
                 ->has('trend', 6)
         );
 });

@@ -6,6 +6,7 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
+use App\Models\Expense;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
 use Illuminate\Support\Carbon;
@@ -26,7 +27,8 @@ class DashboardController extends Controller
         $income = (int) DentistPayment::whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$start, $end])->sum('amount');
         $salaries = (int) EmployeePayment::whereBetween('payment_date', [$start, $end])->sum('amount');
         $materials = (int) MaterialPurchase::whereBetween('purchase_date', [$start, $end])->sum('amount');
-        $expenses = $salaries + $materials;
+        $generalExpenses = (int) Expense::whereBetween('expense_date', [$start, $end])->sum('amount');
+        $expenses = $salaries + $materials + $generalExpenses;
 
         // Outstanding receivables (all time), cancelled orders excluded.
         $outstanding = (int) Order::billable()->sum('amount') - (int) DentistPayment::sum('amount');
@@ -39,6 +41,7 @@ class DashboardController extends Controller
                 'net' => $income - $expenses,
                 'salaries' => $salaries,
                 'materials' => $materials,
+                'general_expenses' => $generalExpenses,
                 'outstanding' => $outstanding,
                 'pending_orders' => Order::where('status', 'pending')->count(),
                 'dentists' => Dentist::count(),

@@ -2,9 +2,9 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     ChevronLeft,
     ChevronRight,
-    Package,
     Pencil,
     Plus,
+    Receipt,
     Trash2,
 } from 'lucide-react';
 import { LedgerTabs } from '@/components/ledger-tabs';
@@ -21,12 +21,13 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem, MaterialPurchase } from '@/types';
+import type { BreadcrumbItem, Expense } from '@/types';
+import { EXPENSE_CATEGORIES } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'المواد',
-        href: '/material-purchases',
+        title: 'المصاريف',
+        href: '/expenses',
     },
 ];
 
@@ -42,53 +43,53 @@ function shiftMonth(month: string, delta: number) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function MaterialPurchasesIndex({
-    purchases,
+export default function ExpensesIndex({
+    expenses,
     month,
     total,
 }: {
-    purchases: MaterialPurchase[];
+    expenses: Expense[];
     month: string;
     total: number;
 }) {
     const goToMonth = (next: string) => {
         router.get(
-            '/material-purchases',
+            '/expenses',
             { month: next },
             { preserveState: true, preserveScroll: true },
         );
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('هل أنت متأكد من حذف هذه المادة؟')) {
-            router.delete(`/material-purchases/${id}`);
+        if (confirm('هل أنت متأكد من حذف هذا المصروف؟')) {
+            router.delete(`/expenses/${id}`);
         }
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="المواد" />
+            <Head title="المصاريف" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                         <h1 className="text-2xl font-bold tracking-tight">
-                            المواد
+                            المصاريف
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            مشتريات المواد والمستهلكات حسب الشهر
+                            المصاريف العامة (مواصلات، ضرائب، إيجار...) حسب الشهر
                         </p>
                     </div>
                     <Button asChild size="lg" className="gap-2 sm:w-auto">
-                        <Link href="/material-purchases/create">
+                        <Link href="/expenses/create">
                             <Plus className="size-4" />
-                            تسجيل مادة
+                            تسجيل مصروف
                         </Link>
                     </Button>
                 </div>
 
-                <LedgerTabs active="materials" month={month} />
+                <LedgerTabs active="expenses" month={month} />
 
                 {/* Month picker + total */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -119,7 +120,7 @@ export default function MaterialPurchasesIndex({
                     <Card className="py-0">
                         <CardContent className="flex items-center gap-3 px-5 py-3">
                             <span className="text-sm text-muted-foreground">
-                                إجمالي مشتريات {MONTH_LABEL(month)}
+                                إجمالي مصاريف {MONTH_LABEL(month)}
                             </span>
                             <span className="text-lg font-bold text-rose-600 tabular-nums dark:text-rose-400">
                                 {total.toLocaleString('en-US')}
@@ -131,19 +132,18 @@ export default function MaterialPurchasesIndex({
                 {/* Table */}
                 <Card className="gap-0 overflow-hidden py-0">
                     <CardContent className="p-0">
-                        {purchases.length === 0 ? (
+                        {expenses.length === 0 ? (
                             <EmptyState
-                                icon={Package}
-                                text="لا توجد مواد مسجّلة في هذا الشهر"
+                                icon={Receipt}
+                                text="لا توجد مصاريف مسجّلة في هذا الشهر"
                             />
                         ) : (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>المادة</TableHead>
-                                        <TableHead>المورّد</TableHead>
-                                        <TableHead>الكمية</TableHead>
-                                        <TableHead>السعر</TableHead>
+                                        <TableHead>البند</TableHead>
+                                        <TableHead>الوصف</TableHead>
+                                        <TableHead>المبلغ</TableHead>
                                         <TableHead>التاريخ</TableHead>
                                         <TableHead>ملاحظات</TableHead>
                                         <TableHead className="text-end">
@@ -152,30 +152,29 @@ export default function MaterialPurchasesIndex({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {purchases.map((purchase) => (
-                                        <TableRow key={purchase.id}>
+                                    {expenses.map((expense) => (
+                                        <TableRow key={expense.id}>
                                             <TableCell className="font-medium">
-                                                {purchase.name}
+                                                {EXPENSE_CATEGORIES[
+                                                    expense.category
+                                                ] ?? expense.category}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
-                                                {purchase.supplier || '-'}
-                                            </TableCell>
-                                            <TableCell className="text-muted-foreground">
-                                                {purchase.quantity || '-'}
+                                                {expense.description || '-'}
                                             </TableCell>
                                             <TableCell className="font-semibold text-rose-600 tabular-nums dark:text-rose-400">
-                                                {purchase.amount.toLocaleString(
+                                                {expense.amount.toLocaleString(
                                                     'en-US',
                                                 )}
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {formatDate(
-                                                    purchase.purchase_date ||
-                                                        purchase.created_at,
+                                                    expense.expense_date ||
+                                                        expense.created_at,
                                                 )}
                                             </TableCell>
                                             <TableCell className="text-muted-foreground">
-                                                {purchase.notes || '-'}
+                                                {expense.notes || '-'}
                                             </TableCell>
                                             <TableCell className="text-end">
                                                 <div className="flex justify-end gap-2">
@@ -185,7 +184,7 @@ export default function MaterialPurchasesIndex({
                                                         size="sm"
                                                     >
                                                         <Link
-                                                            href={`/material-purchases/${purchase.id}/edit`}
+                                                            href={`/expenses/${expense.id}/edit`}
                                                         >
                                                             <Pencil className="h-4 w-4" />
                                                         </Link>
@@ -195,7 +194,7 @@ export default function MaterialPurchasesIndex({
                                                         size="sm"
                                                         onClick={() =>
                                                             handleDelete(
-                                                                purchase.id,
+                                                                expense.id,
                                                             )
                                                         }
                                                     >
@@ -219,7 +218,7 @@ function EmptyState({
     icon: Icon,
     text,
 }: {
-    icon: typeof Package;
+    icon: typeof Receipt;
     text: string;
 }) {
     return (
