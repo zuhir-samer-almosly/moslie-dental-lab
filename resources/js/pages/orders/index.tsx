@@ -1,5 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ClipboardList, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    ClipboardList,
+    Pencil,
+    Plus,
+    Trash2,
+} from 'lucide-react';
 import {
     Dash,
     formatDate,
@@ -12,6 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -31,7 +39,33 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function OrdersIndex({ orders }: { orders: Order[] }) {
+const MONTH_LABEL = (month: string) =>
+    new Date(`${month}-01T00:00:00`).toLocaleDateString('ar-SY', {
+        month: 'long',
+        year: 'numeric',
+    });
+
+function shiftMonth(month: string, delta: number) {
+    const [y, m] = month.split('-').map(Number);
+    const date = new Date(y, m - 1 + delta, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export default function OrdersIndex({
+    orders,
+    month,
+}: {
+    orders: Order[];
+    month: string;
+}) {
+    const goToMonth = (next: string) => {
+        router.get(
+            '/orders',
+            { month: next },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
+
     const handleDelete = (id: number) => {
         if (confirm('هل أنت متأكد من حذف هذا الطلب؟')) {
             router.delete(`/orders/${id}`);
@@ -50,7 +84,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                             الطلبات
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {orders.length} طلب في المختبر
+                            {orders.length} طلب في {MONTH_LABEL(month)}
                         </p>
                     </div>
                     <Button asChild size="lg" className="gap-2 sm:w-auto">
@@ -58,6 +92,32 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                             <Plus className="size-4" />
                             إضافة طلب
                         </Link>
+                    </Button>
+                </div>
+
+                {/* Month picker */}
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => goToMonth(shiftMonth(month, -1))}
+                        title="الشهر السابق"
+                    >
+                        <ChevronRight className="size-4" />
+                    </Button>
+                    <Input
+                        type="month"
+                        value={month}
+                        className="w-44"
+                        onChange={(e) => goToMonth(e.target.value)}
+                    />
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => goToMonth(shiftMonth(month, 1))}
+                        title="الشهر التالي"
+                    >
+                        <ChevronLeft className="size-4" />
                     </Button>
                 </div>
 
@@ -75,7 +135,7 @@ export default function OrdersIndex({ orders }: { orders: Order[] }) {
                         {orders.length === 0 ? (
                             <EmptyState
                                 icon={ClipboardList}
-                                text="لا توجد طلبات بعد"
+                                text="لا توجد طلبات في هذا الشهر"
                             />
                         ) : (
                             <Table>

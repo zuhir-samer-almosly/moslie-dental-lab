@@ -2,28 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    use ResolvesMonth;
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource for a given month.
      */
-    public function index()
+    public function index(Request $request)
     {
         $orders = Order::with(['dentist', 'items'])->latest()->get();
         $payments = DentistPayment::all(['dentist_id', 'amount', 'payment_date', 'created_at']);
 
+        // Compute carried balances against the FULL history first, so filtering
+        // the visible list to one month below doesn't distort them.
         $this->assignPreviousBalances($orders, $payments);
 
+        // Show one month at a time (consistent with the other ledgers) so the
+        // list stays bounded regardless of how many orders exist overall.
+        $month = $this->resolveMonth($request->query('month'));
+        $start = $month->copy()->startOfMonth();
+        $end = $month->copy()->endOfMonth();
+
+        $visible = $orders
+            ->filter(fn (Order $o) => $o->due_date->between($start, $end))
+            ->values();
+
         return inertia('orders/index', [
-            'orders' => $orders,
+            'orders' => $visible,
+            'month' => $month->format('Y-m'),
         ]);
     }
 

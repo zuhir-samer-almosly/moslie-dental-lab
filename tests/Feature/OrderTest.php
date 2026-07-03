@@ -110,7 +110,8 @@ test('the orders index carries each order a previous balance, excluding cancelle
     seedOrder($dentist->id, 50000, '2026-06-12', '2026-06-12 12:00:00');
 
     // previous_balance = 100000 (prior billable) − 30000 (prior payment) = 70000.
-    $this->get(route('orders.index'))
+    // All four orders are dated June 2026, so scope the list to that month.
+    $this->get(route('orders.index', ['month' => '2026-06']))
         ->assertOk()
         ->assertInertia(
             fn ($page) => $page
@@ -126,12 +127,29 @@ test('the earliest order has no previous balance', function () {
 
     seedOrder($dentist->id, 40000, '2026-03-01', '2026-03-01');
 
-    $this->get(route('orders.index'))
+    $this->get(route('orders.index', ['month' => '2026-03']))
         ->assertOk()
         ->assertInertia(
             fn ($page) => $page
                 ->has('orders', 1)
                 ->where('orders.0.previous_balance', 0)
+        );
+});
+
+test('the orders list is scoped to the selected month but balances reflect prior months', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. شهر']);
+
+    seedOrder($dentist->id, 80000, '2026-04-10', '2026-04-10 09:00:00');
+    seedOrder($dentist->id, 20000, '2026-05-10', '2026-05-10 09:00:00');
+
+    // Only May's order is listed, and it still carries April's 80,000 forward.
+    $this->get(route('orders.index', ['month' => '2026-05']))
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->has('orders', 1)
+                ->where('orders.0.previous_balance', 80000)
         );
 });
 
