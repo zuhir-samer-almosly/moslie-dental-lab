@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    CalendarRange,
     ClipboardList,
     CreditCard,
     FileText,
@@ -70,6 +71,11 @@ const mainNavItems: NavItem[] = [
         title: 'المالية',
         href: '/finance',
         icon: PiggyBank,
+    },
+    {
+        title: 'التقرير',
+        href: '/report',
+        icon: CalendarRange,
     },
 ];
 
