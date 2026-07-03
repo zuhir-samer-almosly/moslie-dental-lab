@@ -103,7 +103,7 @@ export default function OrderForm({
     // which the useForm error type doesn't know about.
     const itemError = (index: number, field: string) =>
         (errors as Record<string, string | undefined>)[
-            `items.${index}.${field}`
+        `items.${index}.${field}`
         ];
 
     const addItem = () => {
@@ -379,7 +379,7 @@ export default function OrderForm({
                                                     // field must not poison
                                                     // the totals.
                                                     parseInt(e.target.value) ||
-                                                        0,
+                                                    0,
                                                 )
                                             }
                                             readOnly={
@@ -388,7 +388,7 @@ export default function OrderForm({
                                             className={cn(
                                                 fieldClass,
                                                 item.selected_teeth.length >
-                                                    0 && 'bg-muted',
+                                                0 && 'bg-muted',
                                             )}
                                         />
                                         <InputError
@@ -412,7 +412,7 @@ export default function OrderForm({
                                                     index,
                                                     'price',
                                                     parseInt(e.target.value) ||
-                                                        0,
+                                                    0,
                                                 )
                                             }
                                             className={fieldClass}
@@ -479,7 +479,7 @@ export default function OrderForm({
                         {total.toLocaleString('en-US')}
                     </span>{' '}
                     <span className="text-[13px] font-medium text-muted-foreground">
-                        دينار
+                        syp
                     </span>
                 </span>
                 <Button
