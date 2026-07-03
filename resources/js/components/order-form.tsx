@@ -479,7 +479,7 @@ export default function OrderForm({
                         {total.toLocaleString('en-US')}
                     </span>{' '}
                     <span className="text-[13px] font-medium text-muted-foreground">
-                        syp
+                        ليرة
                     </span>
                 </span>
                 <Button

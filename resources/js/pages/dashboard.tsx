@@ -78,23 +78,10 @@ function MoneyCard({
     icon: LucideIcon;
     variant: 'income' | 'expense' | 'net-positive' | 'net-negative';
 }) {
-    const inverted = variant === 'net-positive';
     return (
-        <div
-            className={cn(
-                'flex flex-col gap-2.5 rounded-2xl border p-6',
-                inverted
-                    ? 'border-primary bg-primary'
-                    : 'border-border bg-card',
-            )}
-        >
+        <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-6">
             <div className="flex items-center justify-between">
-                <span
-                    className={cn(
-                        'text-[15px] font-medium',
-                        inverted ? 'text-[#C7E5E1]' : 'text-muted-foreground',
-                    )}
-                >
+                <span className="text-[15px] font-medium text-muted-foreground">
                     {title}
                 </span>
                 <span
@@ -103,7 +90,7 @@ function MoneyCard({
                         variant === 'income' && CHIP.green,
                         variant === 'expense' && CHIP.red,
                         variant === 'net-negative' && CHIP.red,
-                        inverted && 'bg-white/15 text-white',
+                        variant === 'net-positive' && CHIP.green,
                     )}
                 >
                     <Icon className="size-5" />
@@ -115,18 +102,13 @@ function MoneyCard({
                     variant === 'income' && 'text-[#047857]',
                     variant === 'expense' && 'text-[#BE123C]',
                     variant === 'net-negative' && 'text-[#BE123C]',
-                    inverted && 'text-white',
+                    variant === 'net-positive' && 'text-[#047857]',
                 )}
                 style={{ letterSpacing: '-0.5px' }}
             >
                 {nf(value)}
             </span>
-            <span
-                className={cn(
-                    'text-[13px]',
-                    inverted ? 'text-[#C7E5E1]' : 'text-muted-foreground',
-                )}
-            >
+            <span className="text-[13px] text-muted-foreground">
                 {hint}
             </span>
         </div>
