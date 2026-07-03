@@ -28,10 +28,16 @@ jobs:
         with:
           php-version: '8.4'
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
       - name: Install Dependencies
         run: |
           composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
-          npm install
+          npm ci
 
       - name: Run Pint
         run: composer lint
