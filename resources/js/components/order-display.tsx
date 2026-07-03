@@ -5,7 +5,9 @@ import {
     TOOTH_TYPE_LABELS_AR,
     UPPER_TEETH,
 } from '@/lib/teeth';
-import type { OrderItem } from '@/types';
+import { cn } from '@/lib/utils';
+import type { Order, OrderItem } from '@/types';
+import { ORDER_STATUSES } from '@/types';
 
 /** Shared helpers for rendering order items (patient/teeth/date live in meta). */
 
@@ -31,6 +33,58 @@ export const formatDate = (value: string | null | undefined) => {
 export const Dash = () => (
     <span className="text-xs text-muted-foreground">—</span>
 );
+
+/**
+ * Order status as a tinted pill. Teal is reserved for the brand, so each
+ * status gets its own semantic tone: pending = amber, completed = green,
+ * received = blue (delivered), cancelled = red.
+ */
+const STATUS_PILL: Record<Order['status'], string> = {
+    pending: 'bg-[#FEF3E2] text-[#B45309]',
+    completed: 'bg-[#E5F5EE] text-[#047857]',
+    recieved: 'bg-[#E8EEFC] text-[#1D4ED8]',
+    cancelled: 'bg-[#FDECEE] text-[#BE123C]',
+};
+
+export function StatusPill({
+    status,
+    className,
+}: {
+    status: Order['status'];
+    className?: string;
+}) {
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap',
+                STATUS_PILL[status],
+                className,
+            )}
+        >
+            {ORDER_STATUSES[status]}
+        </span>
+    );
+}
+
+/**
+ * Compact teal number chips for a set of teeth — used in dense list views
+ * (the orders table) where the full anatomical odontogram is too heavy.
+ */
+export function TeethChips({ teeth }: { teeth: number[] }) {
+    if (teeth.length === 0) return <Dash />;
+    return (
+        <div className="flex flex-wrap gap-1">
+            {teeth.map((tooth) => (
+                <span
+                    key={tooth}
+                    className="inline-flex h-6 min-w-[26px] items-center justify-center rounded-[6px] bg-secondary px-1 text-xs font-semibold text-secondary-foreground tabular-nums"
+                >
+                    {tooth}
+                </span>
+            ))}
+        </div>
+    );
+}
 
 /**
  * One tooth slot. Every slot is the SAME fixed width so all 16 columns line up

@@ -1,7 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import OrderForm from '@/components/order-form';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist } from '@/types';
 
@@ -23,22 +22,20 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6">
                 {/* Header */}
-                <div className="flex flex-col gap-3">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-fit gap-2 text-muted-foreground"
-                        onClick={() => window.history.back()}
+                <div className="flex max-w-[920px] items-center gap-3.5">
+                    <Link
+                        href="/orders"
+                        title="رجوع إلى الطلبات"
+                        className="flex size-10 items-center justify-center rounded-[10px] border bg-card text-[#435955] transition-colors hover:border-primary hover:text-primary"
                     >
-                        <ArrowRight className="size-4" />
-                        رجوع
-                    </Button>
+                        <ArrowRight className="size-[18px]" />
+                    </Link>
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight">
+                        <h1 className="text-[26px] font-bold text-foreground">
                             إضافة طلب جديد
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            اختر الطبيب وأضف عناصر الطلب
+                        <p className="text-[15px] text-muted-foreground">
+                            الطلبات ← طلب جديد
                         </p>
                     </div>
                 </div>

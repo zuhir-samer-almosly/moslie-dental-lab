@@ -156,7 +156,11 @@ export default function ReportIndex({
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Button variant="outline" size="sm" onClick={presetToday}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={presetToday}
+                            >
                                 اليوم
                             </Button>
                             <Button
@@ -223,7 +227,9 @@ export default function ReportIndex({
                                 <TableHead>الطبيب</TableHead>
                                 <TableHead>البنود</TableHead>
                                 <TableHead>الحالة</TableHead>
-                                <TableHead className="text-end">المبلغ</TableHead>
+                                <TableHead className="text-end">
+                                    المبلغ
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -336,8 +342,7 @@ export default function ReportIndex({
                         rows={expenses.map((e) => ({
                             key: e.id,
                             date: e.expense_date ?? e.created_at,
-                            label:
-                                EXPENSE_CATEGORIES[e.category] ?? e.category,
+                            label: EXPENSE_CATEGORIES[e.category] ?? e.category,
                             note: e.description,
                             amount: e.amount,
                         }))}

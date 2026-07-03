@@ -11,6 +11,16 @@ interface DentalChartProps {
 const UPPER_JAW = UPPER_TEETH;
 const LOWER_JAW = LOWER_TEETH;
 
+// Teal re-skin palette (see design_handoff_dental_lab_redesign). Selected teeth
+// fill solid teal; unselected are a soft clinical grey.
+const CROWN_SELECTED = '#0F766E';
+const CROWN_SELECTED_STROKE = '#0C5F59';
+const CROWN_UNSELECTED = '#EDF2F1';
+const CROWN_UNSELECTED_STROKE = '#B4C2BF';
+const ROOT_STROKE = '#C9D4D1';
+const NUM_SELECTED = '#0F766E';
+const NUM_UNSELECTED = '#8CA09C';
+
 // Tooth shape path generator - creates a realistic tooth outline
 function getToothPath(toothNumber: number): string {
     const type = getToothType(toothNumber);
@@ -77,24 +87,117 @@ export default function DentalChart({
     const upperY = 75;
     const lowerY = 175;
 
+    const renderTooth = (tooth: number, i: number, isUpper: boolean) => {
+        const x = startX + i * toothSpacing;
+        const y = isUpper ? upperY : lowerY;
+        const isSelected = selectedTeeth.includes(tooth);
+        const isHovered = hoveredTooth === tooth;
+        const crownStroke = isSelected
+            ? CROWN_SELECTED_STROKE
+            : isHovered
+              ? CROWN_SELECTED
+              : CROWN_UNSELECTED_STROKE;
+
+        return (
+            <g
+                key={tooth}
+                transform={`translate(${x}, ${y})`}
+                onClick={() => toggleTooth(tooth)}
+                onMouseEnter={() => setHoveredTooth(tooth)}
+                onMouseLeave={() => setHoveredTooth(null)}
+                className={disabled ? 'cursor-default' : 'cursor-pointer'}
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleTooth(tooth);
+                    }
+                }}
+                aria-label={`سن ${tooth}`}
+                aria-pressed={isSelected}
+            >
+                {/* Root */}
+                <path
+                    d={
+                        isUpper
+                            ? getUpperRootPath(tooth)
+                            : getLowerRootPath(tooth)
+                    }
+                    fill="none"
+                    stroke={ROOT_STROKE}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="transition-all duration-200"
+                />
+
+                {/* Tooth body */}
+                <path
+                    d={getToothPath(tooth)}
+                    fill={isSelected ? CROWN_SELECTED : CROWN_UNSELECTED}
+                    stroke={crownStroke}
+                    strokeWidth={isSelected ? 2 : 1.5}
+                    className="transition-all duration-200"
+                />
+
+                {/* Inner detail - occlusal surface hint */}
+                <ellipse
+                    cx="0"
+                    cy={isUpper ? -2 : 2}
+                    rx="5"
+                    ry="4"
+                    fill="none"
+                    stroke={
+                        isSelected
+                            ? CROWN_SELECTED_STROKE
+                            : CROWN_UNSELECTED_STROKE
+                    }
+                    strokeOpacity={isSelected ? 0.5 : 0.35}
+                    strokeWidth="0.75"
+                    className="transition-all duration-200"
+                />
+
+                {/* Tooth number */}
+                <text
+                    x="0"
+                    y={isUpper ? 38 : -30}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight={isSelected ? '700' : '600'}
+                    fill={isSelected ? NUM_SELECTED : NUM_UNSELECTED}
+                    className="transition-all duration-200 select-none"
+                >
+                    {tooth}
+                </text>
+            </g>
+        );
+    };
+
     return (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
             <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">الأسنان</label>
+                <label className="text-[14px] font-semibold text-[#435955]">
+                    الأسنان{' '}
+                    <span className="text-xs font-normal text-muted-foreground">
+                        {selectedTeeth.length > 0
+                            ? `(${selectedTeeth.length} مختارة)`
+                            : '(اضغط على السن لاختياره)'}
+                    </span>
+                </label>
                 {selectedTeeth.length > 0 && (
                     <button
                         type="button"
                         onClick={() => onSelectionChange([])}
-                        className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                        className="p-1 text-xs text-muted-foreground transition-colors hover:text-destructive"
                     >
                         مسح الكل
                     </button>
                 )}
             </div>
 
-            <div className="rounded-xl border bg-card p-4 transition-colors">
+            <div className="rounded-[14px] border bg-[#FBFCFC] p-4">
                 {/* Quick select buttons */}
-                <div className="mb-3 flex flex-wrap gap-1.5">
+                <div className="mb-3 flex flex-wrap gap-2">
                     <button
                         type="button"
                         onClick={() => {
@@ -119,7 +222,7 @@ export default function DentalChart({
                                 );
                             }
                         }}
-                        className="rounded-md border bg-background px-2 py-0.5 text-xs transition-colors hover:bg-accent"
+                        className="rounded-lg border border-input bg-card px-3.5 py-1.5 text-xs font-semibold text-[#435955] transition-colors hover:border-primary hover:text-primary"
                         disabled={disabled}
                     >
                         الفك العلوي
@@ -148,7 +251,7 @@ export default function DentalChart({
                                 );
                             }
                         }}
-                        className="rounded-md border bg-background px-2 py-0.5 text-xs transition-colors hover:bg-accent"
+                        className="rounded-lg border border-input bg-card px-3.5 py-1.5 text-xs font-semibold text-[#435955] transition-colors hover:border-primary hover:text-primary"
                         disabled={disabled}
                     >
                         الفك السفلي
@@ -166,8 +269,7 @@ export default function DentalChart({
                         y1="10"
                         x2="320"
                         y2="250"
-                        stroke="currentColor"
-                        strokeOpacity="0.1"
+                        stroke="#DCE4E3"
                         strokeWidth="1"
                         strokeDasharray="4 4"
                     />
@@ -178,9 +280,9 @@ export default function DentalChart({
                         y1="125"
                         x2="620"
                         y2="125"
-                        stroke="currentColor"
-                        strokeOpacity="0.15"
+                        stroke="#DCE4E3"
                         strokeWidth="1.5"
+                        strokeDasharray="6 5"
                     />
 
                     {/* Labels */}
@@ -188,8 +290,7 @@ export default function DentalChart({
                         x="16"
                         y="70"
                         fontSize="9"
-                        fill="currentColor"
-                        opacity="0.3"
+                        fill={NUM_UNSELECTED}
                         textAnchor="end"
                         className="select-none"
                     >
@@ -199,8 +300,7 @@ export default function DentalChart({
                         x="624"
                         y="70"
                         fontSize="9"
-                        fill="currentColor"
-                        opacity="0.3"
+                        fill={NUM_UNSELECTED}
                         textAnchor="start"
                         className="select-none"
                     >
@@ -210,8 +310,7 @@ export default function DentalChart({
                         x="16"
                         y="185"
                         fontSize="9"
-                        fill="currentColor"
-                        opacity="0.3"
+                        fill={NUM_UNSELECTED}
                         textAnchor="end"
                         className="select-none"
                     >
@@ -221,8 +320,7 @@ export default function DentalChart({
                         x="624"
                         y="185"
                         fontSize="9"
-                        fill="currentColor"
-                        opacity="0.3"
+                        fill={NUM_UNSELECTED}
                         textAnchor="start"
                         className="select-none"
                     >
@@ -230,257 +328,17 @@ export default function DentalChart({
                     </text>
 
                     {/* Upper teeth */}
-                    {UPPER_TEETH.map((tooth, i) => {
-                        const x = startX + i * toothSpacing;
-                        const isSelected = selectedTeeth.includes(tooth);
-                        const isHovered = hoveredTooth === tooth;
-
-                        return (
-                            <g
-                                key={tooth}
-                                transform={`translate(${x}, ${upperY})`}
-                                onClick={() => toggleTooth(tooth)}
-                                onMouseEnter={() => setHoveredTooth(tooth)}
-                                onMouseLeave={() => setHoveredTooth(null)}
-                                className={
-                                    disabled
-                                        ? 'cursor-default'
-                                        : 'cursor-pointer'
-                                }
-                                role="button"
-                                tabIndex={disabled ? -1 : 0}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        toggleTooth(tooth);
-                                    }
-                                }}
-                                aria-label={`سن ${tooth}`}
-                                aria-pressed={isSelected}
-                            >
-                                {/* Root */}
-                                <path
-                                    d={getUpperRootPath(tooth)}
-                                    fill="none"
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={isSelected ? 0.6 : 0.2}
-                                    strokeWidth="1.5"
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Tooth body */}
-                                <path
-                                    d={getToothPath(tooth)}
-                                    fill={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : isHovered
-                                              ? 'hsl(var(--accent))'
-                                              : 'hsl(var(--muted))'
-                                    }
-                                    fillOpacity={
-                                        isSelected
-                                            ? 0.25
-                                            : isHovered
-                                              ? 0.6
-                                              : 0.4
-                                    }
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={
-                                        isSelected ? 1 : isHovered ? 0.6 : 0.3
-                                    }
-                                    strokeWidth={isSelected ? 2 : 1.5}
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Inner detail - occlusal surface hint */}
-                                <ellipse
-                                    cx="0"
-                                    cy="-2"
-                                    rx="5"
-                                    ry="4"
-                                    fill="none"
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={isSelected ? 0.4 : 0.1}
-                                    strokeWidth="0.75"
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Tooth number */}
-                                <text
-                                    x="0"
-                                    y="38"
-                                    textAnchor="middle"
-                                    fontSize="10"
-                                    fontWeight={isSelected ? '700' : '500'}
-                                    fill={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    opacity={
-                                        isSelected ? 1 : isHovered ? 0.8 : 0.5
-                                    }
-                                    className="transition-all duration-200 select-none"
-                                >
-                                    {tooth}
-                                </text>
-
-                                {/* Selection indicator dot */}
-                                {isSelected && (
-                                    <circle
-                                        cx="0"
-                                        cy="0"
-                                        r="3"
-                                        fill="hsl(var(--primary))"
-                                        opacity="0.8"
-                                        className="animate-in duration-200 zoom-in"
-                                    />
-                                )}
-                            </g>
-                        );
-                    })}
+                    {UPPER_TEETH.map((tooth, i) => renderTooth(tooth, i, true))}
 
                     {/* Lower teeth */}
-                    {LOWER_TEETH.map((tooth, i) => {
-                        const x = startX + i * toothSpacing;
-                        const isSelected = selectedTeeth.includes(tooth);
-                        const isHovered = hoveredTooth === tooth;
-
-                        return (
-                            <g
-                                key={tooth}
-                                transform={`translate(${x}, ${lowerY})`}
-                                onClick={() => toggleTooth(tooth)}
-                                onMouseEnter={() => setHoveredTooth(tooth)}
-                                onMouseLeave={() => setHoveredTooth(null)}
-                                className={
-                                    disabled
-                                        ? 'cursor-default'
-                                        : 'cursor-pointer'
-                                }
-                                role="button"
-                                tabIndex={disabled ? -1 : 0}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        toggleTooth(tooth);
-                                    }
-                                }}
-                                aria-label={`سن ${tooth}`}
-                                aria-pressed={isSelected}
-                            >
-                                {/* Root */}
-                                <path
-                                    d={getLowerRootPath(tooth)}
-                                    fill="none"
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={isSelected ? 0.6 : 0.2}
-                                    strokeWidth="1.5"
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Tooth body */}
-                                <path
-                                    d={getToothPath(tooth)}
-                                    fill={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : isHovered
-                                              ? 'hsl(var(--accent))'
-                                              : 'hsl(var(--muted))'
-                                    }
-                                    fillOpacity={
-                                        isSelected
-                                            ? 0.25
-                                            : isHovered
-                                              ? 0.6
-                                              : 0.4
-                                    }
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={
-                                        isSelected ? 1 : isHovered ? 0.6 : 0.3
-                                    }
-                                    strokeWidth={isSelected ? 2 : 1.5}
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Inner detail */}
-                                <ellipse
-                                    cx="0"
-                                    cy="2"
-                                    rx="5"
-                                    ry="4"
-                                    fill="none"
-                                    stroke={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    strokeOpacity={isSelected ? 0.4 : 0.1}
-                                    strokeWidth="0.75"
-                                    className="transition-all duration-200"
-                                />
-
-                                {/* Tooth number */}
-                                <text
-                                    x="0"
-                                    y="-30"
-                                    textAnchor="middle"
-                                    fontSize="10"
-                                    fontWeight={isSelected ? '700' : '500'}
-                                    fill={
-                                        isSelected
-                                            ? 'hsl(var(--primary))'
-                                            : 'currentColor'
-                                    }
-                                    opacity={
-                                        isSelected ? 1 : isHovered ? 0.8 : 0.5
-                                    }
-                                    className="transition-all duration-200 select-none"
-                                >
-                                    {tooth}
-                                </text>
-
-                                {/* Selection indicator dot */}
-                                {isSelected && (
-                                    <circle
-                                        cx="0"
-                                        cy="0"
-                                        r="3"
-                                        fill="hsl(var(--primary))"
-                                        opacity="0.8"
-                                        className="animate-in duration-200 zoom-in"
-                                    />
-                                )}
-                            </g>
-                        );
-                    })}
+                    {LOWER_TEETH.map((tooth, i) =>
+                        renderTooth(tooth, i, false),
+                    )}
                 </svg>
 
                 {/* Selected teeth summary */}
                 {selectedTeeth.length > 0 && (
-                    <div className="mt-3 border-t pt-3">
+                    <div className="mt-3 border-t border-[#EDF2F1] pt-3">
                         <div className="flex flex-wrap items-center gap-1.5">
                             <span className="ml-1 text-xs text-muted-foreground">
                                 الأسنان المختارة:
@@ -488,7 +346,7 @@ export default function DentalChart({
                             {selectedTeeth.map((tooth) => (
                                 <span
                                     key={tooth}
-                                    className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-md border border-primary/20 bg-primary/15 px-1.5 text-xs font-semibold text-primary"
+                                    className="inline-flex h-6 min-w-[26px] items-center justify-center rounded-[6px] bg-secondary px-1.5 text-xs font-semibold text-secondary-foreground tabular-nums"
                                 >
                                     {tooth}
                                 </span>

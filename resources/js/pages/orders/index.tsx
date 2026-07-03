@@ -5,8 +5,10 @@ import {
     ClipboardList,
     Pencil,
     Plus,
+    Search,
     Trash2,
 } from 'lucide-react';
+import { type ReactNode, useMemo, useState } from 'react';
 import {
     Dash,
     formatDate,
@@ -14,21 +16,12 @@ import {
     itemDate,
     itemPatient,
     itemTeeth,
-    TeethOdontogram,
+    StatusPill,
+    TeethChips,
 } from '@/components/order-display';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import type { BreadcrumbItem, Order } from '@/types';
 import { ORDER_STATUSES } from '@/types';
 
@@ -51,6 +44,10 @@ function shiftMonth(month: string, delta: number) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
+const nf = (value: number) => value.toLocaleString('en-US');
+
+type StatusFilter = 'all' | Order['status'];
+
 export default function OrdersIndex({
     orders,
     month,
@@ -58,6 +55,9 @@ export default function OrdersIndex({
     orders: Order[];
     month: string;
 }) {
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+
     const goToMonth = (next: string) => {
         router.get(
             '/orders',
@@ -72,6 +72,35 @@ export default function OrdersIndex({
         }
     };
 
+    // Client-side filtering over dentist + patient names and status.
+    const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        return orders.filter((order) => {
+            if (statusFilter !== 'all' && order.status !== statusFilter) {
+                return false;
+            }
+            if (!q) return true;
+            const inDentist = order.dentist?.name?.toLowerCase().includes(q);
+            const inPatient = (order.items ?? []).some((item) =>
+                itemPatient(item).toLowerCase().includes(q),
+            );
+            return Boolean(inDentist || inPatient);
+        });
+    }, [orders, search, statusFilter]);
+
+    const totalItems = filtered.reduce(
+        (sum, order) => sum + (order.items?.length ?? 0),
+        0,
+    );
+    const totalAmount = filtered.reduce((sum, order) => sum + order.amount, 0);
+
+    const segments: { key: StatusFilter; label: string }[] = [
+        { key: 'all', label: 'الكل' },
+        ...(Object.entries(ORDER_STATUSES) as [Order['status'], string][]).map(
+            ([key, label]) => ({ key, label }),
+        ),
+    ];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="الطلبات" />
@@ -80,233 +109,339 @@ export default function OrdersIndex({
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight">
+                        <h1 className="text-[26px] font-bold text-foreground">
                             الطلبات
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            {orders.length} طلب في {MONTH_LABEL(month)}
+                        <p className="text-[15px] text-muted-foreground">
+                            {filtered.length} طلبات في {MONTH_LABEL(month)}
                         </p>
                     </div>
-                    <Button asChild size="lg" className="gap-2 sm:w-auto">
+                    <Button
+                        asChild
+                        size="lg"
+                        className="gap-2 rounded-xl px-[22px] text-[15px] font-semibold shadow-[0_2px_6px_rgba(15,118,110,0.25)]"
+                    >
                         <Link href="/orders/create">
-                            <Plus className="size-4" />
+                            <Plus className="size-[18px]" />
                             إضافة طلب
                         </Link>
                     </Button>
                 </div>
 
-                {/* Month picker */}
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => goToMonth(shiftMonth(month, -1))}
-                        title="الشهر السابق"
-                    >
-                        <ChevronRight className="size-4" />
-                    </Button>
-                    <Input
-                        type="month"
-                        value={month}
-                        className="w-44"
-                        onChange={(e) => goToMonth(e.target.value)}
-                    />
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => goToMonth(shiftMonth(month, 1))}
-                        title="الشهر التالي"
-                    >
-                        <ChevronLeft className="size-4" />
-                    </Button>
+                {/* Toolbar: month stepper + search + status filter */}
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 rounded-xl border bg-card p-1.5">
+                        <button
+                            type="button"
+                            onClick={() => goToMonth(shiftMonth(month, -1))}
+                            title="الشهر السابق"
+                            className="flex size-9 items-center justify-center rounded-lg text-[#435955] transition-colors hover:bg-secondary hover:text-primary"
+                        >
+                            <ChevronRight className="size-[18px]" />
+                        </button>
+                        <span className="min-w-[110px] text-center text-[15px] font-semibold text-foreground">
+                            {MONTH_LABEL(month)}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => goToMonth(shiftMonth(month, 1))}
+                            title="الشهر التالي"
+                            className="flex size-9 items-center justify-center rounded-lg text-[#435955] transition-colors hover:bg-secondary hover:text-primary"
+                        >
+                            <ChevronLeft className="size-[18px]" />
+                        </button>
+                    </div>
+
+                    <div className="flex max-w-[340px] flex-1 items-center gap-2.5 rounded-xl border bg-card px-3.5 py-3 text-muted-foreground">
+                        <Search className="size-[17px] shrink-0" />
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="ابحث باسم الطبيب أو المريض..."
+                            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-card p-1.5">
+                        {segments.map((segment) => (
+                            <button
+                                key={segment.key}
+                                type="button"
+                                onClick={() => setStatusFilter(segment.key)}
+                                className={cn(
+                                    'rounded-lg px-4 py-2 text-[13px] transition-colors',
+                                    statusFilter === segment.key
+                                        ? 'bg-primary font-semibold text-primary-foreground'
+                                        : 'font-medium text-[#435955] hover:bg-secondary',
+                                )}
+                            >
+                                {segment.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Table */}
-                <Card className="gap-0 overflow-hidden py-0">
-                    <div className="flex items-center justify-between border-b p-5">
-                        <div className="space-y-0.5">
-                            <h2 className="font-semibold">قائمة الطلبات</h2>
-                            <p className="text-xs text-muted-foreground">
-                                جميع الطلبات وعناصرها
-                            </p>
-                        </div>
-                    </div>
-                    <CardContent className="overflow-x-auto p-0">
-                        {orders.length === 0 ? (
-                            <EmptyState
-                                icon={ClipboardList}
-                                text="لا توجد طلبات في هذا الشهر"
-                            />
-                        ) : (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>اسم الطبيب</TableHead>
-                                        <TableHead>اسم المريض</TableHead>
-                                        <TableHead>العنصر</TableHead>
-                                        <TableHead>الأسنان</TableHead>
-                                        <TableHead>التاريخ</TableHead>
-                                        <TableHead>الحالة</TableHead>
-                                        <TableHead>المبلغ</TableHead>
-                                        <TableHead>ملاحظات</TableHead>
-                                        <TableHead className="text-end">
+                <div className="overflow-hidden rounded-2xl border bg-card">
+                    {filtered.length === 0 ? (
+                        <EmptyState
+                            icon={ClipboardList}
+                            text="لا توجد طلبات مطابقة"
+                        />
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr className="border-b bg-[#F8FAFA]">
+                                        <Th className="px-[18px]">
+                                            اسم الطبيب
+                                        </Th>
+                                        <Th>اسم المريض</Th>
+                                        <Th>العنصر</Th>
+                                        <Th>الأسنان</Th>
+                                        <Th>التاريخ</Th>
+                                        <Th>الحالة</Th>
+                                        <Th>المبلغ</Th>
+                                        <Th className="px-[18px] text-end">
                                             الإجراءات
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {orders.map((order) => {
+                                        </Th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filtered.map((order, orderIndex) => {
                                         const items = order.items ?? [];
                                         const span = Math.max(items.length, 1);
+                                        const isLastOrder =
+                                            orderIndex === filtered.length - 1;
 
-                                        // Order-level cells are rendered once and span all the
-                                        // order's item rows (dentist / status / amount / actions).
+                                        // Group cells (dentist / status / actions) span
+                                        // all of the order's item rows and carry the
+                                        // vertical divider between order groups.
+                                        const groupBorder = isLastOrder
+                                            ? ''
+                                            : 'border-b border-[#EDF2F1]';
+
                                         const dentistCell = (
-                                            <TableCell
+                                            <td
                                                 rowSpan={span}
-                                                className="border-s align-middle font-medium"
+                                                className={cn(
+                                                    'border-s border-[#EDF2F1] px-[18px] py-3.5 align-middle font-semibold text-foreground',
+                                                    groupBorder,
+                                                )}
                                             >
                                                 {!!order.previous_balance && (
                                                     <span className="mb-1 block text-[11px] font-normal text-muted-foreground">
-                                                        رصيد سابق مستحق من قبل:{' '}
-                                                        <span className="font-semibold text-foreground tabular-nums">
-                                                            {order.previous_balance.toLocaleString(
-                                                                'en-US',
+                                                        رصيد سابق مستحق:{' '}
+                                                        <span className="font-bold text-[#B45309] tabular-nums">
+                                                            {nf(
+                                                                order.previous_balance,
                                                             )}
                                                         </span>
                                                     </span>
                                                 )}
                                                 {order.dentist?.name}
-                                            </TableCell>
+                                            </td>
                                         );
                                         const statusCell = (
-                                            <TableCell
+                                            <td
                                                 rowSpan={span}
-                                                className="border-s align-middle"
+                                                className={cn(
+                                                    'border-s border-[#EDF2F1] px-3 py-3.5 align-middle',
+                                                    groupBorder,
+                                                )}
                                             >
-                                                <Badge>
-                                                    {
-                                                        ORDER_STATUSES[
-                                                            order.status
-                                                        ]
-                                                    }
-                                                </Badge>
-                                            </TableCell>
+                                                <StatusPill
+                                                    status={order.status}
+                                                />
+                                            </td>
                                         );
                                         const actionsCell = (
-                                            <TableCell
+                                            <td
                                                 rowSpan={span}
-                                                className="text-end align-middle"
+                                                className={cn(
+                                                    'px-[18px] py-3.5 align-middle',
+                                                    groupBorder,
+                                                )}
                                             >
                                                 <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        asChild
-                                                        variant="outline"
-                                                        size="sm"
+                                                    <Link
+                                                        href={`/orders/${order.id}/edit`}
+                                                        title="تعديل"
+                                                        className="flex size-[34px] items-center justify-center rounded-[9px] border bg-card text-[#435955] transition-colors hover:border-primary hover:text-primary"
                                                     >
-                                                        <Link
-                                                            href={`/orders/${order.id}/edit`}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Link>
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
+                                                        <Pencil className="size-[15px]" />
+                                                    </Link>
+                                                    <button
+                                                        type="button"
+                                                        title="حذف"
                                                         onClick={() =>
                                                             handleDelete(
                                                                 order.id,
                                                             )
                                                         }
+                                                        className="flex size-[34px] items-center justify-center rounded-[9px] border border-[#F5D5DB] bg-card text-[#BE123C] transition-colors hover:border-[#BE123C] hover:bg-[#FDECEE]"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                        <Trash2 className="size-[15px]" />
+                                                    </button>
                                                 </div>
-                                            </TableCell>
+                                            </td>
                                         );
 
                                         if (items.length === 0) {
                                             return (
-                                                <TableRow key={order.id}>
+                                                <tr key={order.id}>
                                                     {dentistCell}
-                                                    <TableCell>
+                                                    <Td className={groupBorder}>
                                                         <Dash />
-                                                    </TableCell>
-                                                    <TableCell>
+                                                    </Td>
+                                                    <Td className={groupBorder}>
                                                         <Dash />
-                                                    </TableCell>
-                                                    <TableCell>
+                                                    </Td>
+                                                    <Td className={groupBorder}>
                                                         <Dash />
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap">
+                                                    </Td>
+                                                    <Td
+                                                        className={cn(
+                                                            'whitespace-nowrap text-[#435955]',
+                                                            groupBorder,
+                                                        )}
+                                                    >
                                                         {formatDate(
                                                             order.due_date,
                                                         ) || <Dash />}
-                                                    </TableCell>
+                                                    </Td>
                                                     {statusCell}
-                                                    <TableCell className="tabular-nums">
-                                                        {order.amount.toLocaleString(
-                                                            'en-US',
+                                                    <Td
+                                                        className={cn(
+                                                            'font-semibold tabular-nums',
+                                                            groupBorder,
                                                         )}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-pre-line">
-                                                        {order.notes || (
-                                                            <Dash />
-                                                        )}
-                                                    </TableCell>
+                                                    >
+                                                        {nf(order.amount)}
+                                                    </Td>
                                                     {actionsCell}
-                                                </TableRow>
+                                                </tr>
                                             );
                                         }
 
-                                        return items.map((item, index) => (
-                                            <TableRow key={item.id}>
-                                                {index === 0 && dentistCell}
-                                                <TableCell>
-                                                    {itemPatient(item) || (
-                                                        <Dash />
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="whitespace-nowrap">
-                                                    {item.type}{' '}
-                                                    <span className="text-muted-foreground">
-                                                        × {item.quantity}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <TeethOdontogram
-                                                        teeth={itemTeeth(item)}
-                                                    />
-                                                </TableCell>
-                                                <TableCell className="whitespace-nowrap">
-                                                    {formatDate(
-                                                        itemDate(item),
-                                                    ) ||
-                                                        formatDate(
-                                                            order.due_date,
-                                                        ) || <Dash />}
-                                                </TableCell>
-                                                {index === 0 && statusCell}
-                                                <TableCell className="tabular-nums">
-                                                    {itemAmount(
-                                                        item,
-                                                    ).toLocaleString('en-US')}
-                                                </TableCell>
-                                                <TableCell className="whitespace-pre-line">
-                                                    {item.notes || <Dash />}
-                                                </TableCell>
-                                                {index === 0 && actionsCell}
-                                            </TableRow>
-                                        ));
+                                        return items.map((item, index) => {
+                                            const isLastItem =
+                                                index === items.length - 1;
+                                            const rowBorder =
+                                                isLastOrder && isLastItem
+                                                    ? ''
+                                                    : isLastItem
+                                                      ? 'border-b border-[#EDF2F1]'
+                                                      : 'border-b border-[#F3F7F6]';
+                                            return (
+                                                <tr key={item.id}>
+                                                    {index === 0 && dentistCell}
+                                                    <Td className={rowBorder}>
+                                                        {itemPatient(item) || (
+                                                            <Dash />
+                                                        )}
+                                                    </Td>
+                                                    <Td
+                                                        className={cn(
+                                                            'whitespace-nowrap',
+                                                            rowBorder,
+                                                        )}
+                                                    >
+                                                        {item.type}{' '}
+                                                        <span className="text-muted-foreground">
+                                                            × {item.quantity}
+                                                        </span>
+                                                    </Td>
+                                                    <Td className={rowBorder}>
+                                                        <TeethChips
+                                                            teeth={itemTeeth(
+                                                                item,
+                                                            )}
+                                                        />
+                                                    </Td>
+                                                    <Td
+                                                        className={cn(
+                                                            'whitespace-nowrap text-[#435955]',
+                                                            rowBorder,
+                                                        )}
+                                                    >
+                                                        {formatDate(
+                                                            itemDate(item),
+                                                        ) ||
+                                                            formatDate(
+                                                                order.due_date,
+                                                            ) || <Dash />}
+                                                    </Td>
+                                                    {index === 0 && statusCell}
+                                                    <Td
+                                                        className={cn(
+                                                            'font-semibold tabular-nums',
+                                                            rowBorder,
+                                                        )}
+                                                    >
+                                                        {nf(itemAmount(item))}
+                                                    </Td>
+                                                    {index === 0 && actionsCell}
+                                                </tr>
+                                            );
+                                        });
                                     })}
-                                </TableBody>
-                            </Table>
-                        )}
-                    </CardContent>
-                </Card>
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Footer summary */}
+                    {filtered.length > 0 && (
+                        <div className="flex items-center justify-between border-t bg-[#F8FAFA] px-[18px] py-3.5">
+                            <span className="text-[13px] text-muted-foreground">
+                                {filtered.length} طلبات · {totalItems} عناصر
+                            </span>
+                            <span className="text-sm text-[#435955]">
+                                الإجمالي:{' '}
+                                <span className="font-bold text-foreground tabular-nums">
+                                    {nf(totalAmount)}
+                                </span>{' '}
+                                <span className="text-xs text-muted-foreground">
+                                    دينار
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                </div>
             </div>
         </AppLayout>
     );
+}
+
+function Th({
+    children,
+    className,
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return (
+        <th
+            className={cn(
+                'px-3 py-3.5 text-start text-[13px] font-semibold text-muted-foreground',
+                className,
+            )}
+        >
+            {children}
+        </th>
+    );
+}
+
+function Td({
+    children,
+    className,
+}: {
+    children: ReactNode;
+    className?: string;
+}) {
+    return <td className={cn('px-3 py-3.5', className)}>{children}</td>;
 }
 
 function EmptyState({

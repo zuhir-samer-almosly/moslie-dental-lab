@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Check, Info, Plus, Trash2 } from 'lucide-react';
 import { useCallback } from 'react';
 import DentalChart from '@/components/dental-chart';
 import InputError from '@/components/input-error';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import WorkTypeCombobox from '@/components/work-type-combobox';
+import { cn } from '@/lib/utils';
 import type { Dentist, Order } from '@/types';
 import { ORDER_STATUSES } from '@/types';
 
@@ -164,87 +165,114 @@ export default function OrderForm({
 
     const selectedDentist = getSelectedDentist();
 
+    const labelClass = 'text-[14px] font-semibold text-[#435955]';
+    const fieldClass = 'h-11 rounded-[10px]';
+
     return (
-        <form onSubmit={handleSubmit} className="max-w-4xl space-y-6">
-            <div className="grid gap-2">
-                <Label htmlFor="dentist_id">الطبيب</Label>
-                <Select
-                    value={data.dentist_id}
-                    onValueChange={handleDentistChange}
-                >
-                    <SelectTrigger>
-                        <SelectValue placeholder="اختر الطبيب" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {dentists.map((dentist) => (
-                            <SelectItem
-                                key={dentist.id}
-                                value={dentist.id.toString()}
-                            >
-                                {dentist.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <InputError message={errors.dentist_id} />
-            </div>
+        <form onSubmit={handleSubmit} className="max-w-[920px] space-y-6">
+            {/* Order info */}
+            <section className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6">
+                <h2 className="text-base font-bold text-foreground">
+                    معلومات الطلب
+                </h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="dentist_id" className={labelClass}>
+                            الطبيب
+                        </Label>
+                        <Select
+                            value={data.dentist_id}
+                            onValueChange={handleDentistChange}
+                        >
+                            <SelectTrigger className={fieldClass}>
+                                <SelectValue placeholder="اختر الطبيب" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dentists.map((dentist) => (
+                                    <SelectItem
+                                        key={dentist.id}
+                                        value={dentist.id.toString()}
+                                    >
+                                        {dentist.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.dentist_id} />
+                    </div>
 
-            <div className="grid gap-2">
-                <Label htmlFor="status">الحالة</Label>
-                <Select
-                    value={data.status}
-                    onValueChange={(value: string) =>
-                        setData('status', value as typeof data.status)
-                    }
-                >
-                    <SelectTrigger>
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {Object.entries(ORDER_STATUSES).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>
-                                {label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <InputError message={errors.status} />
-            </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="status" className={labelClass}>
+                            الحالة
+                        </Label>
+                        <Select
+                            value={data.status}
+                            onValueChange={(value: string) =>
+                                setData('status', value as typeof data.status)
+                            }
+                        >
+                            <SelectTrigger className={fieldClass}>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(ORDER_STATUSES).map(
+                                    ([key, label]) => (
+                                        <SelectItem key={key} value={key}>
+                                            {label}
+                                        </SelectItem>
+                                    ),
+                                )}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.status} />
+                    </div>
+                </div>
 
-            <div className="grid gap-2">
-                <Label htmlFor="notes">ملاحظات</Label>
-                <Textarea
-                    id="notes"
-                    value={data.notes}
-                    onChange={(e) => setData('notes', e.target.value)}
-                    rows={3}
-                />
-                <InputError message={errors.notes} />
-            </div>
-
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <Label>العناصر</Label>
-                    <Button
-                        type="button"
-                        onClick={addItem}
-                        variant="outline"
-                        size="sm"
-                    >
-                        <Plus className="h-4 w-4" />
-                        إضافة عنصر
-                    </Button>
+                <div className="grid gap-2">
+                    <Label htmlFor="notes" className={labelClass}>
+                        ملاحظات
+                    </Label>
+                    <Textarea
+                        id="notes"
+                        value={data.notes}
+                        onChange={(e) => setData('notes', e.target.value)}
+                        rows={2}
+                        placeholder="ملاحظات عامة على الطلب..."
+                        className="rounded-[10px]"
+                    />
+                    <InputError message={errors.notes} />
                 </div>
 
                 {selectedDentist?.price_list &&
                     Object.keys(selectedDentist.price_list).length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                            💡 يتم ملء الأسعار تلقائياً حسب قائمة أسعار الطبيب{' '}
-                            <span className="font-medium">
-                                {selectedDentist.name}
+                        <div className="flex items-center gap-2 rounded-[10px] bg-secondary px-3.5 py-2.5 text-[13px] text-primary">
+                            <Info className="size-4 shrink-0" />
+                            <span>
+                                يتم ملء الأسعار تلقائياً حسب قائمة أسعار الطبيب{' '}
+                                <span className="font-semibold">
+                                    {selectedDentist.name}
+                                </span>
                             </span>
-                        </p>
+                        </div>
                     )}
+            </section>
+
+            {/* Items */}
+            <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-base font-bold text-foreground">
+                        العناصر
+                    </h2>
+                    <Button
+                        type="button"
+                        onClick={addItem}
+                        variant="outline"
+                        className="gap-2 rounded-[10px] border-primary text-primary hover:bg-secondary hover:text-primary"
+                    >
+                        <Plus className="size-4" />
+                        إضافة عنصر
+                    </Button>
+                </div>
 
                 {data.items.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
@@ -255,25 +283,27 @@ export default function OrderForm({
                         {data.items.map((item, index) => (
                             <div
                                 key={index}
-                                className="space-y-4 rounded-lg border p-4"
+                                className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6"
                             >
-                                <div className="flex items-start justify-between">
-                                    <h4 className="font-medium">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[15px] font-bold text-primary">
                                         عنصر {index + 1}
-                                    </h4>
-                                    <Button
+                                    </h3>
+                                    <button
                                         type="button"
-                                        variant="ghost"
-                                        size="sm"
+                                        title="حذف العنصر"
                                         onClick={() => removeItem(index)}
+                                        className="flex size-[34px] items-center justify-center rounded-[9px] border border-[#F5D5DB] bg-card text-[#BE123C] transition-colors hover:bg-[#FDECEE]"
                                     >
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                        <Trash2 className="size-[15px]" />
+                                    </button>
                                 </div>
 
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="grid gap-2">
-                                        <Label>النوع</Label>
+                                        <Label className={labelClass}>
+                                            النوع
+                                        </Label>
                                         <WorkTypeCombobox
                                             value={item.type}
                                             onChange={(v) =>
@@ -288,7 +318,9 @@ export default function OrderForm({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>اسم المريض</Label>
+                                        <Label className={labelClass}>
+                                            اسم المريض
+                                        </Label>
                                         <Input
                                             value={item.patient_name}
                                             onChange={(e) =>
@@ -299,6 +331,7 @@ export default function OrderForm({
                                                 )
                                             }
                                             placeholder="أدخل اسم المريض..."
+                                            className={fieldClass}
                                         />
                                         <InputError
                                             message={itemError(
@@ -309,13 +342,16 @@ export default function OrderForm({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>التاريخ</Label>
+                                        <Label className={labelClass}>
+                                            التاريخ
+                                        </Label>
                                         <DateInput
                                             value={item.date}
                                             onChange={(value) =>
                                                 updateItem(index, 'date', value)
                                             }
                                             required
+                                            className={fieldClass}
                                         />
                                         <InputError
                                             message={itemError(index, 'date')}
@@ -323,7 +359,7 @@ export default function OrderForm({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>
+                                        <Label className={labelClass}>
                                             الكمية{' '}
                                             {item.selected_teeth.length > 0 && (
                                                 <span className="text-xs font-normal text-muted-foreground">
@@ -349,11 +385,11 @@ export default function OrderForm({
                                             readOnly={
                                                 item.selected_teeth.length > 0
                                             }
-                                            className={
-                                                item.selected_teeth.length > 0
-                                                    ? 'bg-muted'
-                                                    : ''
-                                            }
+                                            className={cn(
+                                                fieldClass,
+                                                item.selected_teeth.length >
+                                                    0 && 'bg-muted',
+                                            )}
                                         />
                                         <InputError
                                             message={itemError(
@@ -364,7 +400,9 @@ export default function OrderForm({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>السعر</Label>
+                                        <Label className={labelClass}>
+                                            السعر
+                                        </Label>
                                         <Input
                                             type="number"
                                             min="0"
@@ -377,6 +415,7 @@ export default function OrderForm({
                                                         0,
                                                 )
                                             }
+                                            className={fieldClass}
                                         />
                                         <InputError
                                             message={itemError(index, 'price')}
@@ -384,7 +423,9 @@ export default function OrderForm({
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label>ملاحظات</Label>
+                                        <Label className={labelClass}>
+                                            ملاحظات
+                                        </Label>
                                         <Input
                                             value={item.notes}
                                             onChange={(e) =>
@@ -394,6 +435,7 @@ export default function OrderForm({
                                                     e.target.value,
                                                 )
                                             }
+                                            className={fieldClass}
                                         />
                                     </div>
                                 </div>
@@ -414,31 +456,42 @@ export default function OrderForm({
                                     }}
                                 />
 
-                                <p className="text-sm text-muted-foreground">
+                                <div className="flex justify-end text-sm text-[#435955]">
                                     المجموع الفرعي:{' '}
-                                    {(
-                                        item.quantity * item.price
-                                    ).toLocaleString('en-US')}
-                                </p>
+                                    <span className="mr-1.5 font-bold text-foreground tabular-nums">
+                                        {(
+                                            item.quantity * item.price
+                                        ).toLocaleString('en-US')}
+                                    </span>
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
                 <InputError message={errors.items} />
-            </div>
+            </section>
 
-            <div className="rounded-lg border bg-muted/50 p-4">
-                <p className="text-lg font-semibold">
-                    المجموع الكلي: {total.toLocaleString('en-US')}
-                </p>
-            </div>
-
-            <Button
-                type="submit"
-                disabled={processing || data.items.length === 0}
-            >
-                {submitLabel}
-            </Button>
+            {/* Total + submit */}
+            <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-6 py-5">
+                <span className="text-[17px] font-bold text-foreground">
+                    المجموع الكلي:{' '}
+                    <span className="text-primary tabular-nums">
+                        {total.toLocaleString('en-US')}
+                    </span>{' '}
+                    <span className="text-[13px] font-medium text-muted-foreground">
+                        دينار
+                    </span>
+                </span>
+                <Button
+                    type="submit"
+                    size="lg"
+                    disabled={processing || data.items.length === 0}
+                    className="gap-2 rounded-xl px-7 text-[15px] font-semibold shadow-[0_2px_6px_rgba(15,118,110,0.25)]"
+                >
+                    <Check className="size-[17px]" />
+                    {submitLabel}
+                </Button>
+            </section>
         </form>
     );
 }

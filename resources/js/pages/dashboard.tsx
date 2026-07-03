@@ -1,7 +1,7 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    ArrowUpRight,
     ClipboardList,
+    Clock,
     Coins,
     CreditCard,
     HandCoins,
@@ -14,15 +14,12 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { formatDate } from '@/components/order-display';
-import { Badge } from '@/components/ui/badge';
+import { formatDate, StatusPill } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, DentistPayment, Order } from '@/types';
-import { ORDER_STATUSES } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -57,74 +54,82 @@ const monthLabel = (month: string) =>
         month: 'long',
         year: 'numeric',
     });
+const initial = (name?: string | null) => name?.trim().charAt(0) || '؟';
 
-type Tone = 'blue' | 'amber' | 'violet' | 'emerald' | 'rose';
-
-const toneStyles: Record<Tone, { icon: string; ring: string }> = {
-    blue: {
-        icon: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-        ring: 'hover:border-blue-500/40',
-    },
-    amber: {
-        icon: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-        ring: 'hover:border-amber-500/40',
-    },
-    violet: {
-        icon: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
-        ring: 'hover:border-violet-500/40',
-    },
-    emerald: {
-        icon: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-        ring: 'hover:border-emerald-500/40',
-    },
-    rose: {
-        icon: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-        ring: 'hover:border-rose-500/40',
-    },
-};
+// Icon-chip tints. Teal is the brand default; the money colors get their own
+// semantic tone (green in, red out, amber pending).
+const CHIP = {
+    teal: 'bg-secondary text-primary',
+    green: 'bg-[#E5F5EE] text-[#047857]',
+    red: 'bg-[#FDECEE] text-[#BE123C]',
+    amber: 'bg-[#FEF3E2] text-[#B45309]',
+} as const;
 
 function MoneyCard({
     title,
     value,
     hint,
     icon: Icon,
-    tone,
-    valueClassName,
+    variant,
 }: {
     title: string;
     value: number;
     hint: string;
     icon: LucideIcon;
-    tone: Tone;
-    valueClassName?: string;
+    variant: 'income' | 'expense' | 'net-positive' | 'net-negative';
 }) {
+    const inverted = variant === 'net-positive';
     return (
-        <Card className="gap-0 py-0">
-            <CardContent className="flex items-start justify-between gap-4 p-5">
-                <div className="space-y-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                        {title}
-                    </p>
-                    <p
-                        className={cn(
-                            'text-3xl font-bold tracking-tight tabular-nums',
-                            valueClassName,
-                        )}
-                    >
-                        {nf(value)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{hint}</p>
-                </div>
-                <div
+        <div
+            className={cn(
+                'flex flex-col gap-2.5 rounded-2xl border p-6',
+                inverted
+                    ? 'border-primary bg-primary'
+                    : 'border-border bg-card',
+            )}
+        >
+            <div className="flex items-center justify-between">
+                <span
                     className={cn(
-                        'flex size-11 shrink-0 items-center justify-center rounded-xl',
-                        toneStyles[tone].icon,
+                        'text-[15px] font-medium',
+                        inverted ? 'text-[#C7E5E1]' : 'text-muted-foreground',
+                    )}
+                >
+                    {title}
+                </span>
+                <span
+                    className={cn(
+                        'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                        variant === 'income' && CHIP.green,
+                        variant === 'expense' && CHIP.red,
+                        variant === 'net-negative' && CHIP.red,
+                        inverted && 'bg-white/15 text-white',
                     )}
                 >
                     <Icon className="size-5" />
-                </div>
-            </CardContent>
-        </Card>
+                </span>
+            </div>
+            <span
+                className={cn(
+                    'text-[32px] font-bold tabular-nums',
+                    variant === 'income' && 'text-[#047857]',
+                    variant === 'expense' && 'text-[#BE123C]',
+                    variant === 'net-negative' && 'text-[#BE123C]',
+                    inverted && 'text-white',
+                )}
+                style={{ letterSpacing: '-0.5px' }}
+            >
+                {nf(value)}
+            </span>
+            <span
+                className={cn(
+                    'text-[13px]',
+                    inverted ? 'text-[#C7E5E1]' : 'text-muted-foreground',
+                )}
+            >
+                {hint}
+            </span>
+        </div>
     );
 }
 
@@ -139,22 +144,19 @@ function MiniStat({
     title: string;
     value: number;
     icon: LucideIcon;
-    tone: Tone;
+    tone: keyof typeof CHIP;
     href: string;
     valueClassName?: string;
 }) {
     return (
         <Link
             href={href}
-            className={cn(
-                'group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors',
-                toneStyles[tone].ring,
-            )}
+            className="group flex items-center gap-3.5 rounded-[14px] border bg-card p-4 transition-colors hover:border-primary"
         >
             <span
                 className={cn(
-                    'flex size-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105',
-                    toneStyles[tone].icon,
+                    'flex size-[42px] shrink-0 items-center justify-center rounded-xl',
+                    CHIP[tone],
                 )}
             >
                 <Icon className="size-5" />
@@ -168,7 +170,7 @@ function MiniStat({
                 >
                     {nf(value)}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-[13px] text-muted-foreground">
                     {title}
                 </p>
             </div>
@@ -180,31 +182,31 @@ const quickActions: {
     href: string;
     label: string;
     icon: LucideIcon;
-    tone: Tone;
+    tone: keyof typeof CHIP;
 }[] = [
     {
         href: '/orders/create',
         label: 'إضافة طلب',
         icon: ClipboardList,
-        tone: 'amber',
+        tone: 'teal',
     },
     {
         href: '/payments/create',
         label: 'إضافة دفعة',
         icon: CreditCard,
-        tone: 'emerald',
+        tone: 'green',
     },
     {
         href: '/employees',
         label: 'تسجيل راتب',
         icon: HandCoins,
-        tone: 'rose',
+        tone: 'red',
     },
     {
         href: '/material-purchases/create',
         label: 'تسجيل مادة',
         icon: Package,
-        tone: 'violet',
+        tone: 'amber',
     },
 ];
 
@@ -213,91 +215,62 @@ export default function Dashboard({
     recentOrders,
     recentPayments,
 }: DashboardProps) {
+    const { auth } = usePage().props;
     const netNegative = stats.net < 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="لوحة التحكم" />
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="flex h-full flex-1 flex-col gap-7 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-bold tracking-tight">
-                            لوحة التحكم
+                        <h1 className="text-[26px] font-bold text-foreground">
+                            مرحباً، {auth.user.name} 👋
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            نظرة عامة على أداء المختبر والنشاط الأخير
+                        <p className="text-[15px] text-muted-foreground">
+                            هذا ملخص أداء المختبر لشهر {monthLabel(stats.month)}
                         </p>
                     </div>
-                    <Button asChild size="lg" className="gap-2 sm:w-auto">
+                    <Button
+                        asChild
+                        size="lg"
+                        className="gap-2 rounded-xl px-[22px] text-[15px] font-semibold shadow-[0_2px_6px_rgba(15,118,110,0.25)]"
+                    >
                         <Link href="/orders/create">
-                            <Plus className="size-4" />
+                            <Plus className="size-[18px]" />
                             إضافة طلب جديد
                         </Link>
                     </Button>
                 </div>
 
                 {/* This month's money */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                            <h2 className="font-semibold">
-                                ملخص {monthLabel(stats.month)}
-                            </h2>
-                            <p className="text-xs text-muted-foreground">
-                                الدخل والمصروفات وصافي الربح لهذا الشهر
-                            </p>
-                        </div>
-                        <Button
-                            asChild
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1 text-muted-foreground"
-                        >
-                            <Link href="/finance">
-                                التفاصيل
-                                <ArrowUpRight className="size-4" />
-                            </Link>
-                        </Button>
-                    </div>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        <MoneyCard
-                            title="الدخل"
-                            value={stats.income}
-                            hint="مدفوعات الأطباء هذا الشهر"
-                            icon={TrendingUp}
-                            tone="emerald"
-                            valueClassName="text-emerald-600 dark:text-emerald-400"
-                        />
-                        <MoneyCard
-                            title="المصروفات"
-                            value={stats.expenses}
-                            hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)} + مصاريف ${nf(stats.general_expenses)}`}
-                            icon={TrendingDown}
-                            tone="rose"
-                            valueClassName="text-rose-600 dark:text-rose-400"
-                        />
-                        <MoneyCard
-                            title="صافي الربح"
-                            value={stats.net}
-                            hint={
-                                netNegative
-                                    ? 'خسارة هذا الشهر'
-                                    : 'ربح هذا الشهر'
-                            }
-                            icon={Wallet}
-                            tone={netNegative ? 'rose' : 'blue'}
-                            valueClassName={
-                                netNegative
-                                    ? 'text-rose-600 dark:text-rose-400'
-                                    : undefined
-                            }
-                        />
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <MoneyCard
+                        title="الدخل هذا الشهر"
+                        value={stats.income}
+                        hint="مدفوعات الأطباء هذا الشهر"
+                        icon={TrendingUp}
+                        variant="income"
+                    />
+                    <MoneyCard
+                        title="المصروفات هذا الشهر"
+                        value={stats.expenses}
+                        hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)} + مصاريف ${nf(stats.general_expenses)}`}
+                        icon={TrendingDown}
+                        variant="expense"
+                    />
+                    <MoneyCard
+                        title="صافي الربح"
+                        value={stats.net}
+                        hint={netNegative ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
+                        icon={Wallet}
+                        variant={netNegative ? 'net-negative' : 'net-positive'}
+                    />
                 </div>
 
                 {/* Operational numbers */}
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <MiniStat
                         title="الرصيد المتبقي على الأطباء"
                         value={stats.outstanding}
@@ -306,29 +279,29 @@ export default function Dashboard({
                         href="/invoices"
                         valueClassName={
                             stats.outstanding < 0
-                                ? 'text-rose-600 dark:text-rose-400'
-                                : undefined
+                                ? 'text-[#BE123C]'
+                                : 'text-[#B45309]'
                         }
                     />
                     <MiniStat
                         title="طلبات قيد الانتظار"
                         value={stats.pending_orders}
-                        icon={ClipboardList}
-                        tone="violet"
+                        icon={Clock}
+                        tone="teal"
                         href="/orders"
                     />
                     <MiniStat
                         title="إجمالي الأطباء"
                         value={stats.dentists}
                         icon={Users}
-                        tone="blue"
+                        tone="teal"
                         href="/dentists"
                     />
                     <MiniStat
                         title="إجمالي الموظفين"
                         value={stats.employees}
                         icon={UserCog}
-                        tone="emerald"
+                        tone="teal"
                         href="/employees"
                     />
                 </div>
@@ -336,27 +309,24 @@ export default function Dashboard({
                 {/* Recent activity */}
                 <div className="grid gap-4 lg:grid-cols-2">
                     {/* Recent orders */}
-                    <Card className="gap-0 py-0">
-                        <div className="flex items-center justify-between border-b p-5">
+                    <div className="overflow-hidden rounded-2xl border bg-card">
+                        <div className="flex items-center justify-between border-b border-[#EDF2F1] px-[22px] py-[18px]">
                             <div className="space-y-0.5">
-                                <h2 className="font-semibold">أحدث الطلبات</h2>
+                                <h2 className="text-base font-bold">
+                                    أحدث الطلبات
+                                </h2>
                                 <p className="text-xs text-muted-foreground">
                                     آخر 5 طلبات
                                 </p>
                             </div>
-                            <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="gap-1 text-muted-foreground"
+                            <Link
+                                href="/orders"
+                                className="text-[13px] font-semibold text-primary"
                             >
-                                <Link href="/orders">
-                                    عرض الكل
-                                    <ArrowUpRight className="size-4" />
-                                </Link>
-                            </Button>
+                                عرض الكل ←
+                            </Link>
                         </div>
-                        <CardContent className="p-2">
+                        <div className="p-2">
                             {recentOrders.length === 0 ? (
                                 <EmptyState
                                     icon={ClipboardList}
@@ -368,29 +338,26 @@ export default function Dashboard({
                                         <li key={order.id}>
                                             <Link
                                                 href={`/orders/${order.id}/edit`}
-                                                className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted/60"
+                                                className="flex items-center justify-between gap-3 rounded-[10px] px-3.5 py-3 transition-colors hover:bg-muted"
                                             >
                                                 <div className="flex min-w-0 items-center gap-3">
-                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                                                        <ClipboardList className="size-4" />
+                                                    <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-secondary text-[15px] font-bold text-primary">
+                                                        {initial(
+                                                            order.dentist?.name,
+                                                        )}
                                                     </span>
-                                                    <div className="min-w-0 space-y-1">
-                                                        <p className="truncate text-sm font-medium">
+                                                    <div className="min-w-0 space-y-1.5">
+                                                        <p className="truncate text-[15px] font-semibold">
                                                             {order.dentist
                                                                 ?.name ?? '—'}
                                                         </p>
                                                         <div className="flex items-center gap-2">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="text-[10px]"
-                                                            >
-                                                                {
-                                                                    ORDER_STATUSES[
-                                                                        order
-                                                                            .status
-                                                                    ]
+                                                            <StatusPill
+                                                                status={
+                                                                    order.status
                                                                 }
-                                                            </Badge>
+                                                                className="px-2 py-0.5 text-[11px]"
+                                                            />
                                                             <span className="text-xs text-muted-foreground">
                                                                 {formatDate(
                                                                     order.created_at,
@@ -399,7 +366,7 @@ export default function Dashboard({
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span className="shrink-0 text-sm font-semibold tabular-nums">
+                                                <span className="shrink-0 text-[15px] font-bold tabular-nums">
                                                     {nf(order.amount)}
                                                 </span>
                                             </Link>
@@ -407,33 +374,28 @@ export default function Dashboard({
                                     ))}
                                 </ul>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
                     {/* Recent payments */}
-                    <Card className="gap-0 py-0">
-                        <div className="flex items-center justify-between border-b p-5">
+                    <div className="overflow-hidden rounded-2xl border bg-card">
+                        <div className="flex items-center justify-between border-b border-[#EDF2F1] px-[22px] py-[18px]">
                             <div className="space-y-0.5">
-                                <h2 className="font-semibold">
+                                <h2 className="text-base font-bold">
                                     أحدث المدفوعات
                                 </h2>
                                 <p className="text-xs text-muted-foreground">
                                     آخر 5 مدفوعات
                                 </p>
                             </div>
-                            <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="gap-1 text-muted-foreground"
+                            <Link
+                                href="/payments"
+                                className="text-[13px] font-semibold text-primary"
                             >
-                                <Link href="/payments">
-                                    عرض الكل
-                                    <ArrowUpRight className="size-4" />
-                                </Link>
-                            </Button>
+                                عرض الكل ←
+                            </Link>
                         </div>
-                        <CardContent className="p-2">
+                        <div className="p-2">
                             {recentPayments.length === 0 ? (
                                 <EmptyState
                                     icon={CreditCard}
@@ -444,14 +406,14 @@ export default function Dashboard({
                                     {recentPayments.map((payment) => (
                                         <li
                                             key={payment.id}
-                                            className="flex items-center justify-between gap-3 rounded-lg px-3 py-3"
+                                            className="flex items-center justify-between gap-3 rounded-[10px] px-3.5 py-3"
                                         >
                                             <div className="flex min-w-0 items-center gap-3">
-                                                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                                <span className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-[#E5F5EE] text-[#047857]">
                                                     <CreditCard className="size-4" />
                                                 </span>
-                                                <div className="min-w-0 space-y-1">
-                                                    <p className="truncate text-sm font-medium">
+                                                <div className="min-w-0 space-y-1.5">
+                                                    <p className="truncate text-[15px] font-semibold">
                                                         {payment.dentist
                                                             ?.name ?? '—'}
                                                     </p>
@@ -463,46 +425,41 @@ export default function Dashboard({
                                                     </span>
                                                 </div>
                                             </div>
-                                            <span className="shrink-0 text-sm font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
+                                            <span className="shrink-0 text-[15px] font-bold text-[#047857] tabular-nums">
                                                 +{nf(payment.amount)}
                                             </span>
                                         </li>
                                     ))}
                                 </ul>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Quick actions */}
                 <div className="space-y-3">
                     <div className="space-y-0.5">
-                        <h2 className="font-semibold">إجراءات سريعة</h2>
+                        <h2 className="text-base font-bold">إجراءات سريعة</h2>
                         <p className="text-xs text-muted-foreground">
                             الإجراءات الأكثر استخداماً
                         </p>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {quickActions.map((action) => (
                             <Link
                                 key={action.href}
                                 href={action.href}
-                                className={cn(
-                                    'group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors',
-                                    toneStyles[action.tone].ring,
-                                )}
+                                className="group flex items-center gap-3 rounded-[14px] border bg-card p-4 text-[15px] font-semibold transition-colors hover:border-primary hover:bg-muted"
                             >
                                 <span
                                     className={cn(
-                                        'flex size-10 shrink-0 items-center justify-center rounded-lg transition-transform duration-200 group-hover:scale-105',
-                                        toneStyles[action.tone].icon,
+                                        'flex size-10 shrink-0 items-center justify-center rounded-xl',
+                                        CHIP[action.tone],
                                     )}
                                 >
-                                    <action.icon className="size-5" />
+                                    <action.icon className="size-[19px]" />
                                 </span>
-                                <span className="text-sm font-medium">
-                                    {action.label}
-                                </span>
+                                {action.label}
                             </Link>
                         ))}
                     </div>

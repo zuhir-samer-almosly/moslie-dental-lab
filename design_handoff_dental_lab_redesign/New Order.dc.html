@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #F6F8F8; }
+  * { box-sizing: border-box; }
+  input, select, textarea, button { font-family: inherit; }
+</style>
+</helmet>
+<div dir="rtl" data-screen-label="إضافة طلب" style="display: flex; min-height: 100vh; background: #F6F8F8; font-family: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif; color: #122A27; font-size: 16px;">
+
+  <!-- Sidebar -->
+  <aside style="width: 264px; flex-shrink: 0; background: #FFFFFF; border-left: 1px solid #E3EAE9; display: flex; flex-direction: column; padding: 20px 16px; gap: 8px; position: sticky; top: 0; height: 100vh;">
+    <div style="display: flex; align-items: center; gap: 12px; padding: 8px 10px 20px 10px; border-bottom: 1px solid #EDF2F1; margin-bottom: 12px;">
+      <span style="display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 12px; background: #0F766E; flex-shrink: 0;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5c-1.5-1.8-4-2.3-6-1-2.3 1.5-2.6 4.7-1.2 7 1 1.6 1.5 3.4 1.7 5.3.2 1.6.5 3.2 1.5 3.2 1.6 0 1.2-3.6 4-3.6s2.4 3.6 4 3.6c1 0 1.3-1.6 1.5-3.2.2-1.9.7-3.7 1.7-5.3 1.4-2.3 1.1-5.5-1.2-7-2-1.3-4.5-.8-6 1z"></path></svg>
+      </span>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 17px; font-weight: 700; color: #122A27;">مخبر الموصلي</span>
+        <span style="font-size: 12px; color: #6B807C;">إدارة مالية المختبر</span>
+      </div>
+    </div>
+    <nav style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+      <a href="Dashboard.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+        لوحة التحكم
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        أطباء الأسنان
+      </a>
+      <a href="Orders.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; background: #0F766E; color: #FFFFFF; text-decoration: none; font-size: 15px; font-weight: 600;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M9 12h6"></path><path d="M9 16h6"></path></svg>
+        الطلبات
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+        المدفوعات
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        الفواتير
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4z"></path></svg>
+        الأرصدة المستحقة
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"></circle><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"></path><circle cx="19" cy="11" r="2"></circle></svg>
+        الموظفون
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"></path><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.29 7 12 12 20.71 7"></polyline><line x1="12" y1="22" x2="12" y2="12"></line></svg>
+        النفقات
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2h0V5z"></path><path d="M2 9v1c0 1.1.9 2 2 2h1"></path></svg>
+        المالية
+      </a>
+      <a href="#" style="display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; color: #435955; text-decoration: none; font-size: 15px; font-weight: 500;" style-hover="background: #EFF5F4; color: #0F766E;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        التقرير
+      </a>
+    </nav>
+    <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid #EDF2F1; margin-top: 8px;">
+      <span style="display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #E0F0EE; color: #0F766E; font-weight: 700; font-size: 15px; flex-shrink: 0;">س</span>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 14px; font-weight: 600; color: #122A27;">سامر</span>
+        <span style="font-size: 12px; color: #6B807C;">مدير المختبر</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main style="flex: 1; padding: 32px 36px 48px 36px; display: flex; flex-direction: column; gap: 24px;">
+
+    <!-- Header -->
+    <header style="display: flex; align-items: center; gap: 14px; max-width: 920px;">
+      <a href="Orders.dc.html" title="رجوع إلى الطلبات" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid #E3EAE9; background: #FFFFFF; border-radius: 10px; color: #435955; text-decoration: none;" style-hover="border-color: #0F766E; color: #0F766E;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 5 5 12 12 19"></polyline></svg>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 700; color: #122A27;">إضافة طلب جديد</h1>
+        <p style="margin: 0; font-size: 15px; color: #6B807C;">الطلبات ← طلب جديد</p>
+      </div>
+    </header>
+
+    <!-- Order info card -->
+    <section style="background: #FFFFFF; border: 1px solid #E3EAE9; border-radius: 16px; padding: 24px; max-width: 920px; display: flex; flex-direction: column; gap: 18px;">
+      <span style="font-size: 16px; font-weight: 700; color: #122A27;">معلومات الطلب</span>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 14px; font-weight: 600; color: #435955;">الطبيب</label>
+          <select onChange="{{ onDentist }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27; cursor: pointer;">
+            <option>د. بلال</option>
+          </select>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 14px; font-weight: 600; color: #435955;">الحالة</label>
+          <select onChange="{{ onStatus }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27; cursor: pointer;">
+            <option>قيد الانتظار</option>
+            <option>مكتمل</option>
+            <option>تم التسليم</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="font-size: 14px; font-weight: 600; color: #435955;">ملاحظات</label>
+        <textarea rows="2" placeholder="ملاحظات عامة على الطلب..." style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27; resize: vertical;"></textarea>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; background: #EFF5F4; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #0F766E;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        يتم ملء الأسعار تلقائياً حسب قائمة أسعار الطبيب د. بلال
+      </div>
+    </section>
+
+    <!-- Items -->
+    <section style="display: flex; flex-direction: column; gap: 16px; max-width: 920px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 16px; font-weight: 700; color: #122A27;">العناصر</span>
+        <button onClick="{{ addItem }}" style="display: inline-flex; align-items: center; gap: 8px; border: 1px solid #0F766E; background: #FFFFFF; color: #0F766E; padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;" style-hover="background: #EFF5F4;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          إضافة عنصر
+        </button>
+      </div>
+
+      <sc-for list="{{ items }}" as="item" hint-placeholder-count="1">
+        <div style="background: #FFFFFF; border: 1px solid #E3EAE9; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 15px; font-weight: 700; color: #0F766E;">{{ item.label }}</span>
+            <button data-index="{{ item.index }}" onClick="{{ removeItem }}" title="حذف العنصر" style="display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid #F5D5DB; background: #FFFFFF; border-radius: 9px; color: #BE123C; cursor: pointer;" style-hover="background: #FDECEE;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">النوع</label>
+              <select data-index="{{ item.index }}" data-field="type" value="{{ item.type }}" onChange="{{ updateItem }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27; cursor: pointer;">
+                <option>زيركون</option>
+                <option>بورسلين</option>
+                <option>تلبيسة معدنية</option>
+                <option>طقم كامل</option>
+                <option>تقويم متحرك</option>
+              </select>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">اسم المريض</label>
+              <input data-index="{{ item.index }}" data-field="patient" value="{{ item.patient }}" onChange="{{ updateItem }}" placeholder="أدخل اسم المريض..." style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">التاريخ</label>
+              <input type="date" data-index="{{ item.index }}" data-field="date" value="{{ item.date }}" onChange="{{ updateItem }}" style="padding: 11px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">الكمية <span style="font-weight: 400; font-size: 12px; color: #6B807C;">{{ item.qtyHint }}</span></label>
+              <input type="number" data-index="{{ item.index }}" data-field="qty" value="{{ item.qty }}" onChange="{{ updateItem }}" readOnly="{{ item.hasTeeth }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: {{ item.qtyBg }}; font-size: 15px; color: #122A27;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">السعر</label>
+              <input type="number" data-index="{{ item.index }}" data-field="price" value="{{ item.price }}" onChange="{{ updateItem }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">ملاحظات</label>
+              <input data-index="{{ item.index }}" data-field="notes" value="{{ item.notes }}" onChange="{{ updateItem }}" style="padding: 12px 14px; border: 1px solid #DCE4E3; border-radius: 10px; background: #FFFFFF; font-size: 15px; color: #122A27;">
+            </div>
+          </div>
+
+          <!-- Dental chart -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <label style="font-size: 14px; font-weight: 600; color: #435955;">الأسنان <span style="font-weight: 400; font-size: 12px; color: #6B807C;">{{ item.teethSummary }}</span></label>
+              <button data-index="{{ item.index }}" onClick="{{ clearTeeth }}" style="border: none; background: transparent; color: #6B807C; font-size: 12px; cursor: pointer; padding: 4px;" style-hover="color: #BE123C;">مسح الكل</button>
+            </div>
+            <div style="border: 1px solid #E3EAE9; border-radius: 14px; padding: 16px; background: #FBFCFC; display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; gap: 8px;">
+                <button data-index="{{ item.index }}" data-jaw="upper" onClick="{{ toggleJaw }}" style="border: 1px solid #DCE4E3; background: #FFFFFF; color: #435955; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="border-color: #0F766E; color: #0F766E;">الفك العلوي</button>
+                <button data-index="{{ item.index }}" data-jaw="lower" onClick="{{ toggleJaw }}" style="border: 1px solid #DCE4E3; background: #FFFFFF; color: #435955; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer;" style-hover="border-color: #0F766E; color: #0F766E;">الفك السفلي</button>
+              </div>
+              <div dir="ltr" style="display: flex; gap: 3px; justify-content: center; flex-wrap: nowrap; border-bottom: 1px dashed #DCE4E3; padding-bottom: 10px;">
+                <sc-for list="{{ item.upperRow }}" as="t" hint-placeholder-count="16">
+                  <button data-index="{{ item.index }}" data-tooth="{{ t.num }}" onClick="{{ toggleTooth }}" title="{{ t.num }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; border: none; background: transparent; cursor: pointer; padding: 2px;">
+                    <svg width="24" height="50" viewBox="-16 -54 32 80"><path d="{{ t.rootPath }}" fill="none" stroke="#C9D4D1" stroke-width="2.5" stroke-linecap="round"></path><path d="{{ t.crownPath }}" fill="{{ t.fill }}" stroke="{{ t.stroke }}" stroke-width="2"></path></svg>
+                    <span style="font-size: 10px; font-weight: 600; color: {{ t.numColor }}; font-variant-numeric: tabular-nums;">{{ t.num }}</span>
+                  </button>
+                </sc-for>
+              </div>
+              <div dir="ltr" style="display: flex; gap: 3px; justify-content: center; flex-wrap: nowrap;">
+                <sc-for list="{{ item.lowerRow }}" as="t" hint-placeholder-count="16">
+                  <button data-index="{{ item.index }}" data-tooth="{{ t.num }}" onClick="{{ toggleTooth }}" title="{{ t.num }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; border: none; background: transparent; cursor: pointer; padding: 2px;">
+                    <span style="font-size: 10px; font-weight: 600; color: {{ t.numColor }}; font-variant-numeric: tabular-nums;">{{ t.num }}</span>
+                    <svg width="24" height="50" viewBox="-16 -26 32 80"><path d="{{ t.rootPath }}" fill="none" stroke="#C9D4D1" stroke-width="2.5" stroke-linecap="round"></path><path d="{{ t.crownPath }}" fill="{{ t.fill }}" stroke="{{ t.stroke }}" stroke-width="2"></path></svg>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; font-size: 14px; color: #435955;">
+            المجموع الفرعي: <span style="font-weight: 700; color: #122A27; font-variant-numeric: tabular-nums; margin-right: 6px;">{{ item.subtotal }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+
+    <!-- Total + submit -->
+    <section style="display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; background: #FFFFFF; border: 1px solid #E3EAE9; border-radius: 16px; padding: 20px 24px;">
+      <span style="font-size: 17px; font-weight: 700; color: #122A27;">المجموع الكلي: <span style="color: #0F766E; font-variant-numeric: tabular-nums;">{{ total }}</span> <span style="font-size: 13px; font-weight: 500; color: #6B807C;">دينار</span></span>
+      <button onClick="{{ noop }}" style="display: inline-flex; align-items: center; gap: 8px; background: #0F766E; color: #FFFFFF; border: none; padding: 14px 28px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);" style-hover="background: #0C5F59;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        حفظ الطلب
+      </button>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    items: [
+      { type: 'زيركون', patient: '', qty: 1, price: 150000, notes: '', date: '2026-07-03', teeth: [] },
+    ],
+  };
+
+  toothType(num) {
+    const pos = num % 10;
+    if (pos <= 2) return 'incisor';
+    if (pos === 3) return 'canine';
+    if (pos <= 5) return 'premolar';
+    return 'molar';
+  }
+
+  crownPath(type) {
+    if (type === 'molar') return 'M -14 -18 C -14 -20 -12 -22 -8 -22 L 8 -22 C 12 -22 14 -20 14 -18 L 14 14 C 14 18 10 22 6 22 L -6 22 C -10 22 -14 18 -14 14 Z';
+    if (type === 'premolar') return 'M -11 -18 C -11 -20 -9 -22 -6 -22 L 6 -22 C 9 -22 11 -20 11 -18 L 11 14 C 11 18 8 22 4 22 L -4 22 C -8 22 -11 18 -11 14 Z';
+    if (type === 'canine') return 'M -10 -16 C -10 -20 -8 -24 -4 -24 L 4 -24 C 8 -24 10 -20 10 -16 L 10 14 C 10 18 7 20 4 20 L -4 20 C -7 20 -10 18 -10 14 Z';
+    return 'M -9 -16 C -9 -18 -7 -20 -5 -20 L 5 -20 C 7 -20 9 -18 9 -16 L 9 14 C 9 17 7 19 4 19 L -4 19 C -7 19 -9 17 -9 14 Z';
+  }
+
+  upperRootPath(type) {
+    if (type === 'molar') return 'M -8 -22 C -10 -32 -12 -42 -10 -48 M 0 -22 C 0 -32 0 -42 0 -48 M 8 -22 C 10 -32 12 -42 10 -48';
+    if (type === 'premolar') return 'M -4 -22 C -6 -32 -6 -42 -4 -46 M 4 -22 C 6 -32 6 -42 4 -46';
+    return 'M 0 -20 C 0 -30 -1 -40 0 -46';
+  }
+
+  lowerRootPath(type) {
+    if (type === 'molar') return 'M -6 22 C -8 32 -8 40 -6 46 M 6 22 C 8 32 8 40 6 46';
+    if (type === 'premolar') return 'M 0 22 C -1 32 -1 40 0 46';
+    return 'M 0 19 C 0 30 -1 38 0 44';
+  }
+
+  toothView(num, teeth, isUpper) {
+    const sel = teeth.includes(num);
+    const type = this.toothType(num);
+    return {
+      num,
+      crownPath: this.crownPath(type),
+      rootPath: isUpper ? this.upperRootPath(type) : this.lowerRootPath(type),
+      fill: sel ? '#0F766E' : '#EDF2F1',
+      stroke: sel ? '#0C5F59' : '#B4C2BF',
+      numColor: sel ? '#0F766E' : '#8CA09C',
+    };
+  }
+
+  setItem(index, patch) {
+    this.setState((s) => ({
+      items: s.items.map((it, i) => (i === index ? { ...it, ...patch } : it)),
+    }));
+  }
+
+  renderVals() {
+    const UPPER = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28];
+    const LOWER = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+    const nf = (v) => v.toLocaleString('en-US');
+
+    const items = this.state.items.map((it, index) => {
+      const qty = it.teeth.length > 0 ? it.teeth.length : it.qty;
+      return {
+        index,
+        label: 'عنصر ' + (index + 1),
+        type: it.type,
+        patient: it.patient,
+        date: it.date,
+        notes: it.notes,
+        price: it.price,
+        qty,
+        hasTeeth: it.teeth.length > 0,
+        qtyBg: it.teeth.length > 0 ? '#F3F7F6' : '#FFFFFF',
+        qtyHint: it.teeth.length > 0 ? '(حسب الأسنان المختارة)' : '',
+        teethSummary: it.teeth.length > 0 ? '(' + it.teeth.length + ' مختارة)' : '(اضغط على السن لاختياره)',
+        subtotal: nf(qty * it.price),
+        upperRow: UPPER.map((n) => this.toothView(n, it.teeth, true)),
+        lowerRow: LOWER.map((n) => this.toothView(n, it.teeth, false)),
+      };
+    });
+
+    const total = this.state.items.reduce((sum, it) => {
+      const qty = it.teeth.length > 0 ? it.teeth.length : it.qty;
+      return sum + qty * it.price;
+    }, 0);
+
+    return {
+      items,
+      total: nf(total),
+      noop: () => {},
+      onDentist: () => {},
+      onStatus: () => {},
+
+      addItem: () => {
+        this.setState((s) => ({
+          items: [...s.items, { type: 'زيركون', patient: '', qty: 1, price: 150000, notes: '', date: '2026-07-03', teeth: [] }],
+        }));
+      },
+
+      removeItem: (e) => {
+        const index = Number(e.currentTarget.dataset.index);
+        this.setState((s) => ({ items: s.items.filter((_, i) => i !== index) }));
+      },
+
+      updateItem: (e) => {
+        const el = e.currentTarget;
+        const index = Number(el.dataset.index);
+        const field = el.dataset.field;
+        let value = el.value;
+        if (field === 'qty' || field === 'price') value = parseInt(value) || 0;
+        this.setItem(index, { [field]: value });
+      },
+
+      toggleTooth: (e) => {
+        const el = e.currentTarget;
+        const index = Number(el.dataset.index);
+        const num = Number(el.dataset.tooth);
+        const teeth = this.state.items[index].teeth;
+        const next = teeth.includes(num) ? teeth.filter((t) => t !== num) : [...teeth, num].sort((a, b) => a - b);
+        this.setItem(index, { teeth: next });
+      },
+
+      toggleJaw: (e) => {
+        const el = e.currentTarget;
+        const index = Number(el.dataset.index);
+        const jaw = el.dataset.jaw === 'upper' ? UPPER : LOWER;
+        const teeth = this.state.items[index].teeth;
+        const allSelected = jaw.every((t) => teeth.includes(t));
+        const next = allSelected
+          ? teeth.filter((t) => !jaw.includes(t))
+          : [...new Set([...teeth, ...jaw])].sort((a, b) => a - b);
+        this.setItem(index, { teeth: next });
+      },
+
+      clearTeeth: (e) => {
+        const index = Number(e.currentTarget.dataset.index);
+        this.setItem(index, { teeth: [] });
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>
