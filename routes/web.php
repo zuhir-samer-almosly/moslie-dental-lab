@@ -12,9 +12,12 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('dentists', App\Http\Controllers\DentistController::class);
-    Route::resource('orders', App\Http\Controllers\OrderController::class);
+    Route::resource('dentists', App\Http\Controllers\DentistController::class)
+        ->except('show');
+    Route::resource('orders', App\Http\Controllers\OrderController::class)
+        ->except('show');
     Route::resource('payments', App\Http\Controllers\DentistPaymentController::class)
+        ->except('show')
         ->parameters(['payments' => 'dentistPayment']);
     Route::get('invoices', [App\Http\Controllers\InvoiceController::class, 'index'])->name('invoices.index');
     Route::get('outstanding', [App\Http\Controllers\OutstandingController::class, 'index'])->name('outstanding.index');

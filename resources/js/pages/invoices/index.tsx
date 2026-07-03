@@ -440,10 +440,40 @@ export default function InvoicesIndex({
                                             </Table>
                                         </div>
                                         <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
-                                            <div className="flex items-center justify-between font-semibold">
+                                            {group.opening !== 0 && (
+                                                <div className="flex items-center justify-between">
+                                                    <span>
+                                                        رصيد مستحق من الفاتورة
+                                                        الماضية
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {group.opening.toLocaleString(
+                                                            'en-US',
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center justify-between">
                                                 <span>إجمالي طلبات الفترة</span>
                                                 <span className="tabular-nums">
                                                     {group.ordersTotal.toLocaleString(
+                                                        'en-US',
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span>مدفوعات الفترة</span>
+                                                <span className="tabular-nums">
+                                                    −
+                                                    {group.paymentsTotal.toLocaleString(
+                                                        'en-US',
+                                                    )}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
+                                                <span>المستحق على الطبيب</span>
+                                                <span className="tabular-nums">
+                                                    {group.due.toLocaleString(
                                                         'en-US',
                                                     )}
                                                 </span>

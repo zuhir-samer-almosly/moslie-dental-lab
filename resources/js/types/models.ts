@@ -1,7 +1,6 @@
 export interface Dentist {
     id: number;
     name: string;
-    email: string | null;
     phone: string | null;
     address: string | null;
     price_list: Record<string, number> | null;

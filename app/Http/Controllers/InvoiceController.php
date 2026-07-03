@@ -6,13 +6,25 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request)
     {
-        $from = $request->input('from');
-        $to = $request->input('to');
+        // Parse the bounds defensively: garbage dates would otherwise slip
+        // straight into the queries and produce a silently wrong report. Only
+        // build the invoice when BOTH bounds parse; an inverted range is
+        // swapped so the query stays valid.
+        $start = $this->parseDate($request->input('from'));
+        $end = $this->parseDate($request->input('to'));
+
+        if ($start && $end && $start->greaterThan($end)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        $from = $start?->toDateString();
+        $to = $end?->toDateString();
         $dentistId = $request->input('dentist_id');
 
         $orders = null;
@@ -31,7 +43,7 @@ class InvoiceController extends Controller
 
             $paymentsQuery = DentistPayment::with('dentist')
                 ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
-                ->orderBy('payment_date');
+                ->orderByRaw('COALESCE(payment_date, created_at)');
 
             if ($dentistId) {
                 $ordersQuery->where('dentist_id', $dentistId);
@@ -102,5 +114,22 @@ class InvoiceController extends Controller
                 'dentist_id' => $dentistId,
             ],
         ]);
+    }
+
+    /**
+     * Parse a Y-m-d bound, returning null for anything missing or malformed
+     * so a bad value collapses to "no report" instead of a broken query.
+     */
+    private function parseDate(?string $value): ?Carbon
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('!Y-m-d', $value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

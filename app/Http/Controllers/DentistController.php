@@ -40,14 +40,6 @@ class DentistController extends Controller
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(Dentist $dentist)
-    {
-        //
-    }
-
-    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Dentist $dentist)

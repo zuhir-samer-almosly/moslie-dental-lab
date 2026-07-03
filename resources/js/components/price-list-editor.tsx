@@ -8,6 +8,28 @@ export type PriceRow = {
 };
 
 /**
+ * Return the distinct trimmed names that appear on more than one row. The
+ * price list is submitted as a name→price object, so duplicates would
+ * silently collapse (last one wins) — callers use this to block submit and
+ * tell the user instead of quietly dropping a price.
+ */
+export function findDuplicateNames(rows: PriceRow[]): string[] {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+    for (const row of rows) {
+        const name = row.name.trim();
+        if (name === '') {
+            continue;
+        }
+        if (seen.has(name)) {
+            duplicates.add(name);
+        }
+        seen.add(name);
+    }
+    return [...duplicates];
+}
+
+/**
  * Editable list of work types and their default prices for a dentist.
  * Each row is a free-text name + price; rows can be added or removed.
  * The parent owns the array and submits it (an empty-named rows are

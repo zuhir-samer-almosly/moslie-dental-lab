@@ -367,7 +367,7 @@ export default function Dashboard({
                                     {recentOrders.map((order) => (
                                         <li key={order.id}>
                                             <Link
-                                                href={`/orders/${order.id}`}
+                                                href={`/orders/${order.id}/edit`}
                                                 className="flex items-center justify-between gap-3 rounded-lg px-3 py-3 transition-colors hover:bg-muted/60"
                                             >
                                                 <div className="flex min-w-0 items-center gap-3">

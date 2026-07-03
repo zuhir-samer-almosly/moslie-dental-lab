@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class EmployeeController extends Controller
 {
+    use ResolvesMonth;
+
     /**
      * Display the merged employees + monthly salaries page.
      */
@@ -75,24 +77,5 @@ class EmployeeController extends Controller
 
         return redirect()->back()
             ->with('success', 'تم حذف الموظف بنجاح');
-    }
-
-    /**
-     * Parse a "Y-m" month string, falling back to the current month.
-     */
-    private function resolveMonth(?string $month): Carbon
-    {
-        if ($month) {
-            try {
-                // `!` resets unspecified parts (day, time) instead of filling
-                // them from "now" — without it, parsing "2026-06" on July 31
-                // produces June 31 → overflows into July.
-                return Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
-            } catch (\Throwable) {
-                // fall through to current month
-            }
-        }
-
-        return Carbon::now()->startOfMonth();
     }
 }

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreMaterialPurchaseRequest;
 use App\Http\Requests\UpdateMaterialPurchaseRequest;
 use App\Models\MaterialPurchase;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 
 class MaterialPurchaseController extends Controller
 {
+    use ResolvesMonth;
+
     /**
      * Display a listing of the resource for a given month.
      */
@@ -82,24 +84,5 @@ class MaterialPurchaseController extends Controller
 
         return redirect()->route('material-purchases.index')
             ->with('success', 'تم حذف المادة بنجاح');
-    }
-
-    /**
-     * Parse a "Y-m" month string, falling back to the current month.
-     */
-    private function resolveMonth(?string $month): Carbon
-    {
-        if ($month) {
-            try {
-                // `!` resets unspecified parts (day, time) instead of filling
-                // them from "now" — without it, parsing "2026-06" on July 31
-                // produces June 31 → overflows into July.
-                return Carbon::createFromFormat('!Y-m', $month)->startOfMonth();
-            } catch (\Throwable) {
-                // fall through to current month
-            }
-        }
-
-        return Carbon::now()->startOfMonth();
     }
 }

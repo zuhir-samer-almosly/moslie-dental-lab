@@ -1,7 +1,10 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
-import PriceListEditor, { type PriceRow } from '@/components/price-list-editor';
+import PriceListEditor, {
+    findDuplicateNames,
+    type PriceRow,
+} from '@/components/price-list-editor';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,17 +25,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function DentistsEdit({ dentist }: { dentist: Dentist }) {
-    const { data, setData, transform, put, processing, errors } = useForm({
-        name: dentist.name,
-        phone: dentist.phone || '',
-        address: dentist.address || '',
-        price_list: Object.entries(dentist.price_list || {}).map(
-            ([name, price]) => ({
-                name,
-                price,
-            }),
-        ) as PriceRow[],
-    });
+    const { data, setData, transform, put, processing, errors, setError } =
+        useForm({
+            name: dentist.name,
+            phone: dentist.phone || '',
+            address: dentist.address || '',
+            price_list: Object.entries(dentist.price_list || {}).map(
+                ([name, price]) => ({
+                    name,
+                    price,
+                }),
+            ) as PriceRow[],
+        });
 
     transform((payload) => ({
         ...payload,
@@ -45,6 +49,14 @@ export default function DentistsEdit({ dentist }: { dentist: Dentist }) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const duplicates = findDuplicateNames(data.price_list);
+        if (duplicates.length > 0) {
+            setError(
+                'price_list',
+                `أنواع عمل مكررة: ${duplicates.join('، ')}. لكل نوع سطر واحد فقط.`,
+            );
+            return;
+        }
         put(`/dentists/${dentist.id}`);
     };
 

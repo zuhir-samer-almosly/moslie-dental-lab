@@ -6,6 +6,8 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
@@ -16,31 +18,77 @@ class OrderController extends Controller
     public function index()
     {
         $orders = Order::with(['dentist', 'items'])->latest()->get();
-
-        // Per order, the dentist's outstanding balance carried in from BEFORE
-        // this order's date: their earlier orders minus their earlier payments.
         $payments = DentistPayment::all(['dentist_id', 'amount', 'payment_date', 'created_at']);
 
-        $orders->each(function (Order $order) use ($orders, $payments) {
-            $cutoff = $order->due_date;
-
-            $priorOrders = $orders
-                ->where('dentist_id', $order->dentist_id)
-                ->where('status', '!=', 'cancelled')
-                ->filter(fn (Order $o) => $o->due_date < $cutoff)
-                ->sum('amount');
-
-            $priorPayments = $payments
-                ->where('dentist_id', $order->dentist_id)
-                ->filter(fn (DentistPayment $p) => \Illuminate\Support\Carbon::parse($p->payment_date ?? $p->created_at)->lt($cutoff))
-                ->sum('amount');
-
-            $order->previous_balance = (int) $priorOrders - (int) $priorPayments;
-        });
+        $this->assignPreviousBalances($orders, $payments);
 
         return inertia('orders/index', [
             'orders' => $orders,
         ]);
+    }
+
+    /**
+     * Attach each order's `previous_balance`: the dentist's outstanding balance
+     * carried in from BEFORE that order's date — their earlier billable orders
+     * minus their earlier payments.
+     *
+     * Done per dentist with a sorted two-pointer sweep (O(n log n)) rather than
+     * re-scanning the whole order/payment set for every order (O(n²)).
+     *
+     * @param  Collection<int, Order>  $orders
+     * @param  Collection<int, DentistPayment>  $payments
+     */
+    private function assignPreviousBalances(Collection $orders, Collection $payments): void
+    {
+        $paymentsByDentist = $payments->groupBy('dentist_id');
+
+        foreach ($orders->groupBy('dentist_id') as $dentistId => $dentistOrders) {
+            // Billable order amounts and payment amounts as [ts, amount] events,
+            // each sorted ascending by date so a single forward pass suffices.
+            $orderEvents = $dentistOrders
+                ->reject(fn (Order $o) => $o->status === 'cancelled')
+                ->map(fn (Order $o) => ['ts' => $o->due_date->timestamp, 'amount' => (int) $o->amount])
+                ->sortBy('ts')
+                ->values()
+                ->all();
+
+            $paymentEvents = ($paymentsByDentist[$dentistId] ?? collect())
+                ->map(fn (DentistPayment $p) => [
+                    'ts' => Carbon::parse($p->payment_date ?? $p->created_at)->timestamp,
+                    'amount' => (int) $p->amount,
+                ])
+                ->sortBy('ts')
+                ->values()
+                ->all();
+
+            // Visit every order (including cancelled — they still show a carried
+            // balance) in ascending date order, accumulating everything that
+            // falls strictly before the current order's date.
+            $sortedOrders = $dentistOrders
+                ->sortBy(fn (Order $o) => $o->due_date->timestamp)
+                ->values();
+
+            $oi = 0;
+            $pi = 0;
+            $orderSum = 0;
+            $paymentSum = 0;
+
+            foreach ($sortedOrders as $order) {
+                $cutoff = $order->due_date->timestamp;
+
+                while ($oi < count($orderEvents) && $orderEvents[$oi]['ts'] < $cutoff) {
+                    $orderSum += $orderEvents[$oi]['amount'];
+                    $oi++;
+                }
+
+                while ($pi < count($paymentEvents) && $paymentEvents[$pi]['ts'] < $cutoff) {
+                    $paymentSum += $paymentEvents[$pi]['amount'];
+                    $pi++;
+                }
+
+                $order->previous_balance = $orderSum - $paymentSum;
+            }
+        }
     }
 
     /**
@@ -79,14 +127,6 @@ class OrderController extends Controller
 
         return redirect()->route('orders.index')
             ->with('success', 'تم إضافة الطلب بنجاح');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Order $order)
-    {
-        //
     }
 
     /**

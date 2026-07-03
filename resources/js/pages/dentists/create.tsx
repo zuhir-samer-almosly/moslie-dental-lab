@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import PriceListEditor, {
     DEFAULT_WORK_TYPES,
+    findDuplicateNames,
     type PriceRow,
 } from '@/components/price-list-editor';
 import { Button } from '@/components/ui/button';
@@ -25,15 +26,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function DentistsCreate() {
-    const { data, setData, transform, post, processing, errors } = useForm({
-        name: '',
-        phone: '',
-        address: '',
-        price_list: DEFAULT_WORK_TYPES.map((name) => ({
-            name,
-            price: 0,
-        })) as PriceRow[],
-    });
+    const { data, setData, transform, post, processing, errors, setError } =
+        useForm({
+            name: '',
+            phone: '',
+            address: '',
+            price_list: DEFAULT_WORK_TYPES.map((name) => ({
+                name,
+                price: 0,
+            })) as PriceRow[],
+        });
 
     transform((payload) => ({
         ...payload,
@@ -46,6 +48,14 @@ export default function DentistsCreate() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const duplicates = findDuplicateNames(data.price_list);
+        if (duplicates.length > 0) {
+            setError(
+                'price_list',
+                `أنواع عمل مكررة: ${duplicates.join('، ')}. لكل نوع سطر واحد فقط.`,
+            );
+            return;
+        }
         post('/dentists');
     };
 
