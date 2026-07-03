@@ -202,6 +202,15 @@
         text-align: start;
     }
 
+    /* Center the column headings in their boxes. !important because the
+       markup's Tailwind utilities (.text-start, .h-12) are class selectors
+       and would otherwise beat these element selectors. */
+    th {
+        height: auto !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+
     body {
         direction: rtl;
     }

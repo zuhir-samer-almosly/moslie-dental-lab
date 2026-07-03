@@ -36,7 +36,9 @@ export const Dash = () => (
  * One tooth slot. Every slot is the SAME fixed width so all 16 columns line up
  * and both arches stay centered on the midline (variable widths made the two
  * rows drift out of alignment). Selected → a numbered pill filling the cell;
- * unselected → a faint centered tick.
+ * unselected → a faint centered tick. Ticks (and the arch midline) must be
+ * drawn with borders, not background-color: browsers strip backgrounds when
+ * printing, and the invoice print relies on these marks being visible.
  */
 function ToothSlot({ tooth, selected }: { tooth: number; selected: boolean }) {
     return (
@@ -44,14 +46,14 @@ function ToothSlot({ tooth, selected }: { tooth: number; selected: boolean }) {
             {selected ? (
                 <span
                     title={`${tooth} — ${TOOTH_TYPE_LABELS_AR[getToothType(tooth)]}`}
-                    className="inline-flex h-4 w-full items-center justify-center rounded-sm border border-primary/20 bg-primary/15 text-[9px] font-semibold text-primary tabular-nums"
+                    className="inline-flex h-4 w-full items-center justify-center rounded-sm border border-primary/20 bg-primary/15 text-[9px] font-semibold text-primary tabular-nums print:border-primary/60"
                 >
                     {tooth}
                 </span>
             ) : (
                 <span
                     aria-hidden
-                    className="h-3 w-px rounded-sm bg-muted-foreground/25"
+                    className="h-3 w-0 border-l border-muted-foreground/25 print:border-muted-foreground/70"
                 />
             )}
         </span>
@@ -73,7 +75,7 @@ function ToothArch({
                     {i === 8 && (
                         <span
                             aria-hidden
-                            className="mx-0.5 h-4 w-px shrink-0 bg-border"
+                            className="mx-0.5 h-4 w-0 shrink-0 border-l border-border print:border-muted-foreground/70"
                         />
                     )}
                     <ToothSlot tooth={tooth} selected={selected.has(tooth)} />
