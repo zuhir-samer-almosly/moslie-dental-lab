@@ -7,27 +7,29 @@ import { cn } from '@/lib/utils';
  * Toast for the session flash shared by HandleInertiaRequests: green for
  * `success`, red for `error` (e.g. a blocked dentist/employee delete).
  * Auto-hides — errors linger longer — and can be dismissed manually.
+ *
+ * Visibility is derived: the toast shows while the current `flash` object
+ * isn't the one that was dismissed. Each server response produces a new
+ * object, so a repeated action re-shows the same message.
  */
 export default function FlashMessages() {
     const { flash } = usePage().props;
-    const [visible, setVisible] = useState(false);
+    const [dismissed, setDismissed] = useState<typeof flash | null>(null);
 
     const message = flash?.error || flash?.success || '';
     const isError = Boolean(flash?.error);
+    const visible = Boolean(message) && dismissed !== flash;
 
     useEffect(() => {
         if (!message) return;
-        setVisible(true);
         const timer = setTimeout(
-            () => setVisible(false),
+            () => setDismissed(flash),
             isError ? 8000 : 4000,
         );
         return () => clearTimeout(timer);
-        // `flash` is a new object on every server response, so the same
-        // message re-shows when an action is repeated.
     }, [flash, message, isError]);
 
-    if (!visible || !message) return null;
+    if (!visible) return null;
 
     return (
         <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 print:hidden">
@@ -46,7 +48,7 @@ export default function FlashMessages() {
                 <span>{message}</span>
                 <button
                     type="button"
-                    onClick={() => setVisible(false)}
+                    onClick={() => setDismissed(flash)}
                     className="ms-1 rounded p-0.5 transition-colors hover:bg-white/20"
                     aria-label="إغلاق"
                 >
