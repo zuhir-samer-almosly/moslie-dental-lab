@@ -63,7 +63,7 @@ const mainNavItems: NavItem[] = [
         icon: UserCog,
     },
     {
-        title: 'المواد',
+        title: 'النفقات',
         href: '/material-purchases',
         icon: Package,
     },
