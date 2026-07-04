@@ -404,7 +404,7 @@ export default function OrdersIndex({
                                     {nf(totalAmount)}
                                 </span>{' '}
                                 <span className="text-xs text-muted-foreground">
-                                    دينار
+                                    ليرة
                                 </span>
                             </span>
                         </div>

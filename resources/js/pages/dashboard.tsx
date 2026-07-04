@@ -258,7 +258,7 @@ export default function Dashboard({
                         value={stats.outstanding}
                         icon={Coins}
                         tone="amber"
-                        href="/invoices"
+                        href="/outstanding"
                         valueClassName={
                             stats.outstanding < 0
                                 ? 'text-[#BE123C]'

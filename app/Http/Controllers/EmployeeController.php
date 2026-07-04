@@ -18,7 +18,10 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        $employees = Employee::withSum('payments', 'amount')->latest()->get();
+        // Cast the withSum aggregate to int: MySQL returns SUM as a string, which
+        // makes the frontend's .toLocaleString() a no-op (unformatted digits in prod).
+        $employees = Employee::withSum('payments', 'amount')->latest()->get()
+            ->each(fn (Employee $employee) => $employee->payments_sum_amount = (int) $employee->payments_sum_amount);
 
         $month = $this->resolveMonth($request->query('month'));
         $start = $month->copy()->startOfMonth()->toDateString();
