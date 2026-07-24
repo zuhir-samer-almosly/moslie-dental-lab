@@ -147,19 +147,22 @@
 
 /* Drop the browser's print header/footer (date, page title, URL, page number).
    Chrome only omits them when the printed page has zero margin; we restore the
-   visual margin via padding on <main> below. */
+   visual margin via padding on <main> below.
+
+   The invoice's tooth-map table is wide, so we also print in landscape. Both the
+   orientation and the zero margin MUST live in this single top-level @page rule.
+   When the `size: landscape` lived in a separate `@media print { @page {} }`
+   block, some print engines failed to merge it with this margin rule and dropped
+   the orientation: the page was laid out portrait, then the printer rotated that
+   render onto landscape paper, so the content came out sideways. The invoice is
+   the only page with a print flow, so a global landscape page is scoped to it in
+   practice. */
 @page {
+    size: A4 landscape;
     margin: 0;
 }
 
 @media print {
-    /* The invoice's tooth-map table is wide; print sideways so every column
-       fits. The invoice is the only page with a print flow, so a global
-       landscape page is effectively scoped to it. */
-    @page {
-        size: A4 landscape;
-    }
-
     .sidebar,
     .app-header,
     nav,

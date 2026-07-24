@@ -1,12 +1,15 @@
-version: '3.8'
-
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: moslie-dental-lab-local
-    restart: unless-stopped
+    # NOT unless-stopped: on WSL2, Docker Desktop auto-restarts a persisted
+    # container at boot before the WSL filesystem is ready, so the code bind
+    # mount below comes up empty ("Could not open input file: artisan"). Starting
+    # via ./docker-start-local.sh (which --force-recreate's) re-resolves the mount
+    # cleanly instead. See the wsl-docker-ghost-mount project memory.
+    restart: "no"
     working_dir: /opt/dental-lab/moslie-dental-lab
     volumes:
       # Mount the whole code directory for hot-reloading & easy local debugging
@@ -49,7 +52,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: moslie-vite-local
-    restart: unless-stopped
+    # Same WSL2 ghost-mount reason as the app service above.
+    restart: "no"
     working_dir: /opt/dental-lab/moslie-dental-lab
     command: npm run dev -- --host 0.0.0.0
     environment:
