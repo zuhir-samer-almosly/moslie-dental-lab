@@ -1,16 +1,8 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
-import InputError from '@/components/input-error';
-import PriceListEditor, {
-    DEFAULT_WORK_TYPES,
-    findDuplicateNames,
-    type PriceRow,
-} from '@/components/price-list-editor';
+import DentistForm from '@/components/dentists/dentist-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -26,39 +18,6 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function DentistsCreate() {
-    const { data, setData, transform, post, processing, errors, setError } =
-        useForm({
-            name: '',
-            phone: '',
-            address: '',
-            price_list: DEFAULT_WORK_TYPES.map((name) => ({
-                name,
-                price: 0,
-            })) as PriceRow[],
-        });
-
-    transform((payload) => ({
-        ...payload,
-        price_list: Object.fromEntries(
-            payload.price_list
-                .filter((row) => row.name.trim() !== '')
-                .map((row) => [row.name.trim(), row.price]),
-        ),
-    }));
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const duplicates = findDuplicateNames(data.price_list);
-        if (duplicates.length > 0) {
-            setError(
-                'price_list',
-                `أنواع عمل مكررة: ${duplicates.join('، ')}. لكل نوع سطر واحد فقط.`,
-            );
-            return;
-        }
-        post('/dentists');
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="إضافة طبيب" />
@@ -85,69 +44,13 @@ export default function DentistsCreate() {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="max-w-2xl">
+                <div className="max-w-2xl">
                     <Card className="gap-0 py-0">
-                        <CardContent className="space-y-6 p-5 md:p-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="name">الاسم *</Label>
-                                <Input
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) =>
-                                        setData('name', e.target.value)
-                                    }
-                                    required
-                                />
-                                <InputError message={errors.name} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="phone">الهاتف</Label>
-                                <Input
-                                    id="phone"
-                                    value={data.phone}
-                                    onChange={(e) =>
-                                        setData('phone', e.target.value)
-                                    }
-                                />
-                                <InputError message={errors.phone} />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="address">العنوان</Label>
-                                <Textarea
-                                    id="address"
-                                    value={data.address}
-                                    onChange={(e) =>
-                                        setData('address', e.target.value)
-                                    }
-                                    rows={3}
-                                />
-                                <InputError message={errors.address} />
-                            </div>
-
-                            <div className="space-y-3">
-                                <Label>قائمة الأسعار</Label>
-                                <p className="text-sm text-muted-foreground">
-                                    حدد أنواع العمل وأسعارها لهذا الطبيب. ستظهر
-                                    هذه الأنواع عند إضافة عناصر الطلب ويُملأ
-                                    سعرها تلقائياً.
-                                </p>
-                                <PriceListEditor
-                                    value={data.price_list}
-                                    onChange={(rows) =>
-                                        setData('price_list', rows)
-                                    }
-                                />
-                                <InputError message={errors.price_list} />
-                            </div>
-
-                            <Button type="submit" disabled={processing}>
-                                حفظ
-                            </Button>
+                        <CardContent className="p-5 md:p-6">
+                            <DentistForm redirectToIndex />
                         </CardContent>
                     </Card>
-                </form>
+                </div>
             </div>
         </AppLayout>
     );
