@@ -1,6 +1,7 @@
 {
   "enabledPlugins": {
     "laravel@laravel": true,
-    "laravel-nightwatch@laravel": false
+    "laravel-nightwatch@laravel": false,
+    "claude-md-management@claude-plugins-official": true
   }
 }

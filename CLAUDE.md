@@ -161,7 +161,7 @@ Several read-only controllers aggregate the models above into reports; no models
 ## Notes
 
 - **Local** dev runs in Docker via `docker-compose.local.yml` (`./docker-start-local.sh`, served at `http://dental.test`). Run artisan/migrations inside the `app` container.
-- **Production** runs on a DigitalOcean VPS via Docker (`docker-compose.yml`) at `dental-lab.zoher-moslie.me`; a code change requires a rebuild. See `DEPLOYMENT.md`.
+- **Production** runs on a DigitalOcean VPS via Docker (`docker-compose.yml`) at `dental-lab.zoher-moslie.me`; a code change requires an image **rebuild** (composer install and `npm run build` happen at build time), never just a restart. Use the **`deploy` skill**; full reference in `DEPLOYMENT.md`.
 - Single-tenant by design: one shared dataset, no per-user data scoping, public registration disabled.
 - Nightly off-site DB backups go to Google Drive (spatie/laravel-backup); see `BACKUPS.md` and the `backups` skill.
 - Laravel Boost MCP works only through the project `.mcp.json` env overrides (`APP_ENV=local`, `DB_HOST=127.0.0.1`, array session/cache); the plugin default is broken here.
