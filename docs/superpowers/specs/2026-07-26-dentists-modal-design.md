@@ -166,6 +166,21 @@ New cases:
 
 Then `npm run types` and the full gate via the `run-checks` skill.
 
+## Portal events (found during implementation)
+
+The dialog must be a **sibling** of the order `<form>`, never a child.
+
+Radix moves the dialog's DOM to `<body>` via a portal, so there is no invalid
+HTML nesting — but React still propagates events through the *React* tree. With
+the dialog rendered inside `<form>`, pressing حفظ on the dentist form also fired
+the order form's `onSubmit`: an accidental half-typed order was saved and the
+app navigated to `/orders`, which presented as "the draft disappeared". Verified
+in the browser: the request trace showed a `PUT /dentists/5` immediately
+followed by a `POST /orders`.
+
+`DentistForm` also calls `e.stopPropagation()` in its submit handler as a second
+layer, since it is designed to be dropped into arbitrary hosts.
+
 ## Risks
 
 - **Draft loss** if `preserveState` is forgotten on any one request in the
