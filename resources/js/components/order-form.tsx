@@ -124,6 +124,69 @@ export default function OrderForm({
         });
     }, [data.items.length]);
 
+    // A price edited in the dentists dialog must land on the items already
+    // typed — that is the whole point of being able to open it mid-order.
+    // Snapshot the selected dentist's list, and when a refreshed `dentists`
+    // prop arrives, rewrite only the items whose work type actually changed
+    // price. Types that did not change are left alone, so a one-off price
+    // typed by hand survives opening and closing the dialog.
+    const priceSnapshot = useRef<{
+        dentistId: string;
+        priceList: Record<string, number>;
+    } | null>(null);
+
+    useEffect(() => {
+        const priceList =
+            dentists.find((d) => d.id.toString() === data.dentist_id)
+                ?.price_list ?? {};
+        const previous = priceSnapshot.current;
+        priceSnapshot.current = { dentistId: data.dentist_id, priceList };
+
+        // First run, or the user switched dentist — handleDentistChange has
+        // already refilled the prices, so there is nothing to diff against.
+        if (!previous || previous.dentistId !== data.dentist_id) {
+            return;
+        }
+
+        const changed = new Map<string, number>();
+        for (const [type, price] of Object.entries(priceList)) {
+            const before = previous.priceList[type];
+            // `undefined` covers a work type newly added to the list: an item
+            // typed free-hand under that name adopts the list price too.
+            if (
+                before === undefined ||
+                Math.round(before) !== Math.round(price)
+            ) {
+                changed.set(type, Math.round(price));
+            }
+        }
+
+        if (changed.size === 0) {
+            return;
+        }
+
+        setData((prev) => ({
+            ...prev,
+            items: prev.items.map((item) => {
+                const price = changed.get(item.type);
+                return price === undefined ? item : { ...item, price };
+            }),
+        }));
+    }, [dentists, data.dentist_id, setData]);
+
+    // If the selected dentist is deleted from the dialog, drop the dangling
+    // selection rather than submitting an id the server will reject. Driven by
+    // the refreshed list, not by the delete callback, so a delete the server
+    // refused (dentist has orders or payments) correctly changes nothing.
+    useEffect(() => {
+        if (
+            data.dentist_id &&
+            !dentists.some((d) => d.id.toString() === data.dentist_id)
+        ) {
+            setData('dentist_id', '');
+        }
+    }, [dentists, data.dentist_id, setData]);
+
     const addItem = () => {
         const defaultType = workTypeNames[0] || '';
         const price = getDentistPrice(defaultType) ?? 0;
