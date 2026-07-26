@@ -13,7 +13,8 @@ test('a dentist without financial history can be deleted', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. مؤقت']);
 
-    $this->delete(route('dentists.destroy', $dentist))
+    $this->from(route('dentists.index'))
+        ->delete(route('dentists.destroy', $dentist))
         ->assertRedirect(route('dentists.index'))
         ->assertSessionHas('success');
 
@@ -30,7 +31,8 @@ test('a dentist with orders cannot be deleted', function () {
         'status' => 'pending',
     ]);
 
-    $this->delete(route('dentists.destroy', $dentist))
+    $this->from(route('dentists.index'))
+        ->delete(route('dentists.destroy', $dentist))
         ->assertRedirect(route('dentists.index'))
         ->assertSessionHas('error');
 
@@ -47,10 +49,70 @@ test('a dentist with payments cannot be deleted', function () {
         'payment_date' => '2026-06-15',
     ]);
 
-    $this->delete(route('dentists.destroy', $dentist))
+    $this->from(route('dentists.index'))
+        ->delete(route('dentists.destroy', $dentist))
         ->assertRedirect(route('dentists.index'))
         ->assertSessionHas('error');
 
     $this->assertDatabaseHas('dentists', ['id' => $dentist->id]);
     $this->assertDatabaseHas('dentist_payments', ['dentist_id' => $dentist->id]);
+});
+
+test('storing a dentist from the order page redirects back and saves the price list', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->from(route('orders.create'))
+        ->post(route('dentists.store'), [
+            'name' => 'د. خالد',
+            'price_list' => ['خزف' => 90000, 'زيركون' => 150000],
+        ])
+        ->assertRedirect(route('orders.create'))
+        ->assertSessionHas('success');
+
+    expect(Dentist::firstWhere('name', 'د. خالد')->price_list)
+        ->toBe(['خزف' => 90000, 'زيركون' => 150000]);
+});
+
+test('storing a dentist from the standalone page redirects to the index', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->from(route('dentists.create'))
+        ->post(route('dentists.store'), [
+            'name' => 'د. ليلى',
+            'to_index' => true,
+        ])
+        ->assertRedirect(route('dentists.index'))
+        ->assertSessionHas('success');
+
+    $dentist = Dentist::firstWhere('name', 'د. ليلى');
+
+    expect($dentist)->not->toBeNull()
+        ->and($dentist->getAttributes())->not->toHaveKey('to_index');
+});
+
+test('updating one work type price leaves the rest of the price list intact', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create([
+        'name' => 'د. سامر',
+        'price_list' => ['خزف' => 90000, 'زيركون' => 150000],
+    ]);
+
+    $this->from(route('orders.create'))
+        ->put(route('dentists.update', $dentist), [
+            'name' => 'د. سامر',
+            'price_list' => ['خزف' => 110000, 'زيركون' => 150000],
+        ])
+        ->assertRedirect(route('orders.create'))
+        ->assertSessionHas('success');
+
+    expect($dentist->fresh()->price_list)
+        ->toBe(['خزف' => 110000, 'زيركون' => 150000]);
+});
+
+test('the standalone dentist pages still load', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+
+    $this->get(route('dentists.create'))->assertOk();
+    $this->get(route('dentists.edit', $dentist))->assertOk();
 });
