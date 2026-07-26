@@ -90,24 +90,30 @@ without this change.
 With the flag set, the `back()` redirect re-runs `OrderController::create()`, so
 a fresh `dentists` prop arrives while the React form state survives.
 
-### Price sync onto the open draft
+### Item prices are frozen once the item is added
 
-Implemented as an effect in `order-form.tsx`:
+**Reversed after hands-on use (2026-07-26).** The first build made price-list
+edits flow onto the items already in the draft. In practice that was wrong: with
+one item at 200, raising the list price to 300 for a *second* item silently
+rewrote the first one to 300 too. The price on a line is the price that was
+agreed for it.
 
-1. Hold a ref snapshot of `{ dentistId, priceList }` for the currently selected
-   dentist.
-2. When the `dentists` prop changes and `dentistId` is the same, diff the old
-   and new price lists. For every work type whose price actually changed,
-   rewrite `price` on every draft item of that type; the running total
-   recomputes from the items as it already does. A work type **newly added** to
-   the list counts as changed: an item typed free-hand under that name adopts
-   the list price, which is the point of adding it mid-order.
-3. Work types whose price did not change are left alone, so a one-off price
-   typed by hand survives opening and closing the modal. It is overwritten only
-   if that exact work type's price is edited in the modal — accepted and
-   intended.
-4. If `dentistId` changed instead, refresh the snapshot and update nothing:
-   `handleDentistChange` already refills prices on dentist switch.
+The rule is now simply:
+
+1. `addItem` fills the price from the dentist's list at the moment the item is
+   added (`getDentistPrice`), and nothing rewrites it afterwards.
+2. Editing the price list — from the dialog or anywhere else — affects only the
+   items added **next**. The refreshed `dentists` prop feeds `getDentistPrice`,
+   so the next item picks up the new price automatically.
+3. To change an existing line, the user types in that line's own price field.
+   That is the only thing that moves it.
+
+There is no sync effect in `order-form.tsx`; the absence is the feature, and the
+comment there says so to stop it being "helpfully" re-added.
+
+Switching the selected dentist still refills every item's price via the
+pre-existing `handleDentistChange` — a different dentist means a different price
+list, and that behaviour predates this work.
 
 Prices stay integers (`Math.round`), matching `price_list.* => integer|min:0`
 and the order item price rule.

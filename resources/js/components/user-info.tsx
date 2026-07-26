@@ -21,15 +21,19 @@ export function UserInfo({
                     {getInitials(user.name)}
                 </AvatarFallback>
             </Avatar>
+            {/* pb/-mb: Arabic descenders (the dots under a final ي) fall
+                outside the tight line box and `truncate` clips them. */}
             <div className="grid flex-1 text-right text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
+                <span className="-mb-1 truncate pb-1 font-semibold">
+                    {user.name}
+                </span>
                 {showEmail && (
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="-mb-1 truncate pb-1 text-xs text-muted-foreground">
                         {user.email}
                     </span>
                 )}
                 {!showEmail && subtitle && (
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="-mb-1 truncate pb-1 text-xs text-muted-foreground">
                         {subtitle}
                     </span>
                 )}

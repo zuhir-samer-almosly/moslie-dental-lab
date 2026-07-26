@@ -124,55 +124,12 @@ export default function OrderForm({
         });
     }, [data.items.length]);
 
-    // A price edited in the dentists dialog must land on the items already
-    // typed — that is the whole point of being able to open it mid-order.
-    // Snapshot the selected dentist's list, and when a refreshed `dentists`
-    // prop arrives, rewrite only the items whose work type actually changed
-    // price. Types that did not change are left alone, so a one-off price
-    // typed by hand survives opening and closing the dialog.
-    const priceSnapshot = useRef<{
-        dentistId: string;
-        priceList: Record<string, number>;
-    } | null>(null);
-
-    useEffect(() => {
-        const priceList =
-            dentists.find((d) => d.id.toString() === data.dentist_id)
-                ?.price_list ?? {};
-        const previous = priceSnapshot.current;
-        priceSnapshot.current = { dentistId: data.dentist_id, priceList };
-
-        // First run, or the user switched dentist — handleDentistChange has
-        // already refilled the prices, so there is nothing to diff against.
-        if (!previous || previous.dentistId !== data.dentist_id) {
-            return;
-        }
-
-        const changed = new Map<string, number>();
-        for (const [type, price] of Object.entries(priceList)) {
-            const before = previous.priceList[type];
-            // `undefined` covers a work type newly added to the list: an item
-            // typed free-hand under that name adopts the list price too.
-            if (
-                before === undefined ||
-                Math.round(before) !== Math.round(price)
-            ) {
-                changed.set(type, Math.round(price));
-            }
-        }
-
-        if (changed.size === 0) {
-            return;
-        }
-
-        setData((prev) => ({
-            ...prev,
-            items: prev.items.map((item) => {
-                const price = changed.get(item.type);
-                return price === undefined ? item : { ...item, price };
-            }),
-        }));
-    }, [dentists, data.dentist_id, setData]);
+    // An item's price is frozen once the item is added. Editing the dentist's
+    // price list — from the dialog or anywhere else — deliberately does NOT
+    // rewrite items already in the draft: the price you see on a line is the
+    // price you agreed, and only you change it, by typing in that line's own
+    // field. New prices apply to the items you add next (via getDentistPrice
+    // in addItem).
 
     // If the selected dentist is deleted from the dialog, drop the dangling
     // selection rather than submitting an id the server will reject. Driven by

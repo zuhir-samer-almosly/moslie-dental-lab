@@ -82,7 +82,7 @@ export default function DentistsManagerDialog({
                     <DialogDescription>
                         {view === 'list'
                             ? 'أضف طبيباً أو عدّل بياناته وأسعاره دون مغادرة الطلب'
-                            : 'تنطبق الأسعار الجديدة على عناصر الطلب الحالي فوراً'}
+                            : 'تنطبق الأسعار الجديدة على العناصر التي تضيفها بعد الحفظ، ولا تغيّر العناصر الموجودة'}
                     </DialogDescription>
                 </DialogHeader>
 

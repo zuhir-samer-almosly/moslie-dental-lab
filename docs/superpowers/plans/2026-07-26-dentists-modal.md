@@ -1099,6 +1099,12 @@ git commit -m "feat(orders): manage dentists and their prices from a dialog on t
 
 ### Task 5: Live price sync onto the open draft
 
+> **SUPERSEDED 2026-07-26.** This task shipped and was then reverted after
+> hands-on use: rewriting the prices of items already in the draft was wrong.
+> Item prices are now frozen once added — see the spec section "Item prices are
+> frozen once the item is added". Only the deleted-dentist guard in Step 2
+> survives. Do not re-add the sync effect.
+
 **Files:**
 - Modify: `resources/js/components/order-form.tsx`
 

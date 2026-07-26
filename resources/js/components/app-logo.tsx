@@ -17,11 +17,14 @@ export default function AppLogo() {
                     <path d="M12 5.5c-1.5-1.8-4-2.3-6-1-2.3 1.5-2.6 4.7-1.2 7 1 1.6 1.5 3.4 1.7 5.3.2 1.6.5 3.2 1.5 3.2 1.6 0 1.2-3.6 4-3.6s2.4 3.6 4 3.6c1 0 1.3-1.6 1.5-3.2.2-1.9.7-3.7 1.7-5.3 1.4-2.3 1.1-5.5-1.2-7-2-1.3-4.5-.8-6 1z" />
                 </svg>
             </div>
+            {/* The dots under a final ي sit 0.45em below the baseline — past
+                what leading-tight reserves — so `truncate` (overflow-hidden)
+                clips them off. pb/-mb widens the clip box, not the layout. */}
             <div className="grid flex-1 text-right leading-tight">
-                <span className="truncate text-[18px] font-bold text-foreground">
+                <span className="-mb-1 truncate pb-1 text-[18px] font-bold text-foreground">
                     مخبر الموصلي
                 </span>
-                <span className="truncate text-[13px] text-muted-foreground">
+                <span className="-mb-1 truncate pb-1 text-[13px] text-muted-foreground">
                     إدارة مالية المختبر
                 </span>
             </div>
