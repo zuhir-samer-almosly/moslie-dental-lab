@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
         "masbug/flysystem-google-drive-ext": "^2.0",
+        "spatie/browsershot": "^5.4",
         "spatie/laravel-backup": "^9.0"
     },
     "require-dev": {

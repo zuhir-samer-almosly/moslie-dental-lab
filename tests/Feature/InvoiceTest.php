@@ -4,6 +4,7 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
 use App\Models\User;
+use Illuminate\Support\Facades\URL;
 
 function makeOrder(int $dentistId, int $amount, string $createdAt): void
 {
@@ -94,4 +95,59 @@ test('cancelled orders are excluded from invoice totals and opening balance', fu
 
 test('guests cannot access invoices', function () {
     $this->get(route('invoices.index'))->assertRedirect(route('login'));
+});
+
+test('guests cannot download the invoice pdf', function () {
+    $this->get(route('invoices.pdf'))->assertRedirect(route('login'));
+});
+
+test('the pdf needs a valid period before it will render', function () {
+    $this->actingAs(User::factory()->create());
+
+    // No dates → nothing to bill. This has to short-circuit before Browsershot
+    // is ever booted, which is also what keeps this test fast.
+    $this->get(route('invoices.pdf'))->assertStatus(422);
+});
+
+test('the print view rejects an unsigned request', function () {
+    $this->get('/invoices/print-view?from=2026-06-01&to=2026-06-30')
+        ->assertForbidden();
+});
+
+test('the print view renders for a signed url without a session', function () {
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+    makeOrder($dentist->id, 50000, '2026-06-12');
+    makePayment($dentist->id, 20000, '2026-06-25');
+
+    // Signed relatively, exactly as InvoiceController::pdf mints it — headless
+    // Chromium fetches this with no cookies at all.
+    $path = URL::temporarySignedRoute(
+        'invoices.print-view',
+        now()->addMinutes(2),
+        ['from' => '2026-06-01', 'to' => '2026-06-30'],
+        absolute: false,
+    );
+
+    $this->get($path)
+        ->assertOk()
+        ->assertInertia(
+            fn ($page) => $page
+                ->component('invoices/print')
+                ->where('totals.orders', 50000)
+                ->where('totals.payments', 20000)
+                ->where('totals.balance', 30000)
+        );
+});
+
+test('the print view rejects an expired signature', function () {
+    $path = URL::temporarySignedRoute(
+        'invoices.print-view',
+        now()->addMinutes(2),
+        ['from' => '2026-06-01', 'to' => '2026-06-30'],
+        absolute: false,
+    );
+
+    $this->travel(3)->minutes();
+
+    $this->get($path)->assertForbidden();
 });

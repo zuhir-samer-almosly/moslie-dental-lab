@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except('show')
         ->parameters(['payments' => 'dentistPayment']);
     Route::get('invoices', [App\Http\Controllers\InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('invoices/pdf', [App\Http\Controllers\InvoiceController::class, 'pdf'])->name('invoices.pdf');
     Route::get('outstanding', [App\Http\Controllers\OutstandingController::class, 'index'])->name('outstanding.index');
 
     Route::resource('employees', App\Http\Controllers\EmployeeController::class)
@@ -35,5 +36,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('finance', [App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
     Route::get('report', [App\Http\Controllers\ReportController::class, 'index'])->name('report.index');
 });
+
+// Rendered by headless Chromium to build the invoice PDF. It sits outside the
+// auth group because the browser has no session; the `signed` middleware is the
+// gate instead, and InvoiceController::pdf mints a URL valid for two minutes.
+Route::get('invoices/print-view', [App\Http\Controllers\InvoiceController::class, 'printView'])
+    // `relative`: the URL is signed as a path so it stays valid when Chromium
+    // requests it on the container-internal host instead of APP_URL.
+    ->middleware('signed:relative')
+    ->name('invoices.print-view');
 
 require __DIR__.'/settings.php';

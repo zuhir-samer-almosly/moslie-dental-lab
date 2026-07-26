@@ -7,10 +7,102 @@ use App\Models\DentistPayment;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\URL;
+use Spatie\Browsershot\Browsershot;
 
 class InvoiceController extends Controller
 {
     public function index(Request $request)
+    {
+        return inertia('invoices/index', $this->buildReport($request));
+    }
+
+    /**
+     * The same report with no app chrome, rendered by headless Chromium on its
+     * way to a PDF. Reached only through the short-lived signed URL minted in
+     * pdf() below — the browser has no session to authenticate with.
+     */
+    public function printView(Request $request)
+    {
+        return inertia('invoices/print', $this->buildReport($request));
+    }
+
+    /**
+     * Render the invoice as a real A4 landscape PDF.
+     *
+     * Printing from the browser cannot be made to work: CSS `@page { size:
+     * landscape }` sets the layout box, but the sheet orientation comes from
+     * the print dialog's Layout dropdown, which no stylesheet can touch. Left
+     * on Portrait — the default — the driver rotates the wide render onto a
+     * narrow sheet and the invoice comes out sideways and shrunken.
+     *
+     * Driving Chromium ourselves means passing landscape explicitly, so the
+     * output is correct no matter what any dialog says. It renders the live
+     * print page rather than a separate PHP template so the figures can never
+     * diverge from what the user saw on screen.
+     */
+    public function pdf(Request $request)
+    {
+        $report = $this->buildReport($request);
+
+        abort_if($report['orders'] === null, 422, 'حدد فترة صالحة أولاً.');
+
+        // Signed as a relative URL, then pointed at the container-internal
+        // host: nginx and php-fpm share this container, so there is no reason
+        // to send the request back out through the public domain.
+        $path = URL::temporarySignedRoute(
+            'invoices.print-view',
+            now()->addMinutes(config('pdf.signed_url_ttl')),
+            array_filter($report['filters'], fn ($value) => $value !== null),
+            absolute: false,
+        );
+
+        $browsershot = Browsershot::url(rtrim(config('pdf.internal_url'), '/').$path)
+            ->noSandbox() // the container runs as root
+            // Chromium's default /dev/shm is tiny in Docker and it crashes
+            // mid-render without this.
+            ->addChromiumArguments(['disable-dev-shm-usage'])
+            // Apply the tuned @media print rules from app.css, so the PDF and
+            // the browser's own print preview render identically.
+            ->emulateMedia('print')
+            ->format('A4')
+            ->landscape()
+            // Zero here on purpose: the page margin is the `main` padding that
+            // those same print rules already set. Adding margins on top would
+            // double it.
+            ->margins(0, 0, 0, 0)
+            ->showBackground()
+            ->waitUntilNetworkIdle(strict: false)
+            ->timeout(120);
+
+        if ($chromePath = config('pdf.chrome_path')) {
+            $browsershot->setChromePath($chromePath);
+        }
+
+        if ($node = config('pdf.node_binary')) {
+            $browsershot->setNodeBinary($node);
+        }
+
+        if ($npm = config('pdf.npm_binary')) {
+            $browsershot->setNpmBinary($npm);
+        }
+
+        $contents = $browsershot->pdf();
+
+        return response()->streamDownload(
+            fn () => print ($contents),
+            "فاتورة-{$report['filters']['from']}-{$report['filters']['to']}.pdf",
+            ['Content-Type' => 'application/pdf'],
+        );
+    }
+
+    /**
+     * Build the invoice payload shared by the on-screen page, the print page
+     * and the PDF, so all three always agree.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildReport(Request $request): array
     {
         // Parse the bounds defensively: garbage dates would otherwise slip
         // straight into the queries and produce a silently wrong report. Only
@@ -102,7 +194,7 @@ class InvoiceController extends Controller
 
         $dentists = Dentist::all();
 
-        return inertia('invoices/index', [
+        return [
             'orders' => $orders,
             'payments' => $payments,
             'totals' => $totals,
@@ -113,7 +205,7 @@ class InvoiceController extends Controller
                 'to' => $to,
                 'dentist_id' => $dentistId,
             ],
-        ]);
+        ];
     }
 
     /**
