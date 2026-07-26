@@ -1,5 +1,7 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { useState } from 'react';
+import DentistFormDialog from '@/components/dentists/dentist-form-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -21,9 +23,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function DentistsIndex({ dentists }: { dentists: Dentist[] }) {
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editing, setEditing] = useState<Dentist | null>(null);
+
+    const openCreate = () => {
+        setEditing(null);
+        setDialogOpen(true);
+    };
+
+    const openEdit = (dentist: Dentist) => {
+        setEditing(dentist);
+        setDialogOpen(true);
+    };
+
     const handleDelete = (id: number) => {
         if (confirm('هل أنت متأكد من حذف هذا الطبيب؟')) {
-            router.delete(`/dentists/${id}`);
+            router.delete(`/dentists/${id}`, { preserveScroll: true });
         }
     };
 
@@ -42,11 +57,13 @@ export default function DentistsIndex({ dentists }: { dentists: Dentist[] }) {
                             {dentists.length} طبيب مسجّل في المختبر
                         </p>
                     </div>
-                    <Button asChild size="lg" className="gap-2 sm:w-auto">
-                        <Link href="/dentists/create">
-                            <Plus className="size-4" />
-                            إضافة طبيب
-                        </Link>
+                    <Button
+                        size="lg"
+                        className="gap-2 sm:w-auto"
+                        onClick={openCreate}
+                    >
+                        <Plus className="size-4" />
+                        إضافة طبيب
                     </Button>
                 </div>
 
@@ -90,15 +107,13 @@ export default function DentistsIndex({ dentists }: { dentists: Dentist[] }) {
                                             <TableCell className="text-end">
                                                 <div className="flex justify-end gap-2">
                                                     <Button
-                                                        asChild
                                                         variant="outline"
                                                         size="sm"
+                                                        onClick={() =>
+                                                            openEdit(dentist)
+                                                        }
                                                     >
-                                                        <Link
-                                                            href={`/dentists/${dentist.id}/edit`}
-                                                        >
-                                                            <Pencil className="h-4 w-4" />
-                                                        </Link>
+                                                        <Pencil className="h-4 w-4" />
                                                     </Button>
                                                     <Button
                                                         variant="destructive"
@@ -120,6 +135,12 @@ export default function DentistsIndex({ dentists }: { dentists: Dentist[] }) {
                         )}
                     </CardContent>
                 </Card>
+
+                <DentistFormDialog
+                    open={dialogOpen}
+                    onOpenChange={setDialogOpen}
+                    dentist={editing}
+                />
             </div>
         </AppLayout>
     );
