@@ -253,357 +253,386 @@ export default function OrderForm({
     const fieldClass = 'h-11 rounded-[10px]';
 
     return (
-        <form onSubmit={handleSubmit} className="max-w-[920px] space-y-6">
-            {/* Order info */}
-            <section className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6">
-                <h2 className="text-base font-bold text-foreground">
-                    معلومات الطلب
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                        <Label htmlFor="dentist_id" className={labelClass}>
-                            الطبيب
-                        </Label>
-                        <div className="flex items-center gap-2">
-                            <Select
-                                value={data.dentist_id}
-                                onValueChange={handleDentistChange}
-                            >
-                                <SelectTrigger
-                                    className={cn(fieldClass, 'flex-1')}
+        <>
+            <form onSubmit={handleSubmit} className="max-w-[920px] space-y-6">
+                {/* Order info */}
+                <section className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6">
+                    <h2 className="text-base font-bold text-foreground">
+                        معلومات الطلب
+                    </h2>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-2">
+                            <Label htmlFor="dentist_id" className={labelClass}>
+                                الطبيب
+                            </Label>
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value={data.dentist_id}
+                                    onValueChange={handleDentistChange}
                                 >
-                                    <SelectValue placeholder="اختر الطبيب" />
+                                    <SelectTrigger
+                                        className={cn(fieldClass, 'flex-1')}
+                                    >
+                                        <SelectValue placeholder="اختر الطبيب" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {dentists.map((dentist) => (
+                                            <SelectItem
+                                                key={dentist.id}
+                                                value={dentist.id.toString()}
+                                            >
+                                                {dentist.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    title="إدارة الأطباء والأسعار"
+                                    onClick={() => setDentistsDialogOpen(true)}
+                                    className="size-11 shrink-0 rounded-[10px] p-0"
+                                >
+                                    <Users className="size-4" />
+                                </Button>
+                            </div>
+                            <InputError message={errors.dentist_id} />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="status" className={labelClass}>
+                                الحالة
+                            </Label>
+                            <Select
+                                value={data.status}
+                                onValueChange={(value: string) =>
+                                    setData(
+                                        'status',
+                                        value as typeof data.status,
+                                    )
+                                }
+                            >
+                                <SelectTrigger className={fieldClass}>
+                                    <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {dentists.map((dentist) => (
-                                        <SelectItem
-                                            key={dentist.id}
-                                            value={dentist.id.toString()}
-                                        >
-                                            {dentist.name}
-                                        </SelectItem>
-                                    ))}
+                                    {Object.entries(ORDER_STATUSES).map(
+                                        ([key, label]) => (
+                                            <SelectItem key={key} value={key}>
+                                                {label}
+                                            </SelectItem>
+                                        ),
+                                    )}
                                 </SelectContent>
                             </Select>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                title="إدارة الأطباء والأسعار"
-                                onClick={() => setDentistsDialogOpen(true)}
-                                className="size-11 shrink-0 rounded-[10px] p-0"
-                            >
-                                <Users className="size-4" />
-                            </Button>
+                            <InputError message={errors.status} />
                         </div>
-                        <InputError message={errors.dentist_id} />
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="status" className={labelClass}>
-                            الحالة
+                        <Label htmlFor="notes" className={labelClass}>
+                            ملاحظات
                         </Label>
-                        <Select
-                            value={data.status}
-                            onValueChange={(value: string) =>
-                                setData('status', value as typeof data.status)
-                            }
-                        >
-                            <SelectTrigger className={fieldClass}>
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {Object.entries(ORDER_STATUSES).map(
-                                    ([key, label]) => (
-                                        <SelectItem key={key} value={key}>
-                                            {label}
-                                        </SelectItem>
-                                    ),
-                                )}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.status} />
+                        <Textarea
+                            id="notes"
+                            value={data.notes}
+                            onChange={(e) => setData('notes', e.target.value)}
+                            rows={2}
+                            placeholder="ملاحظات عامة على الطلب..."
+                            className="rounded-[10px]"
+                        />
+                        <InputError message={errors.notes} />
                     </div>
-                </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="notes" className={labelClass}>
-                        ملاحظات
-                    </Label>
-                    <Textarea
-                        id="notes"
-                        value={data.notes}
-                        onChange={(e) => setData('notes', e.target.value)}
-                        rows={2}
-                        placeholder="ملاحظات عامة على الطلب..."
-                        className="rounded-[10px]"
-                    />
-                    <InputError message={errors.notes} />
-                </div>
-
-                {selectedDentist?.price_list &&
-                    Object.keys(selectedDentist.price_list).length > 0 && (
-                        <div className="flex items-center gap-2 rounded-[10px] bg-secondary px-3.5 py-2.5 text-[13px] text-primary">
-                            <Info className="size-4 shrink-0" />
-                            <span>
-                                يتم ملء الأسعار تلقائياً حسب قائمة أسعار الطبيب{' '}
-                                <span className="font-semibold">
-                                    {selectedDentist.name}
+                    {selectedDentist?.price_list &&
+                        Object.keys(selectedDentist.price_list).length > 0 && (
+                            <div className="flex items-center gap-2 rounded-[10px] bg-secondary px-3.5 py-2.5 text-[13px] text-primary">
+                                <Info className="size-4 shrink-0" />
+                                <span>
+                                    يتم ملء الأسعار تلقائياً حسب قائمة أسعار
+                                    الطبيب{' '}
+                                    <span className="font-semibold">
+                                        {selectedDentist.name}
+                                    </span>
                                 </span>
-                            </span>
-                        </div>
-                    )}
-            </section>
-
-            {/* Items */}
-            <section className="space-y-4">
-                {/* Sticky so the add button stays reachable without scrolling
-                    back to the top of a long item list. */}
-                <div className="sticky top-0 z-20 flex items-center justify-between bg-background py-3">
-                    <h2 className="text-base font-bold text-foreground">
-                        العناصر
-                        {data.items.length > 0 && (
-                            <span className="mr-1.5 text-sm font-medium text-muted-foreground tabular-nums">
-                                ({data.items.length})
-                            </span>
+                            </div>
                         )}
-                    </h2>
-                    <Button
-                        type="button"
-                        onClick={addItem}
-                        variant="outline"
-                        className="gap-2 rounded-[10px] border-primary text-primary hover:bg-secondary hover:text-primary"
-                    >
-                        <Plus className="size-4" />
-                        إضافة عنصر
-                    </Button>
-                </div>
+                </section>
 
-                {data.items.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                        لا توجد عناصر. قم بإضافة عنصر واحد على الأقل.
-                    </p>
-                ) : (
-                    <div ref={itemsContainerRef} className="space-y-4">
-                        {data.items.map((item, index) => (
-                            <div
-                                key={index}
-                                // scroll-mt clears the sticky bar when a newly
-                                // added item is scrolled into view.
-                                className="flex scroll-mt-16 flex-col gap-[18px] rounded-2xl border bg-card p-6"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-[15px] font-bold text-primary">
-                                        عنصر {index + 1}
-                                    </h3>
-                                    <button
-                                        type="button"
-                                        title="حذف العنصر"
-                                        onClick={() => removeItem(index)}
-                                        className="flex size-[34px] items-center justify-center rounded-[9px] border border-[#F5D5DB] bg-card text-[#BE123C] transition-colors hover:bg-[#FDECEE]"
-                                    >
-                                        <Trash2 className="size-[15px]" />
-                                    </button>
-                                </div>
+                {/* Items */}
+                <section className="space-y-4">
+                    {/* Sticky so the add button stays reachable without scrolling
+                    back to the top of a long item list. */}
+                    <div className="sticky top-0 z-20 flex items-center justify-between bg-background py-3">
+                        <h2 className="text-base font-bold text-foreground">
+                            العناصر
+                            {data.items.length > 0 && (
+                                <span className="mr-1.5 text-sm font-medium text-muted-foreground tabular-nums">
+                                    ({data.items.length})
+                                </span>
+                            )}
+                        </h2>
+                        <Button
+                            type="button"
+                            onClick={addItem}
+                            variant="outline"
+                            className="gap-2 rounded-[10px] border-primary text-primary hover:bg-secondary hover:text-primary"
+                        >
+                            <Plus className="size-4" />
+                            إضافة عنصر
+                        </Button>
+                    </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            النوع
-                                        </Label>
-                                        <WorkTypeCombobox
-                                            value={item.type}
-                                            onChange={(v) =>
-                                                updateItem(index, 'type', v)
-                                            }
-                                            options={workTypeNames}
-                                            placeholder="اختر النوع أو اكتب..."
-                                        />
-                                        <InputError
-                                            message={itemError(index, 'type')}
-                                        />
+                    {data.items.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            لا توجد عناصر. قم بإضافة عنصر واحد على الأقل.
+                        </p>
+                    ) : (
+                        <div ref={itemsContainerRef} className="space-y-4">
+                            {data.items.map((item, index) => (
+                                <div
+                                    key={index}
+                                    // scroll-mt clears the sticky bar when a newly
+                                    // added item is scrolled into view.
+                                    className="flex scroll-mt-16 flex-col gap-[18px] rounded-2xl border bg-card p-6"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-[15px] font-bold text-primary">
+                                            عنصر {index + 1}
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            title="حذف العنصر"
+                                            onClick={() => removeItem(index)}
+                                            className="flex size-[34px] items-center justify-center rounded-[9px] border border-[#F5D5DB] bg-card text-[#BE123C] transition-colors hover:bg-[#FDECEE]"
+                                        >
+                                            <Trash2 className="size-[15px]" />
+                                        </button>
                                     </div>
 
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            اسم المريض
-                                        </Label>
-                                        <Input
-                                            value={item.patient_name}
-                                            onChange={(e) =>
-                                                updateItem(
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                النوع
+                                            </Label>
+                                            <WorkTypeCombobox
+                                                value={item.type}
+                                                onChange={(v) =>
+                                                    updateItem(index, 'type', v)
+                                                }
+                                                options={workTypeNames}
+                                                placeholder="اختر النوع أو اكتب..."
+                                            />
+                                            <InputError
+                                                message={itemError(
+                                                    index,
+                                                    'type',
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                اسم المريض
+                                            </Label>
+                                            <Input
+                                                value={item.patient_name}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        index,
+                                                        'patient_name',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="أدخل اسم المريض..."
+                                                className={fieldClass}
+                                            />
+                                            <InputError
+                                                message={itemError(
                                                     index,
                                                     'patient_name',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="أدخل اسم المريض..."
-                                            className={fieldClass}
-                                        />
-                                        <InputError
-                                            message={itemError(
-                                                index,
-                                                'patient_name',
-                                            )}
-                                        />
-                                    </div>
+                                                )}
+                                            />
+                                        </div>
 
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            التاريخ
-                                        </Label>
-                                        <DateInput
-                                            value={item.date}
-                                            onChange={(value) =>
-                                                updateItem(index, 'date', value)
-                                            }
-                                            required
-                                            className={fieldClass}
-                                        />
-                                        <InputError
-                                            message={itemError(index, 'date')}
-                                        />
-                                    </div>
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                التاريخ
+                                            </Label>
+                                            <DateInput
+                                                value={item.date}
+                                                onChange={(value) =>
+                                                    updateItem(
+                                                        index,
+                                                        'date',
+                                                        value,
+                                                    )
+                                                }
+                                                required
+                                                className={fieldClass}
+                                            />
+                                            <InputError
+                                                message={itemError(
+                                                    index,
+                                                    'date',
+                                                )}
+                                            />
+                                        </div>
 
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            الكمية{' '}
-                                            {item.selected_teeth.length > 0 && (
-                                                <span className="text-xs font-normal text-muted-foreground">
-                                                    (حسب الأسنان المختارة)
-                                                </span>
-                                            )}
-                                        </Label>
-                                        <Input
-                                            type="number"
-                                            min="1"
-                                            value={item.quantity || ''}
-                                            onChange={(e) =>
-                                                updateItem(
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                الكمية{' '}
+                                                {item.selected_teeth.length >
+                                                    0 && (
+                                                    <span className="text-xs font-normal text-muted-foreground">
+                                                        (حسب الأسنان المختارة)
+                                                    </span>
+                                                )}
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                value={item.quantity || ''}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        index,
+                                                        'quantity',
+                                                        // NaN guard: an emptied
+                                                        // field must not poison
+                                                        // the totals.
+                                                        parseInt(
+                                                            e.target.value,
+                                                        ) || 0,
+                                                    )
+                                                }
+                                                readOnly={
+                                                    item.selected_teeth.length >
+                                                    0
+                                                }
+                                                className={cn(
+                                                    fieldClass,
+                                                    item.selected_teeth.length >
+                                                        0 && 'bg-muted',
+                                                )}
+                                            />
+                                            <InputError
+                                                message={itemError(
                                                     index,
                                                     'quantity',
-                                                    // NaN guard: an emptied
-                                                    // field must not poison
-                                                    // the totals.
-                                                    parseInt(e.target.value) ||
-                                                        0,
-                                                )
-                                            }
-                                            readOnly={
-                                                item.selected_teeth.length > 0
-                                            }
-                                            className={cn(
-                                                fieldClass,
-                                                item.selected_teeth.length >
-                                                    0 && 'bg-muted',
-                                            )}
-                                        />
-                                        <InputError
-                                            message={itemError(
-                                                index,
-                                                'quantity',
-                                            )}
-                                        />
-                                    </div>
+                                                )}
+                                            />
+                                        </div>
 
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            السعر
-                                        </Label>
-                                        <Input
-                                            type="number"
-                                            min="0"
-                                            value={item.price || ''}
-                                            onChange={(e) =>
-                                                updateItem(
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                السعر
+                                            </Label>
+                                            <Input
+                                                type="number"
+                                                min="0"
+                                                value={item.price || ''}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        index,
+                                                        'price',
+                                                        parseInt(
+                                                            e.target.value,
+                                                        ) || 0,
+                                                    )
+                                                }
+                                                className={fieldClass}
+                                            />
+                                            <InputError
+                                                message={itemError(
                                                     index,
                                                     'price',
-                                                    parseInt(e.target.value) ||
-                                                        0,
-                                                )
-                                            }
-                                            className={fieldClass}
-                                        />
-                                        <InputError
-                                            message={itemError(index, 'price')}
-                                        />
+                                                )}
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                ملاحظات
+                                            </Label>
+                                            <Input
+                                                value={item.notes}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        index,
+                                                        'notes',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className={fieldClass}
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="grid gap-2">
-                                        <Label className={labelClass}>
-                                            ملاحظات
-                                        </Label>
-                                        <Input
-                                            value={item.notes}
-                                            onChange={(e) =>
-                                                updateItem(
-                                                    index,
-                                                    'notes',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className={fieldClass}
-                                        />
+                                    <DentalChart
+                                        selectedTeeth={item.selected_teeth}
+                                        onSelectionChange={(teeth) => {
+                                            const newItems = [...data.items];
+                                            newItems[index] = {
+                                                ...newItems[index],
+                                                selected_teeth: teeth,
+                                                quantity:
+                                                    teeth.length > 0
+                                                        ? teeth.length
+                                                        : newItems[index]
+                                                              .quantity,
+                                            };
+                                            setData('items', newItems);
+                                        }}
+                                    />
+
+                                    <div className="flex justify-end text-sm text-[#435955]">
+                                        المجموع الفرعي:{' '}
+                                        <span className="mr-1.5 font-bold text-foreground tabular-nums">
+                                            {(
+                                                item.quantity * item.price
+                                            ).toLocaleString('en-US')}
+                                        </span>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    )}
+                    <InputError message={errors.items} />
+                </section>
 
-                                <DentalChart
-                                    selectedTeeth={item.selected_teeth}
-                                    onSelectionChange={(teeth) => {
-                                        const newItems = [...data.items];
-                                        newItems[index] = {
-                                            ...newItems[index],
-                                            selected_teeth: teeth,
-                                            quantity:
-                                                teeth.length > 0
-                                                    ? teeth.length
-                                                    : newItems[index].quantity,
-                                        };
-                                        setData('items', newItems);
-                                    }}
-                                />
-
-                                <div className="flex justify-end text-sm text-[#435955]">
-                                    المجموع الفرعي:{' '}
-                                    <span className="mr-1.5 font-bold text-foreground tabular-nums">
-                                        {(
-                                            item.quantity * item.price
-                                        ).toLocaleString('en-US')}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <InputError message={errors.items} />
-            </section>
-
-            {/* Total + submit */}
-            <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-6 py-5">
-                <span className="text-[17px] font-bold text-foreground">
-                    المجموع الكلي:{' '}
-                    <span className="text-primary tabular-nums">
-                        {total.toLocaleString('en-US')}
-                    </span>{' '}
-                    <span className="text-[13px] font-medium text-muted-foreground">
-                        ليرة
+                {/* Total + submit */}
+                <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-6 py-5">
+                    <span className="text-[17px] font-bold text-foreground">
+                        المجموع الكلي:{' '}
+                        <span className="text-primary tabular-nums">
+                            {total.toLocaleString('en-US')}
+                        </span>{' '}
+                        <span className="text-[13px] font-medium text-muted-foreground">
+                            ليرة
+                        </span>
                     </span>
-                </span>
-                <Button
-                    type="submit"
-                    size="lg"
-                    disabled={processing || data.items.length === 0}
-                    className="gap-2 rounded-xl px-7 text-[15px] font-semibold shadow-[0_2px_6px_rgba(15,118,110,0.25)]"
-                >
-                    <Check className="size-[17px]" />
-                    {submitLabel}
-                </Button>
-            </section>
+                    <Button
+                        type="submit"
+                        size="lg"
+                        disabled={processing || data.items.length === 0}
+                        className="gap-2 rounded-xl px-7 text-[15px] font-semibold shadow-[0_2px_6px_rgba(15,118,110,0.25)]"
+                    >
+                        <Check className="size-[17px]" />
+                        {submitLabel}
+                    </Button>
+                </section>
+            </form>
 
+            {/* Deliberately a SIBLING of the form, not a child. Radix portals
+                the dialog's DOM out to <body>, but React events still bubble
+                through the React tree — so a dialog rendered inside <form>
+                makes its own submit button also submit the order, silently
+                saving a half-typed order and navigating away. */}
             <DentistsManagerDialog
                 open={dentistsDialogOpen}
                 onOpenChange={setDentistsDialogOpen}
                 dentists={dentists}
             />
-        </form>
+        </>
     );
 }

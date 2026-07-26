@@ -76,6 +76,12 @@ export default function DentistForm({
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // This form is rendered inside dialogs that may float over another
+        // form. Radix portals the DOM out to <body>, but React events still
+        // bubble through the React tree, so without this an outer <form>
+        // would submit too. The callers keep the dialog out of their form as
+        // well; this is the belt to that pair of braces.
+        e.stopPropagation();
         clearErrors();
 
         const duplicates = findDuplicateNames(data.price_list);
