@@ -70,7 +70,20 @@ services:
     ports:
       - "127.0.0.1:5173:5173"
     networks:
-      - moslie-network
+      moslie-network:
+        aliases:
+          # Vite writes public/hot with its browser-facing URL,
+          # http://dental.test:5173, and Blade's @vite emits script tags
+          # pointing there. Headless Chromium renders the invoice PDF from
+          # *inside* the app container, where dental.test resolves to
+          # 127.0.0.1 — nothing listens on 5173 there, so the asset requests
+          # are refused, React never mounts, and the PDF comes out blank.
+          # This alias makes Docker's DNS answer dental.test with this
+          # container, so the one URL in public/hot works both from the host
+          # browser (via the published port above) and from inside the network.
+          # Requests keep the Host header dental.test:5173, which Vite already
+          # allows — reaching it as vite:5173 instead would 403.
+          - dental.test
 
   db:
     image: mysql:8.0
