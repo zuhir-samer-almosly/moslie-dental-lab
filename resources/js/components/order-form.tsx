@@ -1,7 +1,8 @@
 import { useForm } from '@inertiajs/react';
-import { Check, Info, Plus, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
+import { Check, Info, Plus, Trash2, Users } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import DentalChart from '@/components/dental-chart';
+import DentistsManagerDialog from '@/components/dentists/dentists-manager-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { DateInput } from '@/components/ui/date-input';
@@ -103,7 +104,7 @@ export default function OrderForm({
     // which the useForm error type doesn't know about.
     const itemError = (index: number, field: string) =>
         (errors as Record<string, string | undefined>)[
-        `items.${index}.${field}`
+            `items.${index}.${field}`
         ];
 
     // The add button is sticky, so it can be clicked from anywhere in a long
@@ -167,6 +168,8 @@ export default function OrderForm({
         setData('items', newItems);
     };
 
+    const [dentistsDialogOpen, setDentistsDialogOpen] = useState(false);
+
     const total = data.items.reduce(
         (sum, item) => sum + item.quantity * item.price,
         0,
@@ -198,24 +201,37 @@ export default function OrderForm({
                         <Label htmlFor="dentist_id" className={labelClass}>
                             الطبيب
                         </Label>
-                        <Select
-                            value={data.dentist_id}
-                            onValueChange={handleDentistChange}
-                        >
-                            <SelectTrigger className={fieldClass}>
-                                <SelectValue placeholder="اختر الطبيب" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dentists.map((dentist) => (
-                                    <SelectItem
-                                        key={dentist.id}
-                                        value={dentist.id.toString()}
-                                    >
-                                        {dentist.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <div className="flex items-center gap-2">
+                            <Select
+                                value={data.dentist_id}
+                                onValueChange={handleDentistChange}
+                            >
+                                <SelectTrigger
+                                    className={cn(fieldClass, 'flex-1')}
+                                >
+                                    <SelectValue placeholder="اختر الطبيب" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dentists.map((dentist) => (
+                                        <SelectItem
+                                            key={dentist.id}
+                                            value={dentist.id.toString()}
+                                        >
+                                            {dentist.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                title="إدارة الأطباء والأسعار"
+                                onClick={() => setDentistsDialogOpen(true)}
+                                className="size-11 shrink-0 rounded-[10px] p-0"
+                            >
+                                <Users className="size-4" />
+                            </Button>
+                        </div>
                         <InputError message={errors.dentist_id} />
                     </div>
 
@@ -406,7 +422,7 @@ export default function OrderForm({
                                                     // field must not poison
                                                     // the totals.
                                                     parseInt(e.target.value) ||
-                                                    0,
+                                                        0,
                                                 )
                                             }
                                             readOnly={
@@ -415,7 +431,7 @@ export default function OrderForm({
                                             className={cn(
                                                 fieldClass,
                                                 item.selected_teeth.length >
-                                                0 && 'bg-muted',
+                                                    0 && 'bg-muted',
                                             )}
                                         />
                                         <InputError
@@ -439,7 +455,7 @@ export default function OrderForm({
                                                     index,
                                                     'price',
                                                     parseInt(e.target.value) ||
-                                                    0,
+                                                        0,
                                                 )
                                             }
                                             className={fieldClass}
@@ -519,6 +535,12 @@ export default function OrderForm({
                     {submitLabel}
                 </Button>
             </section>
+
+            <DentistsManagerDialog
+                open={dentistsDialogOpen}
+                onOpenChange={setDentistsDialogOpen}
+                dentists={dentists}
+            />
         </form>
     );
 }
