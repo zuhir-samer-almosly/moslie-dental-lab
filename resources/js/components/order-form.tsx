@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import { Check, Info, Plus, Trash2 } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import DentalChart from '@/components/dental-chart';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -106,9 +106,27 @@ export default function OrderForm({
         `items.${index}.${field}`
         ];
 
+    // The add button is sticky, so it can be clicked from anywhere in a long
+    // list — but the new item is always appended at the end. Scroll to it so
+    // the click never looks like it did nothing.
+    const itemsContainerRef = useRef<HTMLDivElement>(null);
+    const scrollToLastItem = useRef(false);
+
+    useEffect(() => {
+        if (!scrollToLastItem.current) {
+            return;
+        }
+        scrollToLastItem.current = false;
+        itemsContainerRef.current?.lastElementChild?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        });
+    }, [data.items.length]);
+
     const addItem = () => {
         const defaultType = workTypeNames[0] || '';
         const price = getDentistPrice(defaultType) ?? 0;
+        scrollToLastItem.current = true;
         setData('items', [
             ...data.items,
             {
@@ -259,9 +277,16 @@ export default function OrderForm({
 
             {/* Items */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between">
+                {/* Sticky so the add button stays reachable without scrolling
+                    back to the top of a long item list. */}
+                <div className="sticky top-0 z-20 flex items-center justify-between bg-background py-3">
                     <h2 className="text-base font-bold text-foreground">
                         العناصر
+                        {data.items.length > 0 && (
+                            <span className="mr-1.5 text-sm font-medium text-muted-foreground tabular-nums">
+                                ({data.items.length})
+                            </span>
+                        )}
                     </h2>
                     <Button
                         type="button"
@@ -279,11 +304,13 @@ export default function OrderForm({
                         لا توجد عناصر. قم بإضافة عنصر واحد على الأقل.
                     </p>
                 ) : (
-                    <div className="space-y-4">
+                    <div ref={itemsContainerRef} className="space-y-4">
                         {data.items.map((item, index) => (
                             <div
                                 key={index}
-                                className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6"
+                                // scroll-mt clears the sticky bar when a newly
+                                // added item is scrolled into view.
+                                className="flex scroll-mt-16 flex-col gap-[18px] rounded-2xl border bg-card p-6"
                             >
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-[15px] font-bold text-primary">

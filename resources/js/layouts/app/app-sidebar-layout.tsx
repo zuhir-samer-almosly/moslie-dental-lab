@@ -12,7 +12,11 @@ export default function AppSidebarLayout({
     return (
         <AppShell variant="sidebar">
             <AppSidebar />
-            <AppContent variant="sidebar" className="overflow-x-hidden">
+            {/* overflow-x-clip, not -hidden: `hidden` forces overflow-y to
+                `auto`, which turns this element into the scroll container that
+                `position: sticky` binds to — breaking sticky headers on every
+                page. `clip` clips the same way without that side effect. */}
+            <AppContent variant="sidebar" className="overflow-x-clip">
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}
                 <FlashMessages />

@@ -20,7 +20,9 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="إضافة طلب" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6">
+            {/* No overflow-* here: it would make this a scroll container and
+                break the sticky items bar inside OrderForm. */}
+            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex max-w-[920px] items-center gap-3.5">
                     <Link
