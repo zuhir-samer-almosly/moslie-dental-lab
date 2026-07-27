@@ -303,7 +303,7 @@ export function InvoiceReport({
                                 </div>
                                 <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
                                     <span>المستحق على الطبيب</span>
-                                    <span className="tabular-nums">
+                                    <span className="tabular-nums text-green-600">
                                         {group.due.toLocaleString('en-US')}
                                     </span>
                                 </div>
@@ -390,7 +390,7 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between border-t pt-2">
                         <span className="font-bold">الإجمالي المستحق:</span>
-                        <span className="text-lg font-bold tabular-nums">
+                        <span className="text-lg font-bold tabular-nums text-green-600">
                             {totals.balance.toLocaleString('en-US')}
                         </span>
                     </div>
