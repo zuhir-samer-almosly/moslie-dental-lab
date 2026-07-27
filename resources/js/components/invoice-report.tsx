@@ -29,6 +29,7 @@ import type { Dentist, DentistPayment, Order, OrderItem } from '@/types';
 type DentistGroup = {
     id: number;
     name: string;
+    gender: 'male' | 'female';
     opening: number;
     rows: { order: Order; item: OrderItem | null }[];
     ordersTotal: number;
@@ -66,15 +67,17 @@ export function groupByDentist(
     dentists: Dentist[],
 ): DentistGroup[] {
     const map = new Map<number, DentistGroup>();
-    const nameFor = (id: number) =>
-        dentists.find((d) => d.id === id)?.name ?? '—';
+    const findDentist = (id: number) => dentists.find((d) => d.id === id);
+    const nameFor = (id: number) => findDentist(id)?.name ?? '—';
+    const genderFor = (id: number) => findDentist(id)?.gender ?? 'male';
 
-    const ensure = (id: number, name?: string): DentistGroup => {
+    const ensure = (id: number, name?: string, gender?: 'male' | 'female'): DentistGroup => {
         let group = map.get(id);
         if (!group) {
             group = {
                 id,
                 name: name ?? nameFor(id),
+                gender: gender ?? genderFor(id),
                 opening: 0,
                 rows: [],
                 ordersTotal: 0,
@@ -93,7 +96,7 @@ export function groupByDentist(
     }
 
     for (const order of orders) {
-        const group = ensure(order.dentist_id, order.dentist?.name);
+        const group = ensure(order.dentist_id, order.dentist?.name, order.dentist?.gender);
         const items = order.items ?? [];
         if (items.length === 0) {
             group.rows.push({ order, item: null });
@@ -107,7 +110,7 @@ export function groupByDentist(
     }
 
     for (const payment of payments) {
-        ensure(payment.dentist_id, payment.dentist?.name).paymentsTotal +=
+        ensure(payment.dentist_id, payment.dentist?.name, payment.dentist?.gender).paymentsTotal +=
             payment.amount;
     }
 
@@ -154,7 +157,7 @@ export function InvoiceReport({
                         <div key={group.id} className="space-y-2">
                             <div className="text-center">
                                 <h4 className="text-2xl font-bold">
-                                    الدكتور/الدكتورة : {group.name} محترم/محترمة
+                                    {group.gender === 'female' ? 'الدكتورة' : 'الدكتور'} : {group.name} {group.gender === 'female' ? 'المحترمة' : 'المحترم'}
                                 </h4>
                             </div>
                             <div className="rounded-lg border">

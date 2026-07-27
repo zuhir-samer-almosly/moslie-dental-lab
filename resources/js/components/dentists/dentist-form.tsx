@@ -55,6 +55,7 @@ export default function DentistForm({
         clearErrors,
     } = useForm({
         name: dentist?.name ?? '',
+        gender: dentist?.gender ?? 'male',
         phone: dentist?.phone ?? '',
         address: dentist?.address ?? '',
         price_list: toRows(dentist),
@@ -62,6 +63,7 @@ export default function DentistForm({
 
     transform((payload) => ({
         name: payload.name,
+        gender: payload.gender,
         phone: payload.phone,
         address: payload.address,
         price_list: Object.fromEntries(
@@ -120,6 +122,35 @@ export default function DentistForm({
                     required
                 />
                 <InputError message={errors.name} />
+            </div>
+
+            <div className="grid gap-2">
+                <Label>الجنس *</Label>
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="gender"
+                            value="male"
+                            checked={data.gender === 'male'}
+                            onChange={() => setData('gender', 'male')}
+                            className="accent-primary"
+                        />
+                        <span>دكتور</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="gender"
+                            value="female"
+                            checked={data.gender === 'female'}
+                            onChange={() => setData('gender', 'female')}
+                            className="accent-primary"
+                        />
+                        <span>دكتورة</span>
+                    </label>
+                </div>
+                <InputError message={errors.gender} />
             </div>
 
             <div className="grid gap-2">

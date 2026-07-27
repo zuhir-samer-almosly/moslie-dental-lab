@@ -23,6 +23,7 @@ class UpdateDentistRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'gender' => ['required', 'in:male,female'],
             'phone' => ['nullable', 'string', \Illuminate\Validation\Rule::unique('dentists')->ignore($this->dentist)],
             'address' => ['nullable', 'string'],
             'price_list' => ['nullable', 'array'],
