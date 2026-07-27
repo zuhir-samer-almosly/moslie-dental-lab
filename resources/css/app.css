@@ -219,5 +219,7 @@
 
     body {
         direction: rtl;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
 }

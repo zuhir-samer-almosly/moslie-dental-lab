@@ -154,7 +154,7 @@ export function InvoiceReport({
                         <div key={group.id} className="space-y-2">
                             <div className="text-center">
                                 <h4 className="text-2xl font-bold">
-                                    الطبيب : {group.name} المحترم
+                                    الدكتور/الدكتورة : {group.name} محترم/محترمة
                                 </h4>
                             </div>
                             <div className="rounded-lg border">
@@ -317,7 +317,6 @@ export function InvoiceReport({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>الطبيب</TableHead>
                                 <TableHead>التاريخ</TableHead>
                                 <TableHead>المبلغ</TableHead>
                             </TableRow>
@@ -326,7 +325,7 @@ export function InvoiceReport({
                             {payments.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={3}
+                                        colSpan={2}
                                         className="text-center"
                                     >
                                         لا توجد مدفوعات
@@ -336,15 +335,12 @@ export function InvoiceReport({
                                 payments.map((payment) => (
                                     <TableRow key={payment.id}>
                                         <TableCell>
-                                            {payment.dentist?.name}
-                                        </TableCell>
-                                        <TableCell>
                                             {formatDate(
                                                 payment.payment_date ||
                                                     payment.created_at,
                                             )}
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className="font-semibold text-red-600">
                                             {payment.amount.toLocaleString(
                                                 'en-US',
                                             )}
