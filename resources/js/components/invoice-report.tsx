@@ -294,7 +294,7 @@ export function InvoiceReport({
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span>مدفوعات الفترة</span>
-                                    <span className="tabular-nums">
+                                    <span className="tabular-nums text-red-600">
                                         −
                                         {group.paymentsTotal.toLocaleString(
                                             'en-US',
@@ -357,7 +357,7 @@ export function InvoiceReport({
                 <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
                     <div className="flex items-center justify-between font-semibold">
                         <span>إجمالي مدفوعات الفترة</span>
-                        <span className="tabular-nums">
+                        <span className="tabular-nums text-red-600">
                             {totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
@@ -384,7 +384,7 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between">
                         <span>إجمالي المدفوعات:</span>
-                        <span className="font-semibold tabular-nums">
+                        <span className="font-semibold tabular-nums text-red-600">
                             −{totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
