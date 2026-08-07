@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Account;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
@@ -73,4 +74,57 @@ test('every posted entry balances', function () {
     $totals = JournalLine::selectRaw('SUM(debit) as d, SUM(credit) as c')->first();
 
     expect((int) $totals->d)->toBe((int) $totals->c);
+});
+
+test('a salary payment with null date does not post', function () {
+    $employee = Employee::factory()->create();
+
+    EmployeePayment::create([
+        'employee_id' => $employee->id,
+        'amount' => 80000,
+        'payment_date' => null,  // Invisible to existing reports
+    ]);
+
+    expect(JournalEntry::count())->toBe(0);
+    expect(accountBalance('5000'))->toBe(0);
+});
+
+test('a material purchase with null date does not post', function () {
+    MaterialPurchase::create([
+        'name' => 'خزف',
+        'amount' => 25000,
+        'purchase_date' => null,  // Invisible to existing reports
+    ]);
+
+    expect(JournalEntry::count())->toBe(0);
+    expect(accountBalance('5100'))->toBe(0);
+});
+
+test('a general expense with null date does not post', function () {
+    Expense::create([
+        'category' => 'rent',
+        'amount' => 40000,
+        'expense_date' => null,  // Invisible to existing reports
+    ]);
+
+    expect(JournalEntry::count())->toBe(0);
+    expect(accountBalance('5220'))->toBe(0);
+});
+
+test('an expense whose category maps to a deactivated account still posts to that account', function () {
+    // Find or create the rent account (5220)
+    $rentAccount = Account::chart()->get('5220');
+    if ($rentAccount) {
+        $rentAccount->update(['is_active' => false]);
+    }
+
+    Expense::create([
+        'category' => 'rent',
+        'amount' => 40000,
+        'expense_date' => '2026-06-01',
+    ]);
+
+    // Should debit 5220 (even though inactive), not 5290
+    expect(accountBalance('5220'))->toBe(40000);
+    expect(accountBalance('5290'))->toBe(0);
 });

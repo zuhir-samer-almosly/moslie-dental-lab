@@ -23,7 +23,9 @@ final class ExpensePosting implements Posting
 
     public function shouldPost(): bool
     {
-        return (int) $this->expense->amount !== 0;
+        // Null-dated rows are invisible to existing reports (SQL WHERE doesn't match NULL),
+        // so they remain invisible in the ledger to preserve historical accuracy.
+        return $this->expense->expense_date !== null && (int) $this->expense->amount !== 0;
     }
 
     public function date(): string
@@ -48,7 +50,10 @@ final class ExpensePosting implements Posting
 
     private function accountCode(): string
     {
-        return Account::expenseCategories()
+        // Use allExpenseCategories() to include deactivated accounts. A deactivated
+        // account should still receive postings for expenses that point to it; only
+        // genuine unrecognised categories fall back to 5290.
+        return Account::allExpenseCategories()
             ->firstWhere('category_key', $this->expense->category)
             ?->code ?? self::FALLBACK;
     }

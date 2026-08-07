@@ -66,4 +66,17 @@ class Account extends Model
             ->sortBy('sort_order')
             ->values();
     }
+
+    /**
+     * All expense category accounts including inactive ones. Used by the ledger
+     * to post expenses to their original accounts even if deactivated later,
+     * so they don't reclassify to 5290 (أخرى) just because the UI hid them.
+     */
+    public static function allExpenseCategories(): Collection
+    {
+        return self::chart()
+            ->filter(fn (self $a) => $a->category_key !== null)
+            ->sortBy('sort_order')
+            ->values();
+    }
 }

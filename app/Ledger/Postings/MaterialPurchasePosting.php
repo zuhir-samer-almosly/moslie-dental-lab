@@ -15,7 +15,9 @@ final class MaterialPurchasePosting implements Posting
 
     public function shouldPost(): bool
     {
-        return (int) $this->purchase->amount !== 0;
+        // Null-dated rows are invisible to existing reports (SQL WHERE doesn't match NULL),
+        // so they remain invisible in the ledger to preserve historical accuracy.
+        return $this->purchase->purchase_date !== null && (int) $this->purchase->amount !== 0;
     }
 
     public function date(): string

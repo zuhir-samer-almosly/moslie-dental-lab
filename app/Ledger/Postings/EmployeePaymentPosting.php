@@ -15,7 +15,9 @@ final class EmployeePaymentPosting implements Posting
 
     public function shouldPost(): bool
     {
-        return (int) $this->payment->amount !== 0;
+        // Null-dated rows are invisible to existing reports (SQL WHERE doesn't match NULL),
+        // so they remain invisible in the ledger to preserve historical accuracy.
+        return $this->payment->payment_date !== null && (int) $this->payment->amount !== 0;
     }
 
     public function date(): string
