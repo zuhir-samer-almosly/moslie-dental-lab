@@ -14,7 +14,9 @@ class Ledger
      *
      * @var array<class-string, class-string<Posting>>
      */
-    public const POSTINGS = [];
+    public const POSTINGS = [
+        \App\Models\Order::class => \App\Ledger\Postings\OrderPosting::class,
+    ];
 
     /**
      * Rewrite a source record's entries from its current state. The ledger
