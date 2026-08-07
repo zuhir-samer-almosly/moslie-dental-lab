@@ -2,9 +2,12 @@
 
 namespace App\Models;
 
+use App\Observers\CascadeLedgerObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+#[ObservedBy(CascadeLedgerObserver::class)]
 class Dentist extends Model
 {
     /** @use HasFactory<\Database\Factories\DentistFactory> */

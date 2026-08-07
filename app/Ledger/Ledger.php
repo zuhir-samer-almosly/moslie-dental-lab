@@ -52,6 +52,25 @@ class Ledger
     }
 
     /**
+     * Remove entries for many sources of one type at once. Used when a parent
+     * row is deleted and the database cascades its children away without
+     * Eloquent seeing it.
+     *
+     * @param  list<int>  $ids
+     */
+    public function forgetMany(string $sourceType, array $ids): void
+    {
+        if ($ids === []) {
+            return;
+        }
+
+        JournalEntry::query()
+            ->where('source_type', $sourceType)
+            ->whereIn('source_id', $ids)
+            ->delete();
+    }
+
+    /**
      * @param  list<Line>  $lines
      *
      * @throws UnbalancedEntryException
