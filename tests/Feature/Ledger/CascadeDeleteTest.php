@@ -56,3 +56,26 @@ test('deleting one dentist leaves another dentist entries alone', function () {
 
     expect(JournalEntry::count())->toBe(1);
 });
+
+test('ledger cleanup is atomic with the parent delete', function () {
+    $dentist = Dentist::create(['name' => 'د. سامي']);
+    Order::create([
+        'dentist_id' => $dentist->id,
+        'due_date' => '2026-06-10',
+        'amount' => 500000,
+        'status' => 'pending',
+    ]);
+
+    expect(JournalEntry::count())->toBe(1);
+
+    // Register a listener that aborts the delete, running after the observer.
+    // If cleanup happened in deleting(), entries would be gone even though delete failed.
+    // With cleanup in deleted(), entries remain because deleted() never fires.
+    Dentist::deleting(fn () => false);
+
+    $result = $dentist->delete();
+
+    expect($result)->toBeFalse();
+    expect(Dentist::find($dentist->id))->not->toBeNull();
+    expect(JournalEntry::count())->toBe(1);
+});
