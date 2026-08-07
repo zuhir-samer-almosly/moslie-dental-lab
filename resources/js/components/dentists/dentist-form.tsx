@@ -15,9 +15,9 @@ import type { Dentist } from '@/types';
 const toRows = (dentist?: Dentist | null): PriceRow[] =>
     dentist
         ? Object.entries(dentist.price_list ?? {}).map(([name, price]) => ({
-              name,
-              price,
-          }))
+            name,
+            price,
+        }))
         : DEFAULT_WORK_TYPES.map((name) => ({ name, price: 0 }));
 
 /**
@@ -136,7 +136,7 @@ export default function DentistForm({
                             onChange={() => setData('gender', 'male')}
                             className="accent-primary"
                         />
-                        <span>دكتور</span>
+                        <span>ذكر</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -147,7 +147,7 @@ export default function DentistForm({
                             onChange={() => setData('gender', 'female')}
                             className="accent-primary"
                         />
-                        <span>دكتورة</span>
+                        <span>أنثى</span>
                     </label>
                 </div>
                 <InputError message={errors.gender} />
