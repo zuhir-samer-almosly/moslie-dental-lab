@@ -75,7 +75,7 @@ class Ledger
         });
     }
 
-    private function postingFor(Model $source): ?Posting
+    protected function postingFor(Model $source): ?Posting
     {
         $class = self::POSTINGS[$source::class] ?? null;
 
@@ -86,7 +86,7 @@ class Ledger
     private function assertBalanced(array $lines): void
     {
         if ($lines === []) {
-            throw new UnbalancedEntryException('An entry must have at least two lines.');
+            throw new UnbalancedEntryException('An entry must have at least one line.');
         }
 
         $debits = 0;
@@ -97,12 +97,20 @@ class Ledger
                 throw new UnbalancedEntryException('A line carries a debit or a credit, never both.');
             }
 
+            if ($line->debit === 0 && $line->credit === 0) {
+                throw new UnbalancedEntryException('A line must carry a debit or a credit.');
+            }
+
             if ($line->debit < 0 || $line->credit < 0) {
                 throw new UnbalancedEntryException('Line amounts must not be negative.');
             }
 
             $debits += $line->debit;
             $credits += $line->credit;
+        }
+
+        if ($debits === 0 || $credits === 0) {
+            throw new UnbalancedEntryException('An entry must have at least one debit and one credit.');
         }
 
         if ($debits !== $credits) {
