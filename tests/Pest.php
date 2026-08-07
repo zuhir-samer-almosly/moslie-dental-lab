@@ -15,6 +15,10 @@ pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
+uses()->beforeEach(function () {
+    \App\Models\Account::flushChart();
+})->in('Feature');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
