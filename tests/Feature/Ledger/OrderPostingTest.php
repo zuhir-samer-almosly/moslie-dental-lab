@@ -16,6 +16,16 @@ function receivable(int $dentistId): int
         ->value('balance');
 }
 
+/** Revenue balance, read straight from the lines. */
+function revenue(): int
+{
+    return (int) JournalLine::query()
+        ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+        ->where('accounts.code', '4000')
+        ->selectRaw('COALESCE(SUM(journal_lines.debit),0) - COALESCE(SUM(journal_lines.credit),0) as balance')
+        ->value('balance');
+}
+
 test('creating an order debits receivables and credits revenue', function () {
     $dentist = Dentist::create(['name' => 'د. سامي']);
 
@@ -31,6 +41,7 @@ test('creating an order debits receivables and credits revenue', function () {
     expect($entry->source_type)->toBe(Order::class);
     expect($entry->source_id)->toBe($order->id);
     expect(receivable($dentist->id))->toBe(500000);
+    expect(revenue())->toBe(-500000);
 });
 
 test('editing an order rewrites its entry instead of adding one', function () {
@@ -46,6 +57,7 @@ test('editing an order rewrites its entry instead of adding one', function () {
 
     expect(JournalEntry::count())->toBe(1);
     expect(receivable($dentist->id))->toBe(400000);
+    expect(revenue())->toBe(-400000);
 });
 
 test('cancelling an order removes its entry', function () {
@@ -61,6 +73,7 @@ test('cancelling an order removes its entry', function () {
 
     expect(JournalEntry::count())->toBe(0);
     expect(receivable($dentist->id))->toBe(0);
+    expect(revenue())->toBe(0);
 });
 
 test('un-cancelling an order posts it again', function () {
@@ -77,6 +90,7 @@ test('un-cancelling an order posts it again', function () {
     $order->update(['status' => 'pending']);
 
     expect(receivable($dentist->id))->toBe(500000);
+    expect(revenue())->toBe(-500000);
 });
 
 test('deleting an order removes its entry', function () {
@@ -91,6 +105,7 @@ test('deleting an order removes its entry', function () {
     $order->delete();
 
     expect(JournalEntry::count())->toBe(0);
+    expect(revenue())->toBe(0);
 });
 
 test('a zero-amount order posts nothing', function () {
