@@ -16,6 +16,7 @@ class Ledger
      */
     public const POSTINGS = [
         \App\Models\Order::class => \App\Ledger\Postings\OrderPosting::class,
+        \App\Models\DentistPayment::class => \App\Ledger\Postings\DentistPaymentPosting::class,
     ];
 
     /**
