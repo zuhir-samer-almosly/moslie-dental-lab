@@ -96,23 +96,17 @@ test('an entry with zero total debits and credits is refused', function () {
 test('sync rolls back forget on posting failure', function () {
     $dentist = \App\Models\Dentist::create(['name' => 'د. تجربة']);
 
-    // Create a ledger entry for the dentist first
-    app(Ledger::class)->post('2026-06-01', 'أول', [
-        Line::debit('1100', 1000),
-        Line::credit('4000', 1000),
-    ]);
-
-    expect(JournalEntry::count())->toBe(1);
-    $originalEntry = JournalEntry::first();
-
-    // Create a custom ledger with a test-only posting that will throw
+    // Create a custom ledger that can be controlled for test phases
     $ledger = new class extends Ledger
     {
+        public bool $shouldThrow = false;
+
         protected function postingFor(\Illuminate\Database\Eloquent\Model $source): ?\App\Ledger\Posting
         {
-            // Return a deliberately unbalanced posting
-            return new class implements \App\Ledger\Posting
+            return new class($this->shouldThrow) implements \App\Ledger\Posting
             {
+                public function __construct(private bool $shouldThrow) {}
+
                 public function shouldPost(): bool
                 {
                     return true;
@@ -125,24 +119,43 @@ test('sync rolls back forget on posting failure', function () {
 
                 public function description(): string
                 {
-                    return 'unbalanced';
+                    return 'test entry';
                 }
 
                 public function lines(): array
                 {
+                    if ($this->shouldThrow) {
+                        // Return an unbalanced posting: 500 debits != 1000 credits
+                        return [
+                            \App\Ledger\Line::debit('1000', 500),
+                            \App\Ledger\Line::credit('4000', 1000),
+                        ];
+                    }
+
+                    // Return a balanced posting
                     return [
-                        \App\Ledger\Line::debit('1000', 500),
-                        \App\Ledger\Line::credit('4000', 1000), // This is unbalanced: 500 != 1000
+                        \App\Ledger\Line::debit('1000', 1000),
+                        \App\Ledger\Line::credit('4000', 1000),
                     ];
                 }
             };
         }
     };
 
-    // Try to sync with the unbalanced posting
+    // Phase 1: Create an entry with source attached
+    $ledger->shouldThrow = false;
+    $ledger->sync($dentist);
+
+    expect(JournalEntry::count())->toBe(1);
+    $originalEntry = JournalEntry::first();
+    expect($originalEntry->source_type)->toBe($dentist->getMorphClass());
+    expect($originalEntry->source_id)->toBe($dentist->id);
+
+    // Phase 2: Try to sync with unbalanced posting — should fail and rollback
+    $ledger->shouldThrow = true;
     expect(fn () => $ledger->sync($dentist))->toThrow(UnbalancedEntryException::class);
 
-    // The original entry should still exist (forget/rollback occurred)
+    // Phase 3: Verify the original entry still exists with its id
     expect(JournalEntry::count())->toBe(1);
     $remainingEntry = JournalEntry::first();
     expect($remainingEntry->id)->toBe($originalEntry->id);
