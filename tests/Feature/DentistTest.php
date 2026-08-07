@@ -64,6 +64,7 @@ test('storing a dentist from the order page redirects back and saves the price l
     $this->from(route('orders.create'))
         ->post(route('dentists.store'), [
             'name' => 'د. خالد',
+            'gender' => 'male',
             'price_list' => ['خزف' => 90000, 'زيركون' => 150000],
         ])
         ->assertRedirect(route('orders.create'))
@@ -79,6 +80,7 @@ test('storing a dentist from the standalone page redirects to the index', functi
     $this->from(route('dentists.create'))
         ->post(route('dentists.store'), [
             'name' => 'د. ليلى',
+            'gender' => 'female',
             'to_index' => true,
         ])
         ->assertRedirect(route('dentists.index'))
@@ -100,6 +102,7 @@ test('updating one work type price leaves the rest of the price list intact', fu
     $this->from(route('orders.create'))
         ->put(route('dentists.update', $dentist), [
             'name' => 'د. سامر',
+            'gender' => 'male',
             'price_list' => ['خزف' => 110000, 'زيركون' => 150000],
         ])
         ->assertRedirect(route('orders.create'))
