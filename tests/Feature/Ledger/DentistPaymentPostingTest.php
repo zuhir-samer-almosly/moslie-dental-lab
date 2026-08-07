@@ -6,6 +6,10 @@ use App\Models\JournalEntry;
 use App\Models\JournalLine;
 use App\Models\Order;
 
+/**
+ * Balance for an account without dentist attribution. Used for aggregate
+ * testing where attribution does not apply (e.g., cash).
+ */
 function balanceOf(string $code): int
 {
     return (int) JournalLine::query()
@@ -31,7 +35,7 @@ test('a payment debits cash and credits the dentist receivable', function () {
     ]);
 
     expect(balanceOf('1000'))->toBe(300000);   // cash box
-    expect(balanceOf('1100'))->toBe(200000);   // still owed
+    expect(receivable($dentist->id))->toBe(200000);   // still owed
 });
 
 test('a payment with no payment_date falls back to created_at', function () {
@@ -63,5 +67,5 @@ test('deleting a payment restores the receivable', function () {
     $payment->delete();
 
     expect(balanceOf('1000'))->toBe(0);
-    expect(balanceOf('1100'))->toBe(500000);
+    expect(receivable($dentist->id))->toBe(500000);
 });
