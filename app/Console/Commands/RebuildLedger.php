@@ -14,6 +14,7 @@ use App\Models\JournalLine;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
 use Illuminate\Console\Command;
+use Illuminate\Console\ConfirmableTrait;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,8 +26,11 @@ use Illuminate\Support\Facades\DB;
  */
 class RebuildLedger extends Command
 {
+    use ConfirmableTrait;
+
     protected $signature = 'ledger:rebuild
-                            {--cash-on-hand= : Real counted cash; the difference is posted to owner capital}';
+                            {--cash-on-hand= : Real counted cash; the difference is posted to owner capital}
+                            {--force : Force the operation to run when in production}';
 
     protected $description = 'Rebuild the double-entry ledger from the domain tables';
 
@@ -40,14 +44,13 @@ class RebuildLedger extends Command
     ];
 
     /**
-     * Source model => the date column its posting rule requires. A row with
-     * a null value there is skipped by the posting rule itself (see
-     * EmployeePaymentPosting / MaterialPurchasePosting / ExpensePosting),
-     * deliberately: the existing reports filter with whereBetween(date, ...)
-     * which never matches NULL, so those rows are already invisible to
-     * today's totals and must stay that way here too. This map exists only
-     * so the rebuild can *count and report* what it skipped — never to
-     * change what gets posted.
+     * Source model => the date column its posting rule checks. Used only to
+     * *label* an already-established skip (see syncModel()) as "no date" vs
+     * "other" — never to decide whether a row is skipped. That decision
+     * always comes from asking the real posting rule's shouldPost(), so a
+     * changed skip condition can never silently drift out of sync with what
+     * gets reported: the totals stay true even if this label heuristic goes
+     * stale.
      *
      * @var array<class-string, string>
      */
@@ -58,10 +61,25 @@ class RebuildLedger extends Command
     ];
 
     /** @var array<string, int> class_basename(model) => rows skipped for having no date */
-    private array $skipped = [];
+    private array $skippedNoDate = [];
+
+    /** @var array<string, int> class_basename(model) => rows skipped for any other reason (e.g. zero amount) */
+    private array $skippedOther = [];
 
     public function handle(Ledger $ledger): int
     {
+        $invalid = $this->invalidCashOnHand();
+
+        if ($invalid !== null) {
+            $this->error($invalid);
+
+            return self::FAILURE;
+        }
+
+        if (! $this->confirmToProceed('Rebuilding the ledger replaces every existing journal entry. This is destructive.')) {
+            return self::FAILURE;
+        }
+
         $this->warn('Rebuilding the ledger — every existing entry will be replaced.');
 
         DB::transaction(function () use ($ledger) {
@@ -81,31 +99,71 @@ class RebuildLedger extends Command
         return $status;
     }
 
-    /** Re-sync every row of one source model, tallying rows and no-date skips. */
+    /**
+     * Validate the raw --cash-on-hand string before it is ever cast to int.
+     * `(int) '10,000'` silently truncates to 10 at the first non-digit — and
+     * the report prints every figure through number_format, i.e. with
+     * commas, which is exactly the format a user is likely to paste back in.
+     * A bad cast here would still balance and exit 0, just wrong by orders
+     * of magnitude with no signal. Reject anything that isn't a plain
+     * (optionally negative) integer.
+     *
+     * @return string|null An error message if invalid, null if the value (or its absence) is fine.
+     */
+    private function invalidCashOnHand(): ?string
+    {
+        $raw = $this->option('cash-on-hand');
+
+        if ($raw === null) {
+            return null;
+        }
+
+        if (! preg_match('/^-?\d+$/', $raw)) {
+            return "Invalid --cash-on-hand value [{$raw}]: expected a plain integer such as 10000 or -500 (no commas, no decimals).";
+        }
+
+        return null;
+    }
+
+    /** Re-sync every row of one source model, tallying posted rows and skips by reason. */
     private function syncModel(Ledger $ledger, string $model): void
     {
         $dateColumn = self::DATE_COLUMNS[$model] ?? null;
-        $total = 0;
-        $skipped = 0;
+        $posted = 0;
+        $skippedNoDate = 0;
+        $skippedOther = 0;
 
-        $model::query()->orderBy('id')->chunkById(500, function ($rows) use ($ledger, $dateColumn, &$total, &$skipped) {
+        $model::query()->orderBy('id')->chunkById(500, function ($rows) use ($ledger, $dateColumn, &$posted, &$skippedNoDate, &$skippedOther) {
             foreach ($rows as $row) {
-                $total++;
+                // Ask the real posting rule, not a re-derived heuristic: a
+                // row that fails shouldPost() for a reason other than a null
+                // date (e.g. a zero amount) must still be accounted for
+                // instead of vanishing from every count.
+                $posting = $ledger->postingRuleFor($row);
 
-                if ($dateColumn !== null && $row->{$dateColumn} === null) {
-                    $skipped++;
+                if ($posting !== null && $posting->shouldPost()) {
+                    $posted++;
+                } elseif ($dateColumn !== null && $row->{$dateColumn} === null) {
+                    $skippedNoDate++;
+                } else {
+                    $skippedOther++;
                 }
 
                 $ledger->sync($row);
             }
         });
 
-        $this->skipped[class_basename($model)] = $skipped;
+        $this->skippedNoDate[class_basename($model)] = $skippedNoDate;
+        $this->skippedOther[class_basename($model)] = $skippedOther;
 
-        $line = sprintf('  %-24s %d', class_basename($model), $total);
+        $line = sprintf('  %-24s %d posted', class_basename($model), $posted);
 
-        if ($skipped > 0) {
-            $line .= sprintf('  (%d skipped — no date)', $skipped);
+        if ($skippedNoDate > 0) {
+            $line .= sprintf(', %d skipped (no date)', $skippedNoDate);
+        }
+
+        if ($skippedOther > 0) {
+            $line .= sprintf(', %d skipped (other)', $skippedOther);
         }
 
         $this->line($line);
@@ -182,25 +240,35 @@ class RebuildLedger extends Command
      */
     private function reportSkipped(): void
     {
-        $total = array_sum($this->skipped);
+        $totalNoDate = array_sum($this->skippedNoDate);
+        $totalOther = array_sum($this->skippedOther);
 
-        if ($total === 0) {
-            return;
+        if ($totalNoDate > 0) {
+            $this->newLine();
+            $this->warn("⚠ WARNING: {$totalNoDate} row(s) were excluded because they carry no date:");
+
+            foreach ($this->skippedNoDate as $name => $count) {
+                if ($count > 0) {
+                    $this->line("    {$name}: {$count}");
+                }
+            }
+
+            $this->warn('That money is real but invisible: with no date, these rows are excluded from');
+            $this->warn('the ledger for the same reason the existing reports already miss them (they');
+            $this->warn('filter by a date range, and NULL never matches). Give each row a real date');
+            $this->warn('and run ledger:rebuild again to include it.');
         }
 
-        $this->newLine();
-        $this->warn("⚠ WARNING: {$total} row(s) were excluded because they carry no date:");
+        if ($totalOther > 0) {
+            $this->newLine();
+            $this->line("Note: {$totalOther} row(s) were also excluded for other reasons (e.g. a zero amount):");
 
-        foreach ($this->skipped as $name => $count) {
-            if ($count > 0) {
-                $this->line("    {$name}: {$count}");
+            foreach ($this->skippedOther as $name => $count) {
+                if ($count > 0) {
+                    $this->line("    {$name}: {$count}");
+                }
             }
         }
-
-        $this->warn('That money is real but invisible: with no date, these rows are excluded from');
-        $this->warn('the ledger for the same reason the existing reports already miss them (they');
-        $this->warn('filter by a date range, and NULL never matches). Give each row a real date');
-        $this->warn('and run ledger:rebuild again to include it.');
     }
 
     /**

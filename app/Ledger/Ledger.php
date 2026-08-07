@@ -100,6 +100,17 @@ class Ledger
         });
     }
 
+    /**
+     * Public accessor for the posting rule resolved for a source model, so
+     * callers outside the ledger (e.g. `ledger:rebuild`'s reporting) can ask
+     * "would this row post, and why not if not" without re-deriving or
+     * duplicating the model→posting mapping or any rule's skip condition.
+     */
+    public function postingRuleFor(Model $source): ?Posting
+    {
+        return $this->postingFor($source);
+    }
+
     protected function postingFor(Model $source): ?Posting
     {
         $class = self::POSTINGS[$source::class] ?? null;
