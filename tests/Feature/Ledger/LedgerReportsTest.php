@@ -1,6 +1,9 @@
 <?php
 
+use App\Ledger\AccountCode;
+use App\Ledger\Ledger;
 use App\Ledger\LedgerReports;
+use App\Ledger\Line;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
@@ -60,6 +63,21 @@ test('cash receipts count only money in from dentists', function () {
     expect($this->reports->cashReceipts('2026-05-01', '2026-05-31'))->toBe(0);
 });
 
+test('cash receipts do not pick up other cash-into-1000 movements sharing the debit side', function () {
+    // A capital injection also debits cash — exactly what RebuildLedger's
+    // opening-balance adjustment posts in production (debit 1000 / credit
+    // 3000). movementBetween() must key off both the debit AND the credit
+    // account; if it only checked the debit side, this would leak into
+    // cashReceipts() as if a dentist had paid it.
+    app(Ledger::class)->post('2026-06-20', 'رصيد افتتاحي — رأس المال', [
+        Line::debit(AccountCode::CASH->value, 200000),
+        Line::credit(AccountCode::CAPITAL->value, 200000),
+    ]);
+
+    expect($this->reports->cashReceipts('2026-06-01', '2026-06-30'))->toBe(300000);
+    expect($this->reports->balance(AccountCode::CASH->value))->toBe(180000 + 200000);
+});
+
 test('revenue counts orders by their due date', function () {
     expect($this->reports->revenue('2026-06-01', '2026-06-30'))->toBe(500000);
     expect($this->reports->revenue('2026-05-01', '2026-05-31'))->toBe(100000);
@@ -101,8 +119,8 @@ test('a dentist statement carries an opening balance and a running list', functi
     // The individual lines and the running balance, not just the final
     // total, so a wrong debit/credit or a broken running sum shows up.
     [$first, $second] = $statement['lines']->all();
-    expect($first)->toMatchArray(['date' => '2026-06-10 00:00:00', 'debit' => 500000, 'credit' => 0, 'balance' => 600000]);
-    expect($second)->toMatchArray(['date' => '2026-06-15 00:00:00', 'debit' => 0, 'credit' => 300000, 'balance' => 300000]);
+    expect($first)->toMatchArray(['date' => '2026-06-10', 'debit' => 500000, 'credit' => 0, 'balance' => 600000]);
+    expect($second)->toMatchArray(['date' => '2026-06-15', 'debit' => 0, 'credit' => 300000, 'balance' => 300000]);
 });
 
 test('a dentist statement is not polluted by another dentist sharing the period', function () {
@@ -121,8 +139,8 @@ test('account lines are newest first and stay on their own account', function ()
     // Cash: dentist payment in (06-15), salary out (06-05), rent out (06-01).
     expect($lines)->toHaveCount(3);
 
-    expect($lines->first())->toMatchArray(['date' => '2026-06-15 00:00:00', 'debit' => 300000, 'credit' => 0]);
-    expect($lines->last())->toMatchArray(['date' => '2026-06-01 00:00:00', 'debit' => 0, 'credit' => 40000]);
+    expect($lines->first())->toMatchArray(['date' => '2026-06-15', 'debit' => 300000, 'credit' => 0]);
+    expect($lines->last())->toMatchArray(['date' => '2026-06-01', 'debit' => 0, 'credit' => 40000]);
 
     // None of these lines belong to receivables — a join bug that pulled in
     // the wrong account would inflate the count or the totals below.
@@ -130,10 +148,40 @@ test('account lines are newest first and stay on their own account', function ()
 });
 
 test('account lines respect a date range', function () {
-    // Strictly inside the range on both ends, clear of the rent line (06-01)
-    // and the payment line (06-15).
-    $lines = $this->reports->accountLines('1000', '2026-06-03', '2026-06-10');
+    // The bounds land exactly on the rent line (06-01, the `from`) and the
+    // salary line (06-05, the `to`) — both must be included, and the
+    // payment line (06-15, outside the range) must not.
+    $lines = $this->reports->accountLines('1000', '2026-06-01', '2026-06-05');
 
+    expect($lines)->toHaveCount(2);
+    expect($lines->first())->toMatchArray(['date' => '2026-06-05', 'debit' => 0, 'credit' => 80000]);
+    expect($lines->last())->toMatchArray(['date' => '2026-06-01', 'debit' => 0, 'credit' => 40000]);
+});
+
+test('an inclusive bound on the exact date of an entry includes that entry', function () {
+    // Regression for the SQLite-only defect where a `<=` bound compared
+    // against a full `Y-m-d H:i:s` storage string would silently exclude an
+    // entry dated exactly on the boundary. Covers every call site that
+    // takes an inclusive `to`/`asOf` bound.
+    expect($this->reports->balance('1100', '2026-06-10'))->toBe(600000);
+    // ^ both June orders (billable) are dated on or before 06-10; the June
+    //   payment (06-15) is not yet in the window, so nothing has been paid off.
+
+    expect($this->reports->receivablesByDentist('2026-06-10')[$this->dentist->id])->toBe(600000);
+
+    expect($this->reports->movementBetween('1100', '4000', '2026-06-10', '2026-06-10'))->toBe(500000);
+
+    $expenseRows = $this->reports->expenseBreakdown('2026-06-01', '2026-06-01');
+    expect($expenseRows->pluck('total', 'code')->all())->toBe(['5220' => 40000]);
+
+    $trialRow = $this->reports->trialBalance('2026-06-01')->firstWhere('code', '1000');
+    expect($trialRow['credit'])->toBe(40000);
+
+    $lines = $this->reports->accountLines('1000', null, '2026-06-01');
     expect($lines)->toHaveCount(1);
-    expect($lines->first())->toMatchArray(['date' => '2026-06-05 00:00:00', 'debit' => 0, 'credit' => 80000]);
+    expect($lines->first()['date'])->toBe('2026-06-01');
+
+    $statement = $this->reports->dentistStatement($this->dentist->id, '2026-06-01', '2026-06-10');
+    expect($statement['lines'])->toHaveCount(1);
+    expect($statement['lines']->first()['date'])->toBe('2026-06-10');
 });
