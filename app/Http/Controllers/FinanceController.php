@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Concerns\ResolvesMonth;
 use App\Ledger\AccountCode;
 use App\Ledger\LedgerReports;
+use App\Models\Account;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -50,11 +51,32 @@ class FinanceController extends Controller
             'incomeByDentist' => $this->incomeByDentist($start, $end),
             'expensesByEmployee' => $this->expensesByEmployee($start, $end),
             'expensesByMaterial' => $this->expensesByMaterial($start, $end),
-            'expensesByCategory' => $categories
-                ->map(fn (array $row) => ['name' => $row['label'], 'total' => $row['total']])
-                ->values(),
+            'expensesByCategory' => $this->expensesByCategory($categories),
             'trend' => $this->trend($month),
         ]);
+    }
+
+    /**
+     * General expenses only — accounts carrying a `category_key` (إيجار,
+     * نقل, ...) — excluding the structural accounts (salaries, materials,
+     * the catch-all), sorted biggest first. This is the pre-ledger meaning
+     * of this prop; it is not a second copy of `categories`, which is every
+     * expense account. The page renders both, so collapsing them into the
+     * same list would show the same rows twice.
+     *
+     * Membership is decided from the unfiltered category set so a category
+     * deactivated after the fact still labels its historical spend here,
+     * matching the ruling already applied to expense posting.
+     */
+    private function expensesByCategory(\Illuminate\Support\Collection $categories): \Illuminate\Support\Collection
+    {
+        $categoryCodes = Account::allExpenseCategories()->pluck('code')->all();
+
+        return $categories
+            ->filter(fn (array $row) => in_array($row['key'], $categoryCodes, true))
+            ->sortByDesc('total')
+            ->map(fn (array $row) => ['name' => $row['label'], 'total' => $row['total']])
+            ->values();
     }
 
     /**

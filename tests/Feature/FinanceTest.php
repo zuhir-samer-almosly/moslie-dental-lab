@@ -66,17 +66,8 @@ test('finance summary computes net = income - (salaries + materials + expenses) 
                 ->where('month', '2026-06')
                 ->where('expensesByMaterial.0.name', 'خزف')
                 ->where('expensesByMaterial.0.total', 5000)
-                // expensesByCategory is now every expense account with
-                // movement (salaries + materials + general categories),
-                // ordered by the chart of accounts' sort_order — not just
-                // the general-expense sub-categories, and not sorted by
-                // amount, as it was before the ledger.
-                ->where('expensesByCategory.0.name', 'الرواتب')
-                ->where('expensesByCategory.0.total', 30000)
-                ->where('expensesByCategory.1.name', 'المواد')
-                ->where('expensesByCategory.1.total', 5000)
-                ->where('expensesByCategory.2.name', 'مواصلات وسفر')
-                ->where('expensesByCategory.2.total', 2000)
+                ->where('expensesByCategory.0.name', 'مواصلات وسفر')
+                ->where('expensesByCategory.0.total', 2000)
                 ->has('trend', 6)
         );
 });
@@ -185,6 +176,38 @@ test('a payment and an expense landing on the last day of the month are both inc
             ->where('earned', 100000)
             ->where('expenses', 15000)
         );
+});
+
+test('expensesByCategory excludes salaries and materials and sorts general expenses by amount, not account order', function () {
+    $this->actingAs(User::factory()->create());
+
+    $employee = Employee::factory()->create();
+    EmployeePayment::factory()->create([
+        'employee_id' => $employee->id,
+        'amount' => 90000,
+        'payment_date' => '2026-06-05',
+    ]);
+    MaterialPurchase::factory()->create([
+        'amount' => 80000,
+        'purchase_date' => '2026-06-06',
+    ]);
+    // Rent (5220) sorts after transport (5200) by account/sort_order, but
+    // has the larger amount — if this table ever reverts to sort_order
+    // instead of amount-descending, rent and transport swap places.
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+    Expense::create(['category' => 'transport', 'amount' => 15000, 'expense_date' => '2026-06-02']);
+
+    $this->get(route('finance.index', ['month' => '2026-06']))
+        ->assertInertia(function ($page) {
+            $rows = collect($page->toArray()['props']['expensesByCategory'])->all();
+
+            // Strict: excludes salaries (90000) and materials (80000), and
+            // is ordered biggest-first among what remains.
+            expect($rows)->toBe([
+                ['name' => 'إيجار', 'total' => 40000],
+                ['name' => 'مواصلات وسفر', 'total' => 15000],
+            ]);
+        });
 });
 
 test('finance figures are read from the ledger, not recomputed from domain tables', function () {
