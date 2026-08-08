@@ -48,3 +48,26 @@ test('cancelled orders are excluded from the outstanding balance', function () {
 test('guests cannot access the outstanding page', function () {
     $this->get(route('outstanding.index'))->assertRedirect(route('login'));
 });
+
+test('outstanding balances come from the ledger and match the old formula', function () {
+    $this->actingAs(User::factory()->create());
+
+    $dentist = Dentist::create(['name' => 'د. مطابقة']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-01', 'amount' => 700000, 'status' => 'pending']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-02', 'amount' => 300000, 'status' => 'recieved']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-03', 'amount' => 999999, 'status' => 'cancelled']);
+    DentistPayment::create(['dentist_id' => $dentist->id, 'amount' => 250000, 'payment_date' => '2026-06-10']);
+
+    $oldFormula = (int) Order::billable()->where('dentist_id', $dentist->id)->sum('amount')
+        - (int) DentistPayment::where('dentist_id', $dentist->id)->sum('amount');
+
+    // Prove the number is read from the ledger, not recomputed: wipe the
+    // ledger and the page must report zero.
+    $this->get(route('outstanding.index'))
+        ->assertInertia(fn ($page) => $page->where('dentists.0.outstanding', $oldFormula));
+
+    \App\Models\JournalEntry::query()->delete();
+
+    $this->get(route('outstanding.index'))
+        ->assertInertia(fn ($page) => $page->where('dentists.0.outstanding', 0));
+});
