@@ -43,6 +43,9 @@ type FinanceProps = {
     income: number;
     expenses: number;
     net: number;
+    earned: number;
+    receivables: number;
+    cashBalance: number;
     categories: Category[];
     incomeByDentist: NamedTotal[];
     expensesByEmployee: NamedTotal[];
@@ -71,6 +74,9 @@ export default function FinanceIndex({
     income,
     expenses,
     net,
+    earned,
+    receivables,
+    cashBalance,
     categories,
     incomeByDentist,
     expensesByEmployee,
@@ -156,6 +162,40 @@ export default function FinanceIndex({
                         icon={Wallet}
                         tone={net < 0 ? 'rose' : 'blue'}
                     />
+                </div>
+
+                {/* Secondary figures: work vs. cash */}
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <Card>
+                        <CardContent className="flex items-center justify-between p-5">
+                            <span className="text-sm text-muted-foreground">
+                                الأعمال المنجزة
+                            </span>
+                            <span className="text-xl font-semibold tabular-nums">
+                                {nf(earned)}
+                            </span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="flex items-center justify-between p-5">
+                            <span className="text-sm text-muted-foreground">
+                                الذمم المدينة
+                            </span>
+                            <span className="text-xl font-semibold tabular-nums">
+                                {nf(receivables)}
+                            </span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent className="flex items-center justify-between p-5">
+                            <span className="text-sm text-muted-foreground">
+                                رصيد الصندوق
+                            </span>
+                            <span className="text-xl font-semibold tabular-nums">
+                                {nf(cashBalance)}
+                            </span>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Expense categories */}
