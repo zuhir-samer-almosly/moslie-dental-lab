@@ -93,16 +93,18 @@ export interface Expense {
     updated_at: string;
 }
 
-// General-expense categories: key => Arabic label. Keep in sync with
-// Expense::CATEGORIES in app/Models/Expense.php.
-export const EXPENSE_CATEGORIES: Record<string, string> = {
-    transport: 'مواصلات وسفر',
-    taxes: 'ضرائب',
-    rent: 'إيجار',
-    utilities: 'كهرباء وماء',
-    maintenance: 'صيانة',
-    other: 'أخرى',
-};
+import { usePage } from '@inertiajs/react';
+
+/**
+ * Expense categories, defined by the accounts table and shared on every
+ * Inertia response. Replaces the constant that had to be hand-synced with
+ * the PHP side.
+ */
+export function useExpenseCategories(): Record<string, string> {
+    return (
+        (usePage().props.expenseCategories as Record<string, string>) ?? {}
+    );
+}
 
 export const ORDER_STATUSES: Record<Order['status'], string> = {
     pending: 'قيد الانتظار',

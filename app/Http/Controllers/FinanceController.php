@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\ResolvesMonth;
+use App\Models\Account;
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
@@ -133,6 +134,10 @@ class FinanceController extends Controller
     {
         [$start, $end] = $this->range($month);
 
+        // Unfiltered on purpose: a category deactivated after the fact must
+        // still show its Arabic label for expenses already recorded under it.
+        $labels = Account::allExpenseCategories()->pluck('name', 'category_key');
+
         return DB::table('expenses')
             ->whereBetween('expense_date', [$start, $end])
             ->groupBy('category')
@@ -140,7 +145,7 @@ class FinanceController extends Controller
             ->select('category', DB::raw('SUM(amount) as total'))
             ->get()
             ->map(fn ($row) => [
-                'name' => Expense::CATEGORIES[$row->category] ?? $row->category,
+                'name' => $labels[$row->category] ?? $row->category,
                 'total' => (int) $row->total,
             ]);
     }

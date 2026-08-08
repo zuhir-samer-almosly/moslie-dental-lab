@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Expense } from '@/types';
-import { EXPENSE_CATEGORIES } from '@/types';
+import { useExpenseCategories } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -52,6 +52,7 @@ export default function ExpensesIndex({
     month: string;
     total: number;
 }) {
+    const EXPENSE_CATEGORIES = useExpenseCategories();
     const goToMonth = (next: string) => {
         router.get(
             '/expenses',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Account;
 use App\Models\Expense;
 use App\Models\User;
 
@@ -88,4 +89,60 @@ test('an expense category must be one of the allowed values', function () {
         'amount' => 100,
         'expense_date' => '2026-06-10',
     ])->assertSessionHasErrors(['category']);
+});
+
+test('expense categories are shared from the accounts table', function () {
+    $this->actingAs(\App\Models\User::factory()->create());
+
+    $this->get(route('expenses.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('expenseCategories.rent', 'إيجار')
+            ->where('expenseCategories.transport', 'مواصلات وسفر')
+        );
+});
+
+test('an expense category must exist as an account', function () {
+    $this->actingAs(\App\Models\User::factory()->create());
+
+    $this->post(route('expenses.store'), [
+        'category' => 'not_a_category',
+        'amount' => 1000,
+        'expense_date' => '2026-06-01',
+    ])->assertSessionHasErrors('category');
+
+    $this->post(route('expenses.store'), [
+        'category' => 'rent',
+        'amount' => 1000,
+        'expense_date' => '2026-06-01',
+    ])->assertSessionHasNoErrors();
+});
+
+test('a deactivated category is dropped from the shared prop but a pre-existing expense in it still validates on re-save', function () {
+    $this->actingAs(User::factory()->create());
+
+    Account::where('category_key', 'rent')->update(['is_active' => false]);
+    Account::flushChart();
+
+    // The UI-facing list must not offer the deactivated category...
+    $this->get(route('expenses.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('expenseCategories.transport', 'مواصلات وسفر')
+            ->missing('expenseCategories.rent')
+        );
+
+    // ...but an existing expense recorded under it must still be re-savable,
+    // otherwise deactivating a category would lock every past expense in it.
+    $expense = Expense::factory()->create(['category' => 'rent']);
+
+    $this->put(route('expenses.update', $expense), [
+        'category' => 'rent',
+        'amount' => 2000,
+        'expense_date' => '2026-06-01',
+    ])->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('expenses', [
+        'id' => $expense->id,
+        'category' => 'rent',
+        'amount' => 2000,
+    ]);
 });

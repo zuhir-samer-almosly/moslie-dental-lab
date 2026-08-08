@@ -46,6 +46,11 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // Expense categories live in the accounts table so the chart of
+            // accounts is their single definition. Shared globally because
+            // four unrelated pages render them.
+            'expenseCategories' => fn () => \App\Models\Account::expenseCategories()
+                ->pluck('name', 'category_key'),
         ];
     }
 }

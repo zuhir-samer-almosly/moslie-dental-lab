@@ -32,7 +32,7 @@ import type {
     MaterialPurchase,
     Order,
 } from '@/types';
-import { EXPENSE_CATEGORIES, ORDER_STATUSES } from '@/types';
+import { ORDER_STATUSES, useExpenseCategories } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -88,6 +88,7 @@ export default function ReportIndex({
     totals,
     filters,
 }: ReportProps) {
+    const EXPENSE_CATEGORIES = useExpenseCategories();
     const go = (from: string, to: string) => {
         router.get(
             '/report',

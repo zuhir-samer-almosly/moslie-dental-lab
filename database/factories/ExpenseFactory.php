@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Expense;
+use App\Models\Account;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -18,7 +18,9 @@ class ExpenseFactory extends Factory
     public function definition(): array
     {
         return [
-            'category' => fake()->randomElement(array_keys(Expense::CATEGORIES)),
+            'category' => fake()->randomElement(
+                Account::allExpenseCategories()->pluck('category_key')->all()
+            ),
             'description' => fake()->optional()->sentence(3),
             'amount' => fake()->numberBetween(10, 500) * 1000,
             'expense_date' => fake()->dateTimeThisYear()->format('Y-m-d'),

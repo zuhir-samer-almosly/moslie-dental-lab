@@ -16,7 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
-import { EXPENSE_CATEGORIES } from '@/types';
+import { useExpenseCategories } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,6 +30,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function ExpensesCreate() {
+    const EXPENSE_CATEGORIES = useExpenseCategories();
     const { data, setData, post, processing, errors } = useForm({
         category: '',
         description: '',
