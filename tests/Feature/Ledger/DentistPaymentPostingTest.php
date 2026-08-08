@@ -1,5 +1,6 @@
 <?php
 
+use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\JournalEntry;
@@ -35,7 +36,7 @@ test('a payment debits cash and credits the dentist receivable', function () {
     ]);
 
     expect(balanceOf('1000'))->toBe(300000);   // cash box
-    expect(receivable($dentist->id))->toBe(200000);   // still owed
+    expect(app(LedgerReports::class)->receivablesByDentist()[$dentist->id] ?? 0)->toBe(200000);   // still owed
 });
 
 test('a payment with no payment_date falls back to created_at', function () {
@@ -67,5 +68,5 @@ test('deleting a payment restores the receivable', function () {
     $payment->delete();
 
     expect(balanceOf('1000'))->toBe(0);
-    expect(receivable($dentist->id))->toBe(500000);
+    expect(app(LedgerReports::class)->receivablesByDentist()[$dentist->id] ?? 0)->toBe(500000);
 });
