@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Account;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -49,7 +50,15 @@ class HandleInertiaRequests extends Middleware
             // Expense categories live in the accounts table so the chart of
             // accounts is their single definition. Shared globally because
             // four unrelated pages render them.
-            'expenseCategories' => fn () => \App\Models\Account::expenseCategories()
+            //
+            // Two maps, not one: `expenseCategories` (is_active-filtered) is
+            // what the UI OFFERS in a picker; `expenseCategoryLabels`
+            // (unfiltered) is what the UI LABELS already-recorded data with.
+            // A deactivated category must disappear from pickers but keep
+            // showing its Arabic name wherever it was already used.
+            'expenseCategories' => fn () => Account::expenseCategories()
+                ->pluck('name', 'category_key'),
+            'expenseCategoryLabels' => fn () => Account::allExpenseCategories()
                 ->pluck('name', 'category_key'),
         ];
     }

@@ -146,3 +146,35 @@ test('a deactivated category is dropped from the shared prop but a pre-existing 
         'amount' => 2000,
     ]);
 });
+
+test('a deactivated category with an existing expense still labels correctly in Arabic instead of the raw key', function () {
+    $this->actingAs(User::factory()->create());
+
+    $expense = Expense::factory()->create([
+        'category' => 'rent',
+        'expense_date' => '2026-06-01',
+    ]);
+
+    Account::where('category_key', 'rent')->update(['is_active' => false]);
+    Account::flushChart();
+
+    // The list page labels already-recorded rows from the UNFILTERED map,
+    // not the picker's filtered one — otherwise it would render the raw
+    // key "rent" in an Arabic RTL table instead of "إيجار".
+    $this->get(route('expenses.index', ['month' => '2026-06']))
+        ->assertInertia(fn ($page) => $page
+            ->where('expenseCategoryLabels.rent', 'إيجار')
+            ->missing('expenseCategories.rent')
+        );
+
+    // The edit page still receives the expense with its original category,
+    // and the unfiltered label map has what it needs to show "إيجار" for a
+    // category the active picker no longer lists — so the Select isn't
+    // left blank for a field that already holds a valid, savable value.
+    $this->get(route('expenses.edit', $expense))
+        ->assertInertia(fn ($page) => $page
+            ->where('expense.category', 'rent')
+            ->where('expenseCategoryLabels.rent', 'إيجار')
+            ->missing('expenseCategories.rent')
+        );
+});

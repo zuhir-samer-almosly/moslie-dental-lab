@@ -32,7 +32,7 @@ import type {
     MaterialPurchase,
     Order,
 } from '@/types';
-import { ORDER_STATUSES, useExpenseCategories } from '@/types';
+import { ORDER_STATUSES, useExpenseCategoryLabels } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -88,7 +88,7 @@ export default function ReportIndex({
     totals,
     filters,
 }: ReportProps) {
-    const EXPENSE_CATEGORIES = useExpenseCategories();
+    const EXPENSE_CATEGORY_LABELS = useExpenseCategoryLabels();
     const go = (from: string, to: string) => {
         router.get(
             '/report',
@@ -343,7 +343,9 @@ export default function ReportIndex({
                         rows={expenses.map((e) => ({
                             key: e.id,
                             date: e.expense_date ?? e.created_at,
-                            label: EXPENSE_CATEGORIES[e.category] ?? e.category,
+                            label:
+                                EXPENSE_CATEGORY_LABELS[e.category] ??
+                                e.category,
                             note: e.description,
                             amount: e.amount,
                         }))}

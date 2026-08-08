@@ -16,7 +16,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Expense } from '@/types';
-import { useExpenseCategories } from '@/types';
+import { useExpenseCategories, useExpenseCategoryLabels } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,7 +30,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function ExpensesEdit({ expense }: { expense: Expense }) {
-    const EXPENSE_CATEGORIES = useExpenseCategories();
+    const activeCategories = useExpenseCategories();
+    const categoryLabels = useExpenseCategoryLabels();
+    // The picker offers active categories, plus this expense's own category
+    // even if it was deactivated since — otherwise editing an old expense
+    // would show a blank Select for a field that already has a valid value.
+    const EXPENSE_CATEGORIES =
+        expense.category in activeCategories
+            ? activeCategories
+            : {
+                  ...activeCategories,
+                  [expense.category]:
+                      categoryLabels[expense.category] ?? expense.category,
+              };
     const { data, setData, put, processing, errors } = useForm({
         category: expense.category,
         description: expense.description ?? '',

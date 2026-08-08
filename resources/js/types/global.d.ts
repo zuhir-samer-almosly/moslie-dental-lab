@@ -10,6 +10,10 @@ declare module '@inertiajs/core' {
                 error?: string | null;
             };
             sidebarOpen: boolean;
+            /** is_active-filtered: what expense forms OFFER. */
+            expenseCategories: Record<string, string>;
+            /** Unfiltered: what already-recorded expenses are LABELED with. */
+            expenseCategoryLabels: Record<string, string>;
             [key: string]: unknown;
         };
     }

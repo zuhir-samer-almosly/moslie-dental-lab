@@ -98,12 +98,19 @@ import { usePage } from '@inertiajs/react';
 /**
  * Expense categories, defined by the accounts table and shared on every
  * Inertia response. Replaces the constant that had to be hand-synced with
- * the PHP side.
+ * the PHP side. is_active-filtered — this is what pickers OFFER.
  */
 export function useExpenseCategories(): Record<string, string> {
-    return (
-        (usePage().props.expenseCategories as Record<string, string>) ?? {}
-    );
+    return usePage().props.expenseCategories;
+}
+
+/**
+ * Unfiltered expense-category labels, including deactivated ones, so
+ * already-recorded expenses keep their Arabic name instead of falling back
+ * to the raw category key once their category is deactivated.
+ */
+export function useExpenseCategoryLabels(): Record<string, string> {
+    return usePage().props.expenseCategoryLabels;
 }
 
 export const ORDER_STATUSES: Record<Order['status'], string> = {
