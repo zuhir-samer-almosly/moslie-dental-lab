@@ -203,7 +203,7 @@ export default function FinanceIndex({
                     <div className="border-b p-5">
                         <h2 className="font-semibold">المصروفات حسب البند</h2>
                         <p className="text-xs text-muted-foreground">
-                            الرواتب والمواد والمصاريف العامة
+                            كل حساب مصروف تحرّك هذا الشهر
                         </p>
                     </div>
                     <CardContent className="p-0">

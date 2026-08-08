@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Account;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
@@ -69,6 +70,14 @@ test('finance summary computes net = income - (salaries + materials + expenses) 
                 ->where('expensesByCategory.0.name', 'مواصلات وسفر')
                 ->where('expensesByCategory.0.total', 2000)
                 ->has('trend', 6)
+                // Pin both ends and the current month's own bucket. A count
+                // assertion alone passes even if trend() mutates its way
+                // into six wrong/duplicate months — this is the month the
+                // user is looking at, so it must be the last bucket, with
+                // this request's own income figure.
+                ->where('trend.0.month', '2026-01')
+                ->where('trend.5.month', '2026-06')
+                ->where('trend.5.income', 60000)
         );
 });
 
@@ -208,6 +217,47 @@ test('expensesByCategory excludes salaries and materials and sorts general expen
                 ['name' => 'مواصلات وسفر', 'total' => 15000],
             ]);
         });
+});
+
+test('incomeByDentist reflects money actually collected per dentist, not work billed', function () {
+    $this->actingAs(User::factory()->create());
+
+    $alice = Dentist::create(['name' => 'د. أليس']);
+    // Billed 300000 but only 120000 collected — incomeByDentist must reflect
+    // the 120000 collected, not the 300000 billed.
+    Order::create(['dentist_id' => $alice->id, 'due_date' => '2026-06-03', 'amount' => 300000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $alice->id, 'amount' => 120000, 'payment_date' => '2026-06-05']);
+
+    $bob = Dentist::create(['name' => 'د. بوب']);
+    DentistPayment::create(['dentist_id' => $bob->id, 'amount' => 200000, 'payment_date' => '2026-06-10']);
+
+    $this->get(route('finance.index', ['month' => '2026-06']))
+        ->assertInertia(fn ($page) => $page
+            ->where('incomeByDentist', [
+                ['name' => 'د. بوب', 'total' => 200000],
+                ['name' => 'د. أليس', 'total' => 120000],
+            ])
+        );
+});
+
+test('a deactivated expense category still labels its historical spend in expensesByCategory', function () {
+    $this->actingAs(User::factory()->create());
+
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+
+    // Deactivating a category governs what the UI offers for NEW entries —
+    // it must never relabel or hide spend already posted under it. This is
+    // the exact clause the escalated Task 11 ruling singled out: membership
+    // must come from the unfiltered account set (allExpenseCategories()),
+    // not the filtered, is_active-only one.
+    Account::query()->where('code', '5220')->update(['is_active' => false]);
+    Account::flushChart();
+
+    $this->get(route('finance.index', ['month' => '2026-06']))
+        ->assertInertia(fn ($page) => $page
+            ->where('expensesByCategory.0.name', 'إيجار')
+            ->where('expensesByCategory.0.total', 40000)
+        );
 });
 
 test('finance figures are read from the ledger, not recomputed from domain tables', function () {

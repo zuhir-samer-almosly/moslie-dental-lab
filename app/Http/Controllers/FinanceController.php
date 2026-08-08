@@ -82,19 +82,29 @@ class FinanceController extends Controller
     /**
      * Money collected per dentist. Read from receivable lines rather than the
      * payments table so it cannot disagree with the headline figure.
+     *
+     * Narrowed to the paired cash debit on the same entry (mirroring
+     * `LedgerReports::movementBetween()`), not just "any receivable credit".
+     * A bare `credit > 0` on the receivable account would also catch a
+     * future write-off posting (credits receivable, debits `5900` bad debt,
+     * not cash) and misreport it as money collected from the dentist.
      */
     private function incomeByDentist(string $start, string $end): \Illuminate\Support\Collection
     {
-        return DB::table('journal_lines')
-            ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
-            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
-            ->join('dentists', 'dentists.id', '=', 'journal_lines.dentist_id')
-            ->where('accounts.code', AccountCode::RECEIVABLE->value)
-            ->where('journal_lines.credit', '>', 0)
-            ->whereBetween('journal_entries.entry_date', [$start, $end])
+        return DB::table('journal_lines as cr')
+            ->join('journal_entries as e', 'e.id', '=', 'cr.journal_entry_id')
+            ->join('accounts as cra', 'cra.id', '=', 'cr.account_id')
+            ->join('journal_lines as dr', 'dr.journal_entry_id', '=', 'e.id')
+            ->join('accounts as dra', 'dra.id', '=', 'dr.account_id')
+            ->join('dentists', 'dentists.id', '=', 'cr.dentist_id')
+            ->where('cra.code', AccountCode::RECEIVABLE->value)
+            ->where('dra.code', AccountCode::CASH->value)
+            ->where('cr.credit', '>', 0)
+            ->where('dr.debit', '>', 0)
+            ->whereBetween('e.entry_date', [$start, $end])
             ->groupBy('dentists.id', 'dentists.name')
             ->orderByDesc('total')
-            ->selectRaw('dentists.name, SUM(journal_lines.credit) as total')
+            ->selectRaw('dentists.name, SUM(cr.credit) as total')
             ->get()
             ->map(fn ($row) => ['name' => $row->name, 'total' => (int) $row->total]);
     }
@@ -139,7 +149,7 @@ class FinanceController extends Controller
         $trend = [];
 
         for ($i = 5; $i >= 0; $i--) {
-            $bucket = $month->subMonths($i);
+            $bucket = $month->copy()->subMonths($i);
             [$start, $end] = $this->range($bucket);
 
             $income = $this->reports->cashReceipts($start, $end);
@@ -160,8 +170,8 @@ class FinanceController extends Controller
     private function range(Carbon $month): array
     {
         return [
-            $month->startOfMonth()->toDateString(),
-            $month->endOfMonth()->toDateString(),
+            $month->copy()->startOfMonth()->toDateString(),
+            $month->copy()->endOfMonth()->toDateString(),
         ];
     }
 }
