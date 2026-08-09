@@ -15,6 +15,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 import type { Dentist, DentistPayment, Order, OrderItem } from '@/types';
 
 /**
@@ -54,6 +55,40 @@ export type InvoiceData = {
         dentist_id: string | null;
     };
 };
+
+/**
+ * Money here is coloured by what it means, not by the sign it is printed with.
+ *
+ * The payment lines carry a `−` because they are subtracted from the total,
+ * and colouring by that sign is what used to paint payments red and the
+ * balance green — the exact inverse of every other page. `payments/index.tsx`
+ * shows payments in emerald and `outstanding/index.tsx` shows balances owed in
+ * red; this report now agrees with both.
+ */
+const TONE = {
+    owed: 'text-red-600 dark:text-red-400',
+    credit: 'text-emerald-600 dark:text-emerald-400',
+    settled: '',
+} as const;
+
+/**
+ * Money the lab received. Always a credit, whatever sign it is printed with.
+ */
+const PAYMENT_TONE = TONE.credit;
+
+/**
+ * A balance owed, coloured by which way it points. Neutral at zero: a bold red
+ * `0` on the one dentist who has settled in full reads as an alarm. Green when
+ * negative, because an overpayment is a credit in the dentist's favour, not a
+ * debt — `InvoiceTest` covers that case ("a credit balance is not clamped to
+ * zero"), so it does reach the screen.
+ */
+function dueTone(due: number): string {
+    if (due > 0) return TONE.owed;
+    if (due < 0) return TONE.credit;
+
+    return TONE.settled;
+}
 
 /**
  * The gendered Arabic honorific that wraps a dentist's name. Exported because
@@ -343,7 +378,12 @@ export function InvoiceReport({
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span>مدفوعات الفترة</span>
-                                        <span className="text-red-600 tabular-nums">
+                                        <span
+                                            className={cn(
+                                                PAYMENT_TONE,
+                                                'tabular-nums',
+                                            )}
+                                        >
                                             −
                                             {group.paymentsTotal.toLocaleString(
                                                 'en-US',
@@ -393,7 +433,12 @@ export function InvoiceReport({
                                                     payment.created_at,
                                             )}
                                         </TableCell>
-                                        <TableCell className="font-semibold text-red-600">
+                                        <TableCell
+                                            className={cn(
+                                                'font-semibold',
+                                                PAYMENT_TONE,
+                                            )}
+                                        >
                                             {payment.amount.toLocaleString(
                                                 'en-US',
                                             )}
@@ -407,7 +452,7 @@ export function InvoiceReport({
                 <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
                     <div className="flex items-center justify-between font-semibold">
                         <span>إجمالي مدفوعات الفترة</span>
-                        <span className="text-red-600 tabular-nums">
+                        <span className={cn(PAYMENT_TONE, 'tabular-nums')}>
                             {totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
@@ -434,7 +479,13 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between">
                         <span>إجمالي المدفوعات:</span>
-                        <span className="font-semibold text-red-600 tabular-nums">
+                        <span
+                            className={cn(
+                                'font-semibold',
+                                PAYMENT_TONE,
+                                'tabular-nums',
+                            )}
+                        >
                             −{totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
