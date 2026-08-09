@@ -106,6 +106,25 @@ The application centers around dental lab order management:
 - Standalone purchase record (expense side)
 - Fields: name, supplier, quantity, amount, purchase_date, notes
 
+**Account / JournalEntry / JournalLine** (`app/Models/`)
+- The double-entry ledger. `accounts` is the chart of accounts (seeded by
+  migration, codes referenced via `App\Ledger\AccountCode`); `journal_entries`
+  holds one entry per money event; `journal_lines` holds its debits and credits.
+- **The ledger is the source of truth for every money figure.** Reporting
+  controllers read `App\Ledger\LedgerReports`, never `SUM(amount)` on a domain
+  table. Detail lists still come from the domain tables — they carry the names
+  and notes the ledger does not.
+- Entries are written automatically by `LedgerObserver` on the five money
+  models. The ledger mirrors current state: editing a record rewrites its
+  entry, cancelling or deleting removes it.
+- `App\Ledger\Ledger::post()` throws `UnbalancedEntryException` if debits do
+  not equal credits. Never bypass it.
+- Expense categories are `accounts` rows carrying a `category_key`, shared to
+  the frontend as the `expenseCategories` Inertia prop. Adding a category is
+  one row — do not reintroduce a PHP constant or a TS constant for them.
+- Rebuild all entries from the domain tables with `php artisan ledger:rebuild`
+  (rerunnable; `--cash-on-hand=N` posts the gap to owner capital).
+
 ### Reporting layer
 
 Several read-only controllers aggregate the models above into reports; no models of their own:
@@ -114,7 +133,9 @@ Several read-only controllers aggregate the models above into reports; no models
 - **OutstandingController** (`outstanding`) — unpaid balances (orders billed minus payments), also via `billable()`.
 - **FinanceController** (`finance`) — monthly income (dentist payments) vs. expenses (salaries + materials) vs. net. Expense buckets are an explicit `$categories` array in the controller — add new expense types there.
 
-`Order::billable()` is the canonical scope excluding cancelled orders; use it for any money total. When adding a new CRUD section, follow the existing pattern via the **`add-section` skill** (Arabic/RTL list + create/edit + optional finance roll-up).
+`Order::billable()` still scopes which orders post to the ledger (cancelled
+ones do not), but money totals come from `LedgerReports`, not from summing
+orders directly. When adding a new CRUD section, follow the existing pattern via the **`add-section` skill** (Arabic/RTL list + create/edit + optional finance roll-up).
 
 ### Frontend Structure
 
