@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ParsesDate;
 use App\Ledger\LedgerReports;
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
@@ -13,6 +14,8 @@ use Illuminate\Support\Carbon;
 
 class ReportController extends Controller
 {
+    use ParsesDate;
+
     /**
      * Display everything that happened in a free date range: the work
      * (orders) plus money in (dentist payments) and money out (salaries,
@@ -95,26 +98,19 @@ class ReportController extends Controller
      */
     private function resolveRange(?string $from, ?string $to): array
     {
-        $start = $this->parseDate($from) ?? Carbon::now()->startOfMonth();
-        $end = $this->parseDate($to) ?? Carbon::now()->endOfMonth();
+        // The shared concern hands back a plain Y-m-d string (or null); wrap
+        // it in Carbon here so this method's own behaviour — and its return
+        // type — is unchanged.
+        $parsedFrom = $this->parseDate($from);
+        $parsedTo = $this->parseDate($to);
+
+        $start = $parsedFrom ? Carbon::parse($parsedFrom) : Carbon::now()->startOfMonth();
+        $end = $parsedTo ? Carbon::parse($parsedTo) : Carbon::now()->endOfMonth();
 
         if ($start->greaterThan($end)) {
             [$start, $end] = [$end, $start];
         }
 
         return [$start->toDateString(), $end->toDateString()];
-    }
-
-    private function parseDate(?string $value): ?Carbon
-    {
-        if (! $value) {
-            return null;
-        }
-
-        try {
-            return Carbon::createFromFormat('!Y-m-d', $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

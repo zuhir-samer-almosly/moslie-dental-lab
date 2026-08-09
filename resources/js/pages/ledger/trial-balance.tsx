@@ -54,8 +54,8 @@ export default function TrialBalance({ accounts, totals, balanced }: Props) {
                         <span
                             className={
                                 balanced
-                                    ? 'text-lg font-bold text-[#047857]'
-                                    : 'text-lg font-bold text-[#BE123C]'
+                                    ? 'text-lg font-bold text-emerald-600 dark:text-emerald-400'
+                                    : 'text-lg font-bold text-rose-600 dark:text-rose-400'
                             }
                         >
                             {balanced ? 'متوازنة' : 'غير متوازنة'}
@@ -78,29 +78,46 @@ export default function TrialBalance({ accounts, totals, balanced }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {accounts.map((account) => (
-                                <TableRow key={account.code}>
-                                    <TableCell className="text-muted-foreground tabular-nums">
-                                        {account.code}
-                                    </TableCell>
-                                    <TableCell>{account.name}</TableCell>
-                                    <TableCell className="text-left tabular-nums">
-                                        {nf(account.debit)}
-                                    </TableCell>
-                                    <TableCell className="text-left tabular-nums">
-                                        {nf(account.credit)}
+                            {accounts.length === 0 ? (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={4}
+                                        className="text-center text-muted-foreground"
+                                    >
+                                        لا توجد حسابات
                                     </TableCell>
                                 </TableRow>
-                            ))}
-                            <TableRow className="font-bold">
-                                <TableCell colSpan={2}>الإجمالي</TableCell>
-                                <TableCell className="text-left tabular-nums">
-                                    {nf(totals.debit)}
-                                </TableCell>
-                                <TableCell className="text-left tabular-nums">
-                                    {nf(totals.credit)}
-                                </TableCell>
-                            </TableRow>
+                            ) : (
+                                <>
+                                    {accounts.map((account) => (
+                                        <TableRow key={account.code}>
+                                            <TableCell className="text-muted-foreground tabular-nums">
+                                                {account.code}
+                                            </TableCell>
+                                            <TableCell>
+                                                {account.name}
+                                            </TableCell>
+                                            <TableCell className="text-left tabular-nums">
+                                                {nf(account.debit)}
+                                            </TableCell>
+                                            <TableCell className="text-left tabular-nums">
+                                                {nf(account.credit)}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                    <TableRow className="font-bold">
+                                        <TableCell colSpan={2}>
+                                            الإجمالي
+                                        </TableCell>
+                                        <TableCell className="text-left tabular-nums">
+                                            {nf(totals.debit)}
+                                        </TableCell>
+                                        <TableCell className="text-left tabular-nums">
+                                            {nf(totals.credit)}
+                                        </TableCell>
+                                    </TableRow>
+                                </>
+                            )}
                         </TableBody>
                     </Table>
                 </div>

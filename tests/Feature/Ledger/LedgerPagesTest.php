@@ -68,6 +68,22 @@ test('the cash page shows the balance and its movements', function () {
         );
 });
 
+test('the trial balance page reports zero accounts as balanced with no rows, not a lone total', function () {
+    // With every entry filtered out by an as_of before anything was posted,
+    // the page must fall back to the empty state, not render a lone
+    // "الإجمالي 0 / 0" row under a "متوازنة" badge — the component only
+    // knows to do that if `accounts` is empty AND it branches on that.
+    $this->get(route('ledger.trial-balance', ['as_of' => '2026-01-01']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('ledger/trial-balance')
+            ->has('accounts', 0)
+            ->where('totals.debit', 0)
+            ->where('totals.credit', 0)
+            ->where('balanced', true)
+        );
+});
+
 test('guests cannot reach the ledger pages', function () {
     auth()->logout();
 
@@ -121,9 +137,14 @@ test('the cash page from and to filters exclude out-of-range movements', functio
 });
 
 test('a malformed date query param collapses to no filter rather than erroring', function () {
+    // `filters.*` is the direct proof the value never reached the query — a
+    // parseDate that leaked the raw string would let SQLite compare
+    // `entry_date <= 'not-a-date'` lexically, include every row, and still
+    // match the same totals as "no filter" by coincidence.
     $this->get(route('ledger.trial-balance', ['as_of' => 'not-a-date']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
+            ->where('filters.as_of', null)
             ->where('totals.debit', 740000)
             ->where('totals.credit', 740000)
         );
@@ -131,7 +152,32 @@ test('a malformed date query param collapses to no filter rather than erroring',
     $this->get(route('ledger.cash', ['from' => 'not-a-date', 'to' => 'also-bad']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
+            ->where('filters.from', null)
+            ->where('filters.to', null)
             ->where('balance', 160000)
             ->has('lines', 2)
+        );
+});
+
+test('an overflow date is rejected rather than silently rolled over', function () {
+    // Carbon::createFromFormat only throws on an outright parse error, not
+    // on out-of-range components, so a naive implementation would accept
+    // 2026-02-31 by silently rolling it over to 2026-03-03 — a real date,
+    // just not the one that was asked for, and one that lands after every
+    // fixture entry, which would visibly empty out the filtered results
+    // instead of falling back to "no filter".
+    $this->get(route('ledger.trial-balance', ['as_of' => '2026-02-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.as_of', null)
+            ->where('totals.debit', 740000)
+            ->where('totals.credit', 740000)
+        );
+
+    $this->get(route('ledger.cash', ['to' => '2026-02-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.to', null)
+            ->where('balance', 160000)
         );
 });

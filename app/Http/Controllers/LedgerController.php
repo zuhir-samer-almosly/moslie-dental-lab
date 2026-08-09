@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ParsesDate;
 use App\Ledger\AccountCode;
 use App\Ledger\LedgerReports;
 use Illuminate\Http\Request;
@@ -12,6 +13,8 @@ use Illuminate\Http\Request;
  */
 class LedgerController extends Controller
 {
+    use ParsesDate;
+
     public function __construct(private readonly LedgerReports $reports) {}
 
     /** ميزان المراجعة — proof that the books balance. */
@@ -42,19 +45,5 @@ class LedgerController extends Controller
             'lines' => $this->reports->accountLines(AccountCode::CASH->value, $from, $to),
             'filters' => ['from' => $from, 'to' => $to],
         ]);
-    }
-
-    /** Accept only well-formed Y-m-d; anything else collapses to no filter. */
-    private function parseDate(?string $value): ?string
-    {
-        if (! $value) {
-            return null;
-        }
-
-        try {
-            return \Illuminate\Support\Carbon::createFromFormat('!Y-m-d', $value)->toDateString();
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }
