@@ -39,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('ledger')->name('ledger.')->group(function () {
         Route::get('trial-balance', [App\Http\Controllers\LedgerController::class, 'trialBalance'])->name('trial-balance');
         Route::get('cash', [App\Http\Controllers\LedgerController::class, 'cash'])->name('cash');
+        Route::get('journal', [App\Http\Controllers\LedgerController::class, 'journal'])->name('journal');
     });
 });
 

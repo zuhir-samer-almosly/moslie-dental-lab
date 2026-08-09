@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
 import {
     Banknote,
+    BookOpen,
     CalendarRange,
     ClipboardList,
     CreditCard,
@@ -88,6 +89,11 @@ const mainNavItems: NavItem[] = [
         title: 'ميزان المراجعة',
         href: '/ledger/trial-balance',
         icon: Scale,
+    },
+    {
+        title: 'قيود اليومية',
+        href: '/ledger/journal',
+        icon: BookOpen,
     },
 ];
 
