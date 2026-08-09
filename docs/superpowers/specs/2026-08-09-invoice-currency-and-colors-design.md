@@ -18,6 +18,10 @@ paints a dentist's outstanding balance `text-red-600` unconditionally.
 `invoice-report.tsx:443` paints *the same figure* `text-green-600`. Today
 بلال's 157,310 renders red on الأرصدة المستحقة and green on الفواتير.
 
+The mirror image holds for payments: `payments/index.tsx:92` already renders
+payment amounts `text-emerald-600 dark:text-emerald-400`, while
+`invoice-report.tsx:396` renders the same payments red.
+
 The green came from colouring by arithmetic sign rather than by meaning: the
 payment lines are rendered with a `−` prefix (`:347`, `:438`) because they are
 subtracted from the total, so they were made red as "negative numbers", which
@@ -84,12 +88,22 @@ stay dominant. The number keeps `tabular-nums`; the label must not, and must
 not inherit the figure's `font-bold` / `text-lg`. Number and label are wrapped
 so that RTL bidi reordering cannot split the digit group from its unit.
 
+### Palette
+
+The green is **emerald**, not `green-600`. The app's money-positive colour is
+`text-emerald-600 dark:text-emerald-400` everywhere it appears —
+`payments/index.tsx:92`, `finance/index.tsx:288`, `report/index.tsx:378`,
+`ledger/statement.tsx:235`, `ledger/trial-balance.tsx:57`. The invoice's
+`text-green-600` is the outlier and is replaced, not merely reassigned.
+
+The red stays `text-red-600 dark:text-red-400`, matching
+`outstanding/index.tsx:115`.
+
 ### Dark mode
 
-The invoice currently hardcodes `text-red-600` / `text-green-600` with no dark
-counterpart, unlike `outstanding/index.tsx` which pairs each with
-`dark:text-*-400`. The new helper emits both variants, bringing the two pages
-in line.
+The invoice currently hardcodes its colours with no dark counterpart, unlike
+every page cited above which pairs each with a `dark:text-*-400`. The new
+helper emits both variants, bringing the invoice in line.
 
 This is safe for the PDF: `pages/invoices/print.tsx:21` strips the `dark`
 class from the document element on mount precisely because paper is always
