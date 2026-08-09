@@ -309,10 +309,29 @@ test('the rebuild refuses to run in production without confirmation, and touches
     expect(JournalEntry::count())->toBe($before);
 });
 
-test('--force bypasses the confirmation prompt in production', function () {
+test('--force bypasses the confirmation prompt in production and still rebuilds', function () {
+    $dentist = Dentist::create(['name' => 'د. سامي']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-10', 'amount' => 500000, 'status' => 'pending']);
+
+    // Wipe what the observer wrote, so the entry below can only come from
+    // this command actually running. Against an empty database — and with
+    // only the exit code asserted — this test would pass even if --force
+    // made the command do nothing at all.
+    JournalEntry::query()->delete();
+
     $this->app['env'] = 'production';
 
     $this->artisan('ledger:rebuild', ['--force' => true])->assertSuccessful();
+
+    expect(JournalEntry::count())->toBe(1);
+
+    $receivable = (int) JournalLine::query()
+        ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+        ->where('accounts.code', '1100')
+        ->selectRaw('COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as b')
+        ->value('b');
+
+    expect($receivable)->toBe(500000);
 });
 
 test('cash-on-hand accepts a plain negative integer', function () {

@@ -115,6 +115,13 @@ test('an expense category must exist as an account', function () {
         'amount' => 1000,
         'expense_date' => '2026-06-01',
     ])->assertSessionHasNoErrors();
+
+    // "No errors" only proves validation let it through; this proves the row
+    // reached the table.
+    $this->assertDatabaseHas('expenses', [
+        'category' => 'rent',
+        'amount' => 1000,
+    ]);
 });
 
 test('a deactivated category is dropped from the shared prop but a pre-existing expense in it still validates on re-save', function () {

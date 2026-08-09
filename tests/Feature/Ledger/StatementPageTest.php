@@ -175,6 +175,24 @@ test('the print view is reachable only through a signed url', function () {
     $this->get($signed)->assertOk();
 });
 
+test('the print view rejects an expired signature', function () {
+    // The route sits outside the auth group — the signature is the only gate,
+    // so its expiry has to actually be enforced. Mirrors the same test for
+    // invoices.print-view, which shares this security boundary.
+    auth()->logout();
+
+    $signed = URL::temporarySignedRoute(
+        'ledger.statement.print-view',
+        now()->addMinutes(2),
+        ['dentist_id' => $this->dentist->id],
+        absolute: false,
+    );
+
+    $this->travel(3)->minutes();
+
+    $this->get($signed)->assertForbidden();
+});
+
 test('the print view renders the statement component with the right data', function () {
     $signed = URL::temporarySignedRoute(
         'ledger.statement.print-view',
