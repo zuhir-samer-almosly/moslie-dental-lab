@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
@@ -12,6 +13,8 @@ use Spatie\Browsershot\Browsershot;
 
 class InvoiceController extends Controller
 {
+    public function __construct(private readonly LedgerReports $reports) {}
+
     public function index(Request $request)
     {
         return inertia('invoices/index', $this->buildReport($request));
@@ -145,41 +148,27 @@ class InvoiceController extends Controller
             $orders = $ordersQuery->get();
             $payments = $paymentsQuery->get();
 
-            // Opening balance: everything owed from BEFORE this period.
-            // (all prior orders) - (all prior payments), per dentist, so
-            // unpaid leftovers from earlier months carry into this invoice.
+            // Opening balance: what each dentist owed the day before this
+            // period began, read as their receivable balance as of that date.
+            // This supersedes the old two-query subtraction, which had to
+            // reproduce the same date asymmetry by hand.
             //
-            // Note the intentional date asymmetry: orders are bucketed by
-            // their own date (`due_date`) while payments are bucketed by
-            // `payment_date` (falling back to `created_at`). An order and the
-            // payment settling it can therefore land in different periods —
-            // that is by design and must stay consistent with the in-period
-            // queries above. Keep both sides in sync if you ever change one.
-            //
-            // Alias must not be `total` — the Order model has a `total`
-            // accessor that Eloquent's pluck would apply, clobbering the SUM.
-            $priorOrders = Order::billable()
-                ->where('due_date', '<', $from)
-                ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
-                ->selectRaw('dentist_id, SUM(amount) as amount_sum')
-                ->groupBy('dentist_id')
-                ->pluck('amount_sum', 'dentist_id');
+            // Note the intentional date asymmetry that formula used to
+            // encode by hand: orders are bucketed by their own date
+            // (`due_date`) while payments are bucketed by `payment_date`
+            // (falling back to `created_at`). An order and the payment
+            // settling it can therefore land in different periods — that is
+            // by design and must stay consistent with the in-period queries
+            // above. The ledger's postings preserve this (see OrderPosting
+            // and DentistPaymentPosting), so reading `asOf` here keeps it.
+            $asOf = Carbon::parse($from)->subDay()->toDateString();
 
-            $priorPayments = DentistPayment::whereRaw('DATE(COALESCE(payment_date, created_at)) < ?', [$from])
-                ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
-                ->selectRaw('dentist_id, SUM(amount) as amount_sum')
-                ->groupBy('dentist_id')
-                ->pluck('amount_sum', 'dentist_id');
+            $openingByDentist = $this->reports->receivablesByDentist($asOf)
+                ->when($dentistId, fn ($balances) => $balances->only([$dentistId]))
+                ->reject(fn (int $balance) => $balance === 0)
+                ->all();
 
-            $openingTotal = 0;
-            foreach ($priorOrders->keys()->merge($priorPayments->keys())->unique() as $id) {
-                $opening = (int) ($priorOrders[$id] ?? 0) - (int) ($priorPayments[$id] ?? 0);
-                if ($opening === 0) {
-                    continue; // fully settled, nothing to carry forward
-                }
-                $openingByDentist[$id] = $opening;
-                $openingTotal += $opening;
-            }
+            $openingTotal = array_sum($openingByDentist);
 
             $ordersTotal = $orders->sum('amount');
             $paymentsTotal = $payments->sum('amount');
