@@ -3878,8 +3878,10 @@ In the **Domain Model** section, add after the `MaterialPurchase` entry:
 - Expense categories are `accounts` rows carrying a `category_key`, shared to
   the frontend as the `expenseCategories` Inertia prop. Adding a category is
   one row — do not reintroduce a PHP constant or a TS constant for them.
-- Rebuild all entries from the domain tables with `php artisan ledger:rebuild`
-  (rerunnable; `--cash-on-hand=N` posts the gap to owner capital).
+- Rebuild all entries from the domain tables with
+  `php artisan ledger:rebuild --force` (rerunnable; `--force` is required
+  because the containers run `APP_ENV=production`). `--cash-on-hand=N` posts
+  the gap to owner capital and must be supplied on every rebuild.
 ```
 
 In the **Reporting layer** section, replace the `Order::billable()` paragraph's last sentence with:
@@ -3917,9 +3919,16 @@ Use the `deploy` skill to prepare the release. The VPS commands are run by the u
 1. Fresh database backup (`backups` skill) — do not rely on the nightly Drive backup
 2. Screenshot the outstanding and finance pages for before/after comparison
 3. Rebuild the image and deploy (a code change requires an image rebuild, never a restart)
-4. `docker compose exec app php artisan migrate`
-5. `docker compose exec app php artisan ledger:rebuild` — read the verification report
-6. Re-run with `--cash-on-hand=N` once the real cash figure is known
+4. `docker compose exec app php artisan migrate --force`
+5. `docker compose exec app php artisan ledger:rebuild --force` — read the verification report
+6. Re-run as `docker compose exec app php artisan ledger:rebuild --force --cash-on-hand=N`
+   once the real cash figure is known, and keep supplying the flag on every
+   later rebuild — a run without it deletes the opening capital entry
+
+`--force` is required on both artisan commands: the container runs
+`APP_ENV=production`, so `ConfirmableTrait` prompts, and a non-TTY
+`docker compose exec` takes the default (no) and aborts with "Command
+Cancelled".
 7. Compare the outstanding and finance pages against the screenshots
 
 ---

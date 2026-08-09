@@ -126,8 +126,16 @@ The application centers around dental lab order management:
 - Expense categories are `accounts` rows carrying a `category_key`, shared to
   the frontend as the `expenseCategories` Inertia prop. Adding a category is
   one row — do not reintroduce a PHP constant or a TS constant for them.
-- Rebuild all entries from the domain tables with `php artisan ledger:rebuild`
-  (rerunnable; `--cash-on-hand=N` posts the gap to owner capital).
+- Rebuild all entries from the domain tables with
+  `php artisan ledger:rebuild --force` (rerunnable). **`--force` is required
+  on both local and production containers** — they run `APP_ENV=production`,
+  which puts the command behind Laravel's destructive-command guard, and a
+  non-interactive `docker compose exec` answers it with the default (no) and
+  aborts with "Command Cancelled".
+- `--cash-on-hand=N` posts the gap between the real counted cash and the
+  computed cash box to owner capital, dated the day before the ledger's first
+  entry. **Supply it on every rebuild, not just the first** — a rerun without
+  it deletes the opening balance (the command warns loudly when that happens).
 
 ### Reporting layer
 

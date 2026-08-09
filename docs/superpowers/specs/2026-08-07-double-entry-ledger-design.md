@@ -254,9 +254,27 @@ Production carries live data.
 2. Screenshot the outstanding and finance pages for before/after comparison
 3. Rebuild the image and deploy (`deploy` skill — a code change requires an
    image rebuild, never a restart)
-4. Run migrations, then `php artisan ledger:rebuild` in the `app` container
-5. Read the verification report; supply `--cash-on-hand` and rerun
+4. In the `app` container, run
+   `php artisan migrate --force`, then `php artisan ledger:rebuild --force`.
+   Both commands are guarded by Laravel's destructive-command confirmation and
+   the container runs `APP_ENV=production`; a `docker compose exec` with no
+   TTY answers that prompt with the default (no) and aborts with "Command
+   Cancelled", which reads like a failure rather than a refusal. `--force` is
+   not optional here.
+5. Read the verification report, then rerun as
+   `php artisan ledger:rebuild --force --cash-on-hand=N` once the real counted
+   cash figure is known. `--cash-on-hand` must be supplied on **every**
+   subsequent rebuild: each run wipes the ledger and only that flag
+   re-creates the opening capital entry (the command warns when a rerun drops
+   one). The entry is dated the day before the ledger's first movement, so
+   historical months read the cash box correctly rather than showing the
+   pre-capital negative.
 6. Compare outstanding and finance against the screenshots
+
+Every other command in this sequence is safe non-interactively: `backup:run` /
+`backup:list` (spatie, no confirmation guard), the `deploy` skill's image build
+and `docker compose up -d`, and `optimize:clear`. Only `migrate` and
+`ledger:rebuild` use `ConfirmableTrait`.
 
 Local work and command hand-off follow the usual split: the VPS commands are
 run by the user.
