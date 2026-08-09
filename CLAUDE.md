@@ -106,6 +106,10 @@ The application centers around dental lab order management:
 - Standalone purchase record (expense side)
 - Fields: name, supplier, quantity, amount, purchase_date, notes
 
+**Expense** (`app/Models/Expense.php`)
+- Standalone general-expense record (expense side)
+- Fields: category, description, amount, expense_date, notes
+
 **Account / JournalEntry / JournalLine** (`app/Models/`)
 - The double-entry ledger. `accounts` is the chart of accounts (seeded by
   migration, codes referenced via `App\Ledger\AccountCode`); `journal_entries`
@@ -131,7 +135,7 @@ Several read-only controllers aggregate the models above into reports; no models
 - **DashboardController** — top-level KPIs.
 - **InvoiceController** (`invoices`) — per-dentist billing built on `Order::billable()`.
 - **OutstandingController** (`outstanding`) — unpaid balances (orders billed minus payments), also via `billable()`.
-- **FinanceController** (`finance`) — monthly income (dentist payments) vs. expenses (salaries + materials) vs. net. Expense buckets are an explicit `$categories` array in the controller — add new expense types there.
+- **FinanceController** (`finance`) — monthly cash in vs. cash out vs. net, read from `LedgerReports`. Expense rows are whichever expense accounts moved that month — add a category by adding an `accounts` row with a `category_key`, not by editing the controller.
 
 `Order::billable()` still scopes which orders post to the ledger (cancelled
 ones do not), but money totals come from `LedgerReports`, not from summing
