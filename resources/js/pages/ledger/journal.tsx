@@ -117,33 +117,19 @@ export default function Journal({ entries, accounts, filters }: Props) {
                                 <Label className="text-xs text-muted-foreground">
                                     الحساب
                                 </Label>
-                                <div className="flex gap-2">
-                                    <div className="w-48">
-                                        <Combobox
-                                            value={filters.account ?? null}
-                                            onChange={(value) =>
-                                                go({ account: value ?? '' })
-                                            }
-                                            options={accounts.map(
-                                                (account) => ({
-                                                    value: account.code,
-                                                    label: account.name,
-                                                }),
-                                            )}
-                                            placeholder="الكل"
-                                            clearable
-                                        />
-                                    </div>
-                                    {filters.account && (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => go({ account: '' })}
-                                        >
-                                            مسح
-                                        </Button>
-                                    )}
+                                <div className="w-48">
+                                    <Combobox
+                                        value={filters.account ?? null}
+                                        onChange={(value) =>
+                                            go({ account: value ?? '' })
+                                        }
+                                        options={accounts.map((account) => ({
+                                            value: account.code,
+                                            label: account.name,
+                                        }))}
+                                        placeholder="الكل"
+                                        clearable
+                                    />
                                 </div>
                             </div>
                         </div>
