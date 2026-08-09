@@ -17,7 +17,9 @@ class DentistPaymentFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'dentist_id' => \App\Models\Dentist::factory(),
+            'amount' => fake()->numberBetween(50, 1000) * 1000,
+            'payment_date' => fake()->dateTimeThisYear()->format('Y-m-d'),
         ];
     }
 }
