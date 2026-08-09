@@ -5,6 +5,7 @@ use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
+use App\Models\JournalEntry;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
 use App\Models\User;
@@ -83,4 +84,39 @@ test('the report defaults to the current month when no range is given', function
 
 test('guests cannot access the report', function () {
     $this->get(route('report.index'))->assertRedirect(route('login'));
+});
+
+test('report totals come from the ledger', function () {
+    $this->actingAs(User::factory()->create());
+
+    $dentist = Dentist::create(['name' => 'د. سامي']);
+    Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-10', 'amount' => 500000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $dentist->id, 'amount' => 200000, 'payment_date' => '2026-06-15']);
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-05']);
+
+    $this->get(route('report.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
+        ->assertInertia(fn ($page) => $page
+            ->where('totals.income', 200000)
+            ->where('totals.expenses', 40000)
+            ->where('totals.net', 160000)
+            ->where('totals.earned', 500000)
+            ->where('totals.orders_count', 1)
+        );
+
+    // Prove the totals are read from the ledger, not recomputed: wipe the
+    // ledger while the domain rows survive, and the totals must report zero.
+    JournalEntry::query()->delete();
+
+    $this->get(route('report.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
+        ->assertInertia(fn ($page) => $page
+            ->where('totals.income', 0)
+            ->where('totals.expenses', 0)
+            ->where('totals.net', 0)
+            ->where('totals.earned', 0)
+            ->where('totals.orders_count', 1)
+        );
+
+    expect(Order::count())->toBe(1);
+    expect(DentistPayment::count())->toBe(1);
+    expect(Expense::count())->toBe(1);
 });

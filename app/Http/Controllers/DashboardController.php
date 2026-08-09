@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Ledger\AccountCode;
+use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
-use App\Models\EmployeePayment;
-use App\Models\Expense;
-use App\Models\MaterialPurchase;
 use App\Models\Order;
 use Illuminate\Support\Carbon;
 
@@ -17,21 +16,15 @@ class DashboardController extends Controller
      * Display the home dashboard: this month's money, all-time receivables,
      * and the most recent orders and payments.
      */
-    public function index()
+    public function index(LedgerReports $reports)
     {
         $now = Carbon::now();
         $start = $now->copy()->startOfMonth()->toDateString();
         $end = $now->copy()->endOfMonth()->toDateString();
 
-        // This month's money
-        $income = (int) DentistPayment::whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$start, $end])->sum('amount');
-        $salaries = (int) EmployeePayment::whereBetween('payment_date', [$start, $end])->sum('amount');
-        $materials = (int) MaterialPurchase::whereBetween('purchase_date', [$start, $end])->sum('amount');
-        $generalExpenses = (int) Expense::whereBetween('expense_date', [$start, $end])->sum('amount');
-        $expenses = $salaries + $materials + $generalExpenses;
-
-        // Outstanding receivables (all time), cancelled orders excluded.
-        $outstanding = (int) Order::billable()->sum('amount') - (int) DentistPayment::sum('amount');
+        $income = $reports->cashReceipts($start, $end);
+        $breakdown = $reports->expenseBreakdown($start, $end);
+        $expenses = (int) $breakdown->sum('total');
 
         return inertia('dashboard', [
             'stats' => [
@@ -39,10 +32,18 @@ class DashboardController extends Controller
                 'income' => $income,
                 'expenses' => $expenses,
                 'net' => $income - $expenses,
-                'salaries' => $salaries,
-                'materials' => $materials,
-                'general_expenses' => $generalExpenses,
-                'outstanding' => $outstanding,
+                'salaries' => (int) ($breakdown->firstWhere('code', AccountCode::SALARIES->value)['total'] ?? 0),
+                'materials' => (int) ($breakdown->firstWhere('code', AccountCode::MATERIALS->value)['total'] ?? 0),
+                // Everything that is neither salaries nor materials.
+                'general_expenses' => (int) $breakdown
+                    ->reject(fn (array $row) => in_array($row['code'], [
+                        AccountCode::SALARIES->value,
+                        AccountCode::MATERIALS->value,
+                    ], true))
+                    ->sum('total'),
+                'earned' => $reports->revenue($start, $end),
+                'outstanding' => $reports->balance(AccountCode::RECEIVABLE->value),
+                'cash_balance' => $reports->balance(AccountCode::CASH->value),
                 'pending_orders' => Order::where('status', 'pending')->count(),
                 'dentists' => Dentist::count(),
                 'employees' => Employee::count(),

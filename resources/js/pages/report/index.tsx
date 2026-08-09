@@ -45,6 +45,7 @@ type Totals = {
     income: number;
     expenses: number;
     net: number;
+    earned: number;
     orders_value: number;
     orders_count: number;
     salaries: number;

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Ledger\AccountCode;
+use App\Ledger\LedgerReports;
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
@@ -21,8 +23,12 @@ class ReportController extends Controller
      * other reporting controllers: orders by `due_date`, payments by
      * `payment_date` (fallback `created_at`), salaries by `payment_date`,
      * materials by `purchase_date`, expenses by `expense_date`.
+     *
+     * Totals come from the ledger so they cannot disagree with the finance
+     * page; the detail lists below stay on the domain tables because only
+     * they carry employee names, material names and notes.
      */
-    public function index(Request $request)
+    public function index(Request $request, LedgerReports $reports)
     {
         [$from, $to] = $this->resolveRange($request->query('from'), $request->query('to'));
 
@@ -52,12 +58,9 @@ class ReportController extends Controller
             ->orderByDesc('expense_date')
             ->get();
 
-        $income = (int) $payments->sum('amount');
-        $ordersValue = (int) $orders->sum('amount');
-        $salariesTotal = (int) $salaries->sum('amount');
-        $materialsTotal = (int) $materials->sum('amount');
-        $expensesTotal = (int) $expenses->sum('amount');
-        $outgoing = $salariesTotal + $materialsTotal + $expensesTotal;
+        $income = $reports->cashReceipts($from, $to);
+        $breakdown = $reports->expenseBreakdown($from, $to);
+        $outgoing = (int) $breakdown->sum('total');
 
         return inertia('report/index', [
             'orders' => $orders,
@@ -69,11 +72,17 @@ class ReportController extends Controller
                 'income' => $income,
                 'expenses' => $outgoing,
                 'net' => $income - $outgoing,
-                'orders_value' => $ordersValue,
+                'earned' => $reports->revenue($from, $to),
+                'orders_value' => (int) $orders->sum('amount'),
                 'orders_count' => $orders->count(),
-                'salaries' => $salariesTotal,
-                'materials' => $materialsTotal,
-                'general_expenses' => $expensesTotal,
+                'salaries' => (int) ($breakdown->firstWhere('code', AccountCode::SALARIES->value)['total'] ?? 0),
+                'materials' => (int) ($breakdown->firstWhere('code', AccountCode::MATERIALS->value)['total'] ?? 0),
+                'general_expenses' => (int) $breakdown
+                    ->reject(fn (array $row) => in_array($row['code'], [
+                        AccountCode::SALARIES->value,
+                        AccountCode::MATERIALS->value,
+                    ], true))
+                    ->sum('total'),
             ],
             'filters' => [
                 'from' => $from,

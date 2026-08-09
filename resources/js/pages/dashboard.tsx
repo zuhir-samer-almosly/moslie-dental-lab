@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    Banknote,
     ClipboardList,
     Clock,
     Coins,
@@ -36,7 +37,9 @@ type DashboardStats = {
     salaries: number;
     materials: number;
     general_expenses: number;
+    earned: number;
     outstanding: number;
+    cash_balance: number;
     pending_orders: number;
     dentists: number;
     employees: number;
@@ -253,6 +256,13 @@ export default function Dashboard({
 
                 {/* Operational numbers */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <MiniStat
+                        title="رصيد الصندوق"
+                        value={stats.cash_balance}
+                        icon={Banknote}
+                        tone="green"
+                        href="/finance"
+                    />
                     <MiniStat
                         title="الرصيد المتبقي على الأطباء"
                         value={stats.outstanding}
