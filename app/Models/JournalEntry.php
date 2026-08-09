@@ -14,9 +14,15 @@ class JournalEntry extends Model
 
     protected $casts = ['entry_date' => 'date'];
 
+    /**
+     * Ordered by id — insertion order, which is the order the posting rule
+     * wrote the sides in (debit first). An accounting document should not
+     * render its two sides in whatever order the database happens to return;
+     * SQLite and InnoDB both give PK order today, but neither promises it.
+     */
     public function lines(): HasMany
     {
-        return $this->hasMany(JournalLine::class);
+        return $this->hasMany(JournalLine::class)->orderBy('id');
     }
 
     public function source(): MorphTo

@@ -73,7 +73,11 @@ class LedgerController extends Controller
         $account = $request->query('account');
 
         $entries = JournalEntry::query()
-            ->with(['lines.account', 'lines.dentist'])
+            // Narrowed to what the page declares: the full Account carries
+            // type/sort_order/category_key and the full Dentist carries
+            // phone, address and price_list, none of which the journal
+            // renders and all of which would ride along in the payload.
+            ->with(['lines.account:id,code,name', 'lines.dentist:id,name'])
             ->when($from, fn ($q) => $q->where('entry_date', '>=', $from))
             ->when($to, fn ($q) => $q->where('entry_date', '<=', $to))
             ->when($account, fn ($q) => $q->whereHas(

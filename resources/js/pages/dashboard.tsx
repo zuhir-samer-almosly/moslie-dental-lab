@@ -269,7 +269,10 @@ export default function Dashboard({
                         value={stats.cash_balance}
                         icon={Banknote}
                         tone="green"
-                        href="/finance"
+                        // The cash page, not /finance: this card is an
+                        // all-time balance and so is that page's, while the
+                        // finance page's رصيد الصندوق is as of a month end.
+                        href="/ledger/cash"
                     />
                     <MiniStat
                         title="الرصيد المتبقي على الأطباء"
