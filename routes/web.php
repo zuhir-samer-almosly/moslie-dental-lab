@@ -40,6 +40,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('trial-balance', [App\Http\Controllers\LedgerController::class, 'trialBalance'])->name('trial-balance');
         Route::get('cash', [App\Http\Controllers\LedgerController::class, 'cash'])->name('cash');
         Route::get('journal', [App\Http\Controllers\LedgerController::class, 'journal'])->name('journal');
+        Route::get('statement', [App\Http\Controllers\LedgerController::class, 'statement'])->name('statement');
+        Route::get('statement/pdf', [App\Http\Controllers\LedgerController::class, 'statementPdf'])->name('statement.pdf');
     });
 });
 
@@ -51,5 +53,10 @@ Route::get('invoices/print-view', [App\Http\Controllers\InvoiceController::class
     // requests it on the container-internal host instead of APP_URL.
     ->middleware('signed:relative')
     ->name('invoices.print-view');
+
+// Same pattern as invoices/print-view above, for the dentist statement's PDF.
+Route::get('ledger/statement/print-view', [App\Http\Controllers\LedgerController::class, 'statementPrintView'])
+    ->middleware('signed:relative')
+    ->name('ledger.statement.print-view');
 
 require __DIR__.'/settings.php';

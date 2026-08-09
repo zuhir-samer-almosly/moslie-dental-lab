@@ -9,6 +9,7 @@ import {
     LayoutGrid,
     Package,
     PiggyBank,
+    Receipt,
     Scale,
     UserCog,
     Users,
@@ -94,6 +95,11 @@ const mainNavItems: NavItem[] = [
         title: 'قيود اليومية',
         href: '/ledger/journal',
         icon: BookOpen,
+    },
+    {
+        title: 'كشف حساب',
+        href: '/ledger/statement',
+        icon: Receipt,
     },
 ];
 
