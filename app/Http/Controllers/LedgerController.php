@@ -9,6 +9,7 @@ use App\Models\Account;
 use App\Models\Dentist;
 use App\Models\JournalEntry;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
 use Spatie\Browsershot\Browsershot;
 
@@ -46,7 +47,19 @@ class LedgerController extends Controller
         $to = $this->parseDate($request->query('to'));
 
         return inertia('ledger/cash', [
+            // As-of `to` — every movement up to that date, not just the ones
+            // in the window and not just the ones on the visible page. Both
+            // the date filter and the pagination bound the *list*; this stays
+            // a true balance, which is what it meant before either existed.
             'balance' => $this->reports->balance(AccountCode::CASH->value, $to),
+            // What the cash box held the day before the window opened, so a
+            // `from`-bounded list still reconciles: opening + the period's
+            // movements = balance. Null without a `from`, where the list
+            // already starts at the beginning of time and there is nothing to
+            // carry in. Mirrors dentistStatement()'s opening balance.
+            'opening' => $from
+                ? $this->reports->balance(AccountCode::CASH->value, Carbon::parse($from)->subDay()->toDateString())
+                : null,
             'lines' => $this->reports->accountLines(AccountCode::CASH->value, $from, $to),
             'filters' => ['from' => $from, 'to' => $to],
         ]);

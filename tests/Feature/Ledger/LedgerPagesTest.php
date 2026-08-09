@@ -53,18 +53,69 @@ test('the cash page shows the balance and its movements', function () {
         ->assertInertia(fn ($page) => $page
             ->component('ledger/cash')
             ->where('balance', 160000)
+            // Unbounded list => nothing carried in from before it.
+            ->where('opening', null)
             // Pin the ordered contents (newest first), not just a count — a
             // six-bucket-style bug that dropped or duplicated a line, or
             // landed an amount on the wrong side, would still pass ->has(2).
-            ->has('lines', 2)
-            ->where('lines.0.date', '2026-06-15')
-            ->where('lines.0.description', "دفعة #{$this->payment->id}")
-            ->where('lines.0.debit', 200000)
-            ->where('lines.0.credit', 0)
-            ->where('lines.1.date', '2026-06-01')
-            ->where('lines.1.description', 'مصروف عام')
-            ->where('lines.1.debit', 0)
-            ->where('lines.1.credit', 40000)
+            ->has('lines.data', 2)
+            ->where('lines.data.0.date', '2026-06-15')
+            ->where('lines.data.0.description', "دفعة #{$this->payment->id}")
+            ->where('lines.data.0.debit', 200000)
+            ->where('lines.data.0.credit', 0)
+            ->where('lines.data.1.date', '2026-06-01')
+            ->where('lines.data.1.description', 'مصروف عام')
+            ->where('lines.data.1.debit', 0)
+            ->where('lines.data.1.credit', 40000)
+        );
+});
+
+test('the cash page paginates its movements instead of loading every one ever recorded', function () {
+    // 60 more receipts on top of the fixture's two movements: more than one
+    // page, so an unbounded query and a paginated one give visibly different
+    // answers. Before this was paginated the page rendered all 62.
+    for ($i = 0; $i < 60; $i++) {
+        DentistPayment::create([
+            'dentist_id' => $this->dentist->id,
+            'amount' => 1000,
+            'payment_date' => '2026-06-20',
+        ]);
+    }
+
+    $this->get(route('ledger.cash'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('lines.data', 50)
+            ->where('lines.total', 62)
+            ->where('lines.current_page', 1)
+            ->where('lines.last_page', 2)
+            // The balance is an aggregate over the whole account, not a sum
+            // of the visible rows: 200,000 + 60,000 received less 40,000 out.
+            ->where('balance', 220000)
+        );
+
+    $this->get(route('ledger.cash', ['page' => 2]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('lines.data', 12)
+            ->where('lines.current_page', 2)
+            // Same account-wide figure on page two — pagination must not
+            // touch it.
+            ->where('balance', 220000)
+        );
+});
+
+test('a from-bounded cash list carries an opening balance so it still reconciles', function () {
+    // Without an opening figure, a `from`-bounded list shows a single 200,000
+    // receipt under a 160,000 balance and the two cannot be reconciled. The
+    // 40,000 rent paid on 06-01 is what the window carries in.
+    $this->get(route('ledger.cash', ['from' => '2026-06-10']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('opening', -40000)
+            ->has('lines.data', 1)
+            ->where('lines.data.0.debit', 200000)
+            ->where('balance', 160000)
         );
 });
 
@@ -121,7 +172,7 @@ test('the cash page from and to filters exclude out-of-range movements', functio
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('balance', 160000)
-            ->has('lines', 2)
+            ->has('lines.data', 2)
         );
 
     // `from` excludes the June 1st rent payout. The July receipt is still in
@@ -130,9 +181,9 @@ test('the cash page from and to filters exclude out-of-range movements', functio
     $this->get(route('ledger.cash', ['from' => '2026-06-10']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('lines', 2)
-            ->where('lines.0.date', '2026-07-01')
-            ->where('lines.1.date', '2026-06-15')
+            ->has('lines.data', 2)
+            ->where('lines.data.0.date', '2026-07-01')
+            ->where('lines.data.1.date', '2026-06-15')
         );
 });
 
@@ -155,7 +206,7 @@ test('a malformed date query param collapses to no filter rather than erroring',
             ->where('filters.from', null)
             ->where('filters.to', null)
             ->where('balance', 160000)
-            ->has('lines', 2)
+            ->has('lines.data', 2)
         );
 });
 

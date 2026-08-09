@@ -3,6 +3,7 @@
 namespace App\Ledger;
 
 use App\Models\Account;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -169,8 +170,16 @@ class LedgerReports
     /**
      * Movements on one account, newest first, each carrying its entry's date
      * and description.
+     *
+     * Paginated, like the journal page's entry list: an account's line list
+     * grows monotonically with the business — every payment, salary,
+     * purchase and expense is one cash line, forever — so an unbounded
+     * `get()` here is a query that gets slower every day and can never get
+     * faster. Balances are NOT derived from this list; `balance()` is a
+     * separate aggregate over the whole account, so paginating the list
+     * cannot move a figure.
      */
-    public function accountLines(string $code, ?string $from = null, ?string $to = null): Collection
+    public function accountLines(string $code, ?string $from = null, ?string $to = null, int $perPage = 50): LengthAwarePaginator
     {
         return $this->linesForAccount($code)
             ->when($from, fn ($q) => $q->where('journal_entries.entry_date', '>=', $from))
@@ -184,8 +193,9 @@ class LedgerReports
                 'journal_lines.debit',
                 'journal_lines.credit',
             )
-            ->get()
-            ->map(fn ($row) => [
+            ->paginate($perPage)
+            ->withQueryString()
+            ->through(fn ($row) => [
                 'id' => (int) $row->id,
                 'date' => $row->entry_date,
                 'description' => $row->description,
