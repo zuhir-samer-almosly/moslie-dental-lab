@@ -5,16 +5,10 @@ import DentalChart from '@/components/dental-chart';
 import DentistsManagerDialog from '@/components/dentists/dentists-manager-dialog';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import WorkTypeCombobox from '@/components/work-type-combobox';
 import { cn } from '@/lib/utils';
@@ -223,26 +217,21 @@ export default function OrderForm({
                                 الطبيب
                             </Label>
                             <div className="flex items-center gap-2">
-                                <Select
-                                    value={data.dentist_id}
-                                    onValueChange={handleDentistChange}
-                                >
-                                    <SelectTrigger
-                                        className={cn(fieldClass, 'flex-1')}
-                                    >
-                                        <SelectValue placeholder="اختر الطبيب" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dentists.map((dentist) => (
-                                            <SelectItem
-                                                key={dentist.id}
-                                                value={dentist.id.toString()}
-                                            >
-                                                {dentist.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex-1">
+                                    <Combobox
+                                        id="dentist_id"
+                                        value={data.dentist_id}
+                                        onChange={(value) =>
+                                            handleDentistChange(value ?? '')
+                                        }
+                                        options={dentists.map((dentist) => ({
+                                            value: dentist.id.toString(),
+                                            label: dentist.name,
+                                        }))}
+                                        placeholder="اختر الطبيب"
+                                        className={fieldClass}
+                                    />
+                                </div>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -260,28 +249,25 @@ export default function OrderForm({
                             <Label htmlFor="status" className={labelClass}>
                                 الحالة
                             </Label>
-                            <Select
+                            <Combobox
+                                id="status"
                                 value={data.status}
-                                onValueChange={(value: string) =>
-                                    setData(
-                                        'status',
-                                        value as typeof data.status,
-                                    )
-                                }
-                            >
-                                <SelectTrigger className={fieldClass}>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {Object.entries(ORDER_STATUSES).map(
-                                        ([key, label]) => (
-                                            <SelectItem key={key} value={key}>
-                                                {label}
-                                            </SelectItem>
-                                        ),
-                                    )}
-                                </SelectContent>
-                            </Select>
+                                onChange={(value) => {
+                                    if (value !== null) {
+                                        setData(
+                                            'status',
+                                            value as typeof data.status,
+                                        );
+                                    }
+                                }}
+                                options={Object.entries(ORDER_STATUSES).map(
+                                    ([key, label]) => ({
+                                        value: key,
+                                        label,
+                                    }),
+                                )}
+                                className={fieldClass}
+                            />
                             <InputError message={errors.status} />
                         </div>
                     </div>

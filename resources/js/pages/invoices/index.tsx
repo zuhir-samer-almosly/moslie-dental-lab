@@ -4,15 +4,9 @@ import { useState } from 'react';
 import Heading from '@/components/heading';
 import { InvoiceReport, type InvoiceData } from '@/components/invoice-report';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem } from '@/types';
 
@@ -131,40 +125,19 @@ export default function InvoicesIndex(props: InvoiceData) {
 
                         <div className="grid gap-2">
                             <Label htmlFor="dentist_id">الطبيب (اختياري)</Label>
-                            <div className="flex gap-2">
-                                <Select
-                                    value={data.dentist_id || undefined}
-                                    onValueChange={(value) =>
-                                        setData('dentist_id', value)
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="الكل" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {props.dentists.map((dentist) => (
-                                            <SelectItem
-                                                key={dentist.id}
-                                                value={dentist.id.toString()}
-                                            >
-                                                {dentist.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {data.dentist_id && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() =>
-                                            setData('dentist_id', '')
-                                        }
-                                    >
-                                        مسح
-                                    </Button>
-                                )}
-                            </div>
+                            <Combobox
+                                id="dentist_id"
+                                value={data.dentist_id || null}
+                                onChange={(value) =>
+                                    setData('dentist_id', value ?? '')
+                                }
+                                options={props.dentists.map((dentist) => ({
+                                    value: dentist.id.toString(),
+                                    label: dentist.name,
+                                }))}
+                                placeholder="الكل"
+                                clearable
+                            />
                         </div>
                     </div>
 

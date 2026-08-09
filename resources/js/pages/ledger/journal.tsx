@@ -3,15 +3,9 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Fragment } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -124,26 +118,22 @@ export default function Journal({ entries, accounts, filters }: Props) {
                                     الحساب
                                 </Label>
                                 <div className="flex gap-2">
-                                    <Select
-                                        value={filters.account ?? undefined}
-                                        onValueChange={(value) =>
-                                            go({ account: value })
-                                        }
-                                    >
-                                        <SelectTrigger className="w-48">
-                                            <SelectValue placeholder="الكل" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {accounts.map((account) => (
-                                                <SelectItem
-                                                    key={account.code}
-                                                    value={account.code}
-                                                >
-                                                    {account.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="w-48">
+                                        <Combobox
+                                            value={filters.account ?? null}
+                                            onChange={(value) =>
+                                                go({ account: value ?? '' })
+                                            }
+                                            options={accounts.map(
+                                                (account) => ({
+                                                    value: account.code,
+                                                    label: account.name,
+                                                }),
+                                            )}
+                                            placeholder="الكل"
+                                            clearable
+                                        />
+                                    </div>
                                     {filters.account && (
                                         <Button
                                             type="button"

@@ -3,16 +3,10 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist, DentistPayment } from '@/types';
 
@@ -78,26 +72,19 @@ export default function PaymentsEdit({
                         <CardContent className="space-y-6 p-5 md:p-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="dentist_id">الطبيب</Label>
-                                <Select
+                                <Combobox
+                                    id="dentist_id"
                                     value={data.dentist_id}
-                                    onValueChange={(value) =>
-                                        setData('dentist_id', value)
+                                    onChange={(value) =>
+                                        setData('dentist_id', value ?? '')
                                     }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="اختر الطبيب" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dentists.map((dentist) => (
-                                            <SelectItem
-                                                key={dentist.id}
-                                                value={dentist.id.toString()}
-                                            >
-                                                {dentist.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    options={dentists.map((dentist) => ({
+                                        value: dentist.id.toString(),
+                                        label: dentist.name,
+                                    }))}
+                                    placeholder="اختر الطبيب"
+                                    aria-invalid={!!errors.dentist_id}
+                                />
                                 <InputError message={errors.dentist_id} />
                             </div>
 

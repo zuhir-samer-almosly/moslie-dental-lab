@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import {
     Dialog,
@@ -13,13 +14,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import type { Employee, EmployeePayment } from '@/types';
 
@@ -103,26 +97,19 @@ export function SalaryFormDialog({
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid gap-2">
                         <Label htmlFor="employee_id">الموظف</Label>
-                        <Select
+                        <Combobox
+                            id="employee_id"
                             value={data.employee_id}
-                            onValueChange={(value) =>
-                                setData('employee_id', value)
+                            onChange={(value) =>
+                                setData('employee_id', value ?? '')
                             }
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر الموظف" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {options.map((employee) => (
-                                    <SelectItem
-                                        key={employee.id}
-                                        value={employee.id.toString()}
-                                    >
-                                        {employee.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            options={options.map((employee) => ({
+                                value: employee.id.toString(),
+                                label: employee.name,
+                            }))}
+                            placeholder="اختر الموظف"
+                            aria-invalid={!!errors.employee_id}
+                        />
                         <InputError message={errors.employee_id} />
                     </div>
 

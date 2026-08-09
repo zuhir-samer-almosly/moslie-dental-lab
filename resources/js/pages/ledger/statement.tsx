@@ -2,15 +2,9 @@ import { Head, router } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     Table,
     TableBody,
@@ -111,29 +105,23 @@ export default function Statement({
                                 <Label className="text-xs text-muted-foreground">
                                     الطبيب
                                 </Label>
-                                <Select
-                                    value={
-                                        filters.dentist_id?.toString() ??
-                                        undefined
-                                    }
-                                    onValueChange={(value) =>
-                                        go({ dentist_id: value })
-                                    }
-                                >
-                                    <SelectTrigger className="w-56">
-                                        <SelectValue placeholder="اختر طبيباً" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {dentists.map((d) => (
-                                            <SelectItem
-                                                key={d.id}
-                                                value={d.id.toString()}
-                                            >
-                                                {d.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="w-56">
+                                    <Combobox
+                                        value={
+                                            filters.dentist_id?.toString() ??
+                                            null
+                                        }
+                                        onChange={(value) =>
+                                            go({ dentist_id: value ?? '' })
+                                        }
+                                        options={dentists.map((d) => ({
+                                            value: d.id.toString(),
+                                            label: d.name,
+                                        }))}
+                                        placeholder="اختر طبيباً"
+                                        clearable
+                                    />
+                                </div>
                             </div>
                             <div className="space-y-1.5">
                                 <Label className="text-xs text-muted-foreground">

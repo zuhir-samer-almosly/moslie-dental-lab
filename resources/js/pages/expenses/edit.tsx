@@ -3,16 +3,10 @@ import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Expense } from '@/types';
@@ -34,7 +28,7 @@ export default function ExpensesEdit({ expense }: { expense: Expense }) {
     const categoryLabels = useExpenseCategoryLabels();
     // The picker offers active categories, plus this expense's own category
     // even if it was deactivated since — otherwise editing an old expense
-    // would show a blank Select for a field that already has a valid value.
+    // would show a blank field for a value that is already valid.
     const EXPENSE_CATEGORIES =
         expense.category in activeCategories
             ? activeCategories
@@ -85,28 +79,21 @@ export default function ExpensesEdit({ expense }: { expense: Expense }) {
                         <CardContent className="space-y-6 p-5 md:p-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="category">البند</Label>
-                                <Select
+                                <Combobox
+                                    id="category"
                                     value={data.category}
-                                    onValueChange={(value) =>
-                                        setData('category', value)
+                                    onChange={(value) =>
+                                        setData('category', value ?? '')
                                     }
-                                >
-                                    <SelectTrigger id="category">
-                                        <SelectValue placeholder="اختر البند" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {Object.entries(EXPENSE_CATEGORIES).map(
-                                            ([key, label]) => (
-                                                <SelectItem
-                                                    key={key}
-                                                    value={key}
-                                                >
-                                                    {label}
-                                                </SelectItem>
-                                            ),
-                                        )}
-                                    </SelectContent>
-                                </Select>
+                                    options={Object.entries(
+                                        EXPENSE_CATEGORIES,
+                                    ).map(([key, label]) => ({
+                                        value: key,
+                                        label,
+                                    }))}
+                                    placeholder="اختر البند"
+                                    aria-invalid={!!errors.category}
+                                />
                                 <InputError message={errors.category} />
                             </div>
 
