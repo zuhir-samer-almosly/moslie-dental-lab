@@ -171,6 +171,56 @@ test('the opening capital entry falls back to today when the ledger is empty', f
     expect($capitalEntry->entry_date->toDateString())->toBe(now()->toDateString());
 });
 
+test('a rerun without --cash-on-hand warns that it dropped the opening capital entry', function () {
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+
+    // Monday: the operator counts the cash and records the opening balance.
+    $this->artisan('ledger:rebuild', ['--cash-on-hand' => 10000])->assertSuccessful();
+
+    $capital = fn () => (int) JournalLine::query()
+        ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+        ->where('accounts.code', '3000')
+        ->selectRaw('COALESCE(SUM(credit),0) - COALESCE(SUM(debit),0) as b')
+        ->value('b');
+
+    expect($capital())->toBe(50000);
+
+    // Tuesday: a posting rule was corrected, so they rebuild — and forget the
+    // flag. The opening balance is gone and the cash box is back to -40,000.
+    // That much is by design; doing it *silently* is not.
+    // Each expected substring must land on a *different* output line: the
+    // assertion matches per write, and one line can only satisfy one of them.
+    $this->artisan('ledger:rebuild')
+        ->expectsOutputToContain('WARNING: an opening capital entry (رأس المال)')
+        ->expectsOutputToContain('--cash-on-hand was not supplied')
+        // The figure that was lost, named rather than merely alluded to.
+        ->expectsOutputToContain('Capital before:  50,000')
+        ->assertSuccessful();
+
+    expect($capital())->toBe(0);
+});
+
+test('a rerun that supplies --cash-on-hand again does not warn', function () {
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+
+    $this->artisan('ledger:rebuild', ['--cash-on-hand' => 10000])->assertSuccessful();
+
+    // The capital entry is re-established, so there is nothing to warn about
+    // — a warning that fires on every rerun would be noise the operator
+    // learns to skip past.
+    $this->artisan('ledger:rebuild', ['--cash-on-hand' => 10000])
+        ->doesntExpectOutputToContain('WARNING: an opening capital entry')
+        ->assertSuccessful();
+});
+
+test('a first rebuild with no prior capital entry does not warn', function () {
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+
+    $this->artisan('ledger:rebuild')
+        ->doesntExpectOutputToContain('WARNING: an opening capital entry')
+        ->assertSuccessful();
+});
+
 test('rebuild reports receivables matching the old outstanding formula', function () {
     $dentist = Dentist::create(['name' => 'د. سامي']);
     Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-06-10', 'amount' => 500000, 'status' => 'pending']);

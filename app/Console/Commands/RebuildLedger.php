@@ -67,6 +67,16 @@ class RebuildLedger extends Command
     /** @var array<string, int> class_basename(model) => rows skipped for any other reason (e.g. zero amount) */
     private array $skippedOther = [];
 
+    /**
+     * Owner capital as it stood *before* the wipe (credit-positive), or null
+     * if no entry ever touched 3000. Captured because the wipe deletes it and
+     * only --cash-on-hand puts it back — see reportDroppedCapital().
+     */
+    private ?int $capitalBefore = null;
+
+    /** Cash box as it stood before the wipe, for the same warning. */
+    private int $cashBefore = 0;
+
     public function handle(Ledger $ledger): int
     {
         $invalid = $this->invalidCashOnHand();
@@ -83,6 +93,8 @@ class RebuildLedger extends Command
 
         $this->warn('Rebuilding the ledger — every existing entry will be replaced.');
 
+        $this->captureCapitalBeforeWipe();
+
         DB::transaction(function () use ($ledger) {
             JournalEntry::query()->delete();
 
@@ -96,8 +108,53 @@ class RebuildLedger extends Command
         $status = $this->report();
 
         $this->reportSkipped();
+        $this->reportDroppedCapital();
 
         return $status;
+    }
+
+    /**
+     * Note the owner-capital position before the wipe removes it. Only
+     * --cash-on-hand re-creates that entry, so a plain rerun silently drops
+     * it; this is what lets reportDroppedCapital() say so afterwards.
+     */
+    private function captureCapitalBeforeWipe(): void
+    {
+        $hadCapital = JournalLine::query()
+            ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
+            ->where('accounts.code', AccountCode::CAPITAL->value)
+            ->exists();
+
+        // balance() is debit-minus-credit; capital is credit-natured, so flip
+        // the sign to print the figure the operator recognises.
+        $this->capitalBefore = $hadCapital ? -$this->balance(AccountCode::CAPITAL->value) : null;
+        $this->cashBefore = $this->balance(AccountCode::CASH->value);
+    }
+
+    /**
+     * Warn — loudly — when this rebuild deleted an opening capital entry and
+     * did not put one back.
+     *
+     * The whole point of the command is that a corrected posting rule means
+     * a rebuild, and the rerun is exactly when the operator forgets the flag
+     * they used the first time. Without this, the opening balance vanishes
+     * and the cash box quietly returns to its uncorrected (usually deeply
+     * negative) figure with nothing on screen to say why.
+     */
+    private function reportDroppedCapital(): void
+    {
+        if ($this->capitalBefore === null || $this->option('cash-on-hand') !== null) {
+            return;
+        }
+
+        $this->newLine();
+        $this->warn('⚠ WARNING: an opening capital entry (رأس المال) existed before this rebuild');
+        $this->warn('  and was NOT re-created, because --cash-on-hand was not supplied.');
+        $this->warn('    Capital before:  '.number_format($this->capitalBefore));
+        $this->warn('    Cash box before: '.number_format($this->cashBefore));
+        $this->warn('    Cash box now:    '.number_format($this->balance(AccountCode::CASH->value)));
+        $this->warn('Re-run as: php artisan ledger:rebuild --force --cash-on-hand=<real counted cash>');
+        $this->warn('to restore it. Supply the flag on EVERY rebuild, not just the first.');
     }
 
     /**
