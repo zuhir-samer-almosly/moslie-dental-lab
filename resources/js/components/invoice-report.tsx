@@ -91,6 +91,43 @@ function dueTone(due: number): string {
 }
 
 /**
+ * A balance owed, with its unit. Since the redenomination divided every stored
+ * amount by 100, a bare figure is ambiguous against any invoice printed before
+ * it — the unit is what disambiguates, so it rides along with the two figures
+ * a reader actually takes off the page.
+ *
+ * `inline-flex` keeps the digits and the unit in one bidi run: RTL reordering
+ * would otherwise be free to move the Arabic label away from the Latin digit
+ * group it belongs to. The unit resets `font-normal text-sm` so it stays quiet
+ * beside the bold, enlarged grand total, and `whitespace-nowrap` stops it
+ * wrapping mid-phrase in a narrow column.
+ */
+function DueAmount({
+    value,
+    className,
+}: {
+    value: number;
+    className?: string;
+}) {
+    return (
+        <span
+            className={cn(
+                'inline-flex items-baseline gap-1',
+                dueTone(value),
+                className,
+            )}
+        >
+            <span className="tabular-nums">
+                {value.toLocaleString('en-US')}
+            </span>
+            <span className="text-sm font-normal whitespace-nowrap text-muted-foreground">
+                ليرة جديدة
+            </span>
+        </span>
+    );
+}
+
+/**
  * The gendered Arabic honorific that wraps a dentist's name. Exported because
  * the PDF names its file with the same words the heading prints, and the two
  * drifting apart is exactly the kind of thing nobody notices until a doctor
@@ -392,9 +429,7 @@ export function InvoiceReport({
                                     </div>
                                     <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
                                         <span>المستحق على الطبيب</span>
-                                        <span className="text-green-600 tabular-nums">
-                                            {group.due.toLocaleString('en-US')}
-                                        </span>
+                                        <DueAmount value={group.due} />
                                     </div>
                                 </div>
                             </div>
@@ -491,9 +526,10 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between border-t pt-2">
                         <span className="font-bold">الإجمالي المستحق:</span>
-                        <span className="text-lg font-bold text-green-600 tabular-nums">
-                            {totals.balance.toLocaleString('en-US')}
-                        </span>
+                        <DueAmount
+                            value={totals.balance}
+                            className="text-lg font-bold"
+                        />
                     </div>
                 </div>
             </div>
