@@ -55,6 +55,20 @@ spatie/laravel-backup **only creates** backups; restoring is manual. Steps:
   Re-mint it locally (needs a browser) with `php artisan backup:google-token`, then
   put the printed value in the VPS `.env` as `GOOGLE_DRIVE_REFRESH_TOKEN` and
   re-deploy. The command's header comment documents the consent flow.
+- **`backup:list` says the disk is unreachable with `UnableToReadFile: ... File
+  not found` on the `Zoher Dental Lab` folder:** this is an **expired refresh
+  token**, not a missing folder — the adapter reports a failed auth as an
+  unresolvable path. Confirm by checking Drive: if the folder is there and full
+  of old zips, the credentials are the problem. Root cause to rule out first is
+  an OAuth consent screen left in **Testing** publishing status, whose tokens
+  Google kills after 7 days (this silently stopped backups 2026-07-04 → 08-09).
+  Fix is one-time: Cloud Console → OAuth consent screen → **PUBLISH APP**, then
+  re-mint. `backup:google-token` requests the non-sensitive `drive.file` scope
+  specifically so publishing needs no Google verification.
+- **A dead `google` disk does not have to block a deploy.** Take a direct dump
+  instead — it needs no Drive and no credentials on the command line:
+  `docker compose exec -T db sh -c 'mysqldump -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' > ~/pre-deploy-$(date +%F).sql`
+  then `scp` it off the box and check the tail reads `-- Dump completed`.
 - **`mysqldump` errors about auth plugin:** the `db` service is pinned to
   `--default-authentication-plugin=mysql_native_password` in `docker-compose.yml`
   exactly so the (MariaDB-based) dump client works — don't change it.

@@ -22,10 +22,25 @@ paid 5 TB account):
 1. Go to <https://console.cloud.google.com/> → create a project (e.g. "Dental Lab Backups").
 2. **APIs & Services → Library →** enable **Google Drive API**.
 3. **APIs & Services → OAuth consent screen →** External, fill the app name +
-   your email, and add yourself as a **Test user** (this avoids the app-verification
-   requirement — test users can authorize indefinitely).
-4. **APIs & Services → Credentials → Create credentials → OAuth client ID →**
+   your email.
+4. **Still on the OAuth consent screen: click PUBLISH APP** so the publishing
+   status reads **In production**, not **Testing**. Do not skip this and do not
+   settle for adding yourself as a Test user instead — see the warning below.
+   The command requests the `drive.file` scope, which is non-sensitive, so
+   publishing is instant and needs no Google verification.
+5. **APIs & Services → Credentials → Create credentials → OAuth client ID →**
    Application type **Desktop app**. Copy the **Client ID** and **Client secret**.
+
+> **Why step 4 is not optional.** Google expires the refresh token of any app
+> left in **Testing** publishing status after exactly **7 days**. A Test user
+> can keep *authorizing* forever, which is what makes this trap so easy to walk
+> into — but the token it hands out still dies in a week, and it takes the
+> nightly backup with it. This is not hypothetical: tokens minted 2026-06-27
+> backed up cleanly every night through 2026-07-04, then stopped dead for five
+> weeks before anyone noticed. Worse, the symptom lies — `backup:list` reports
+> `UnableToReadFile ... File not found` against the destination folder, so it
+> reads as a missing Drive folder rather than as the auth failure it is. **If
+> the `google` disk ever goes unreachable, suspect an expired token first.**
 
 ### 2. Get a refresh token
 

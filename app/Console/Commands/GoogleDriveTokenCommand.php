@@ -13,6 +13,19 @@ use Illuminate\Console\Command;
  * with the Google account that owns the backup storage, then paste the
  * `code=...` value Google redirects you to. The command prints the refresh
  * token to put in the production .env as GOOGLE_DRIVE_REFRESH_TOKEN.
+ *
+ * IMPORTANT — the OAuth app must be published, or backups silently die after
+ * a week. Google expires the refresh tokens of an app whose consent screen is
+ * still in "Testing" publishing status after exactly 7 days. This is what
+ * killed the first rollout: tokens minted 2026-06-27 uploaded fine nightly
+ * through 2026-07-04, then stopped for five weeks with no alert. The failure
+ * surfaces from `backup:list` as a misleading "File not found" on the
+ * destination folder rather than as an auth error, so read a dead disk as a
+ * suspected expired token first, not a missing folder.
+ *
+ * So, once: Google Cloud Console -> APIs & Services -> OAuth consent screen ->
+ * PUBLISH APP. With the drive.file scope set below that is instant and needs
+ * no verification, and the refresh token then lasts until it is revoked.
  */
 class GoogleDriveTokenCommand extends Command
 {
@@ -37,7 +50,13 @@ class GoogleDriveTokenCommand extends Command
         // Use the Desktop-app loopback redirect: Google will redirect to a
         // (non-loading) localhost page whose URL contains the auth code.
         $client->setRedirectUri('http://localhost');
-        $client->setScopes([GoogleDrive::DRIVE]);
+        // DRIVE_FILE, not DRIVE. The uploader only ever touches files it
+        // created itself, and drive.file is a *non-sensitive* scope: the OAuth
+        // app can be published to "In production" without Google's CASA
+        // security assessment, which full DRIVE (a restricted scope) requires.
+        // That matters because a Testing-status app's refresh tokens expire
+        // after 7 days — see the docblock above.
+        $client->setScopes([GoogleDrive::DRIVE_FILE]);
         $client->setAccessType('offline');
         // Force the consent screen so Google always returns a refresh token.
         $client->setPrompt('consent');
