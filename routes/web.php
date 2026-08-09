@@ -35,6 +35,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except('show');
     Route::get('finance', [App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
     Route::get('report', [App\Http\Controllers\ReportController::class, 'index'])->name('report.index');
+
+    Route::prefix('ledger')->name('ledger.')->group(function () {
+        Route::get('trial-balance', [App\Http\Controllers\LedgerController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('cash', [App\Http\Controllers\LedgerController::class, 'cash'])->name('cash');
+    });
 });
 
 // Rendered by headless Chromium to build the invoice PDF. It sits outside the

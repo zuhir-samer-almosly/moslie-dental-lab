@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import {
+    Banknote,
     CalendarRange,
     ClipboardList,
     CreditCard,
@@ -7,6 +8,7 @@ import {
     LayoutGrid,
     Package,
     PiggyBank,
+    Scale,
     UserCog,
     Users,
     Wallet,
@@ -76,6 +78,16 @@ const mainNavItems: NavItem[] = [
         title: 'التقرير',
         href: '/report',
         icon: CalendarRange,
+    },
+    {
+        title: 'الصندوق',
+        href: '/ledger/cash',
+        icon: Banknote,
+    },
+    {
+        title: 'ميزان المراجعة',
+        href: '/ledger/trial-balance',
+        icon: Scale,
     },
 ];
 
