@@ -17,7 +17,11 @@ class DentistFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'name' => fake()->name(),
+            'gender' => fake()->randomElement(['male', 'female']),
+            'phone' => fake()->unique()->numerify('09########'),
+            'address' => fake()->city(),
+            'price_list' => null,
         ];
     }
 }

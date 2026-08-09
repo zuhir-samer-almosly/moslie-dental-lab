@@ -17,7 +17,12 @@ class OrderItemFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'order_id' => \App\Models\Order::factory(),
+            'type' => fake()->randomElement(['زيركون', 'خزف', 'طقم كامل', 'جسر']),
+            'quantity' => fake()->numberBetween(1, 6),
+            'price' => fake()->numberBetween(50, 500) * 1000,
+            'notes' => null,
+            'meta' => ['selected_teeth' => [], 'patient_name' => '', 'date' => null],
         ];
     }
 }
