@@ -2,7 +2,11 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { FileDown, Printer } from 'lucide-react';
 import { useState } from 'react';
 import Heading from '@/components/heading';
-import { InvoiceReport, type InvoiceData } from '@/components/invoice-report';
+import {
+    dentistHonorific,
+    InvoiceReport,
+    type InvoiceData,
+} from '@/components/invoice-report';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
@@ -39,6 +43,42 @@ export default function InvoicesIndex(props: InvoiceData) {
     };
 
     /**
+     * What lands in the downloads folder. Filtered to one dentist, the file
+     * names itself after them — these get forwarded straight to the doctor, so
+     * a name you would fix by hand is a name you would fix every month.
+     * Mirrors App\Support\InvoiceFilename on the server.
+     *
+     * Reads `data`, not `filters`: `data` is what the fetch below actually
+     * sends, so the file is named for the report inside it rather than for
+     * whatever was last submitted.
+     */
+    const pdfFilename = () => {
+        const generic = `فاتورة-${data.from}-${data.to}.pdf`;
+
+        const dentist = props.dentists.find(
+            (candidate) => candidate.id.toString() === data.dentist_id,
+        );
+
+        if (!dentist) {
+            return generic;
+        }
+
+        const name = dentist.name
+            // eslint-disable-next-line no-control-regex
+            .replace(/[/\\:*?"<>|\u0000-\u001F]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!name) {
+            return generic;
+        }
+
+        const { title, respect } = dentistHonorific(dentist.gender);
+
+        return `${title} ${name} ${respect} ${data.from} - ${data.to}.pdf`;
+    };
+
+    /**
      * The browser's own print dialog decides the paper orientation, and CSS
      * can't set it — printing straight from the page comes out sideways on a
      * portrait sheet. This asks the server to render the same report through
@@ -68,7 +108,7 @@ export default function InvoicesIndex(props: InvoiceData) {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `فاتورة-${data.from}-${data.to}.pdf`;
+            link.download = pdfFilename();
             document.body.appendChild(link);
             link.click();
             link.remove();

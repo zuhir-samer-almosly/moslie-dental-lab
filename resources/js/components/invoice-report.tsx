@@ -56,6 +56,21 @@ export type InvoiceData = {
 };
 
 /**
+ * The gendered Arabic honorific that wraps a dentist's name. Exported because
+ * the PDF names its file with the same words the heading prints, and the two
+ * drifting apart is exactly the kind of thing nobody notices until a doctor
+ * gets a file addressed to the wrong gender.
+ */
+export function dentistHonorific(gender: 'male' | 'female'): {
+    title: string;
+    respect: string;
+} {
+    return gender === 'female'
+        ? { title: 'الدكتورة', respect: 'المحترمة' }
+        : { title: 'الدكتور', respect: 'المحترم' };
+}
+
+/**
  * Build a per-dentist statement: previous (opening) balance carried from
  * earlier months + this period's orders − this period's payments = amount due.
  * Dentists with only a carried-over balance (no new orders) still appear.
@@ -71,7 +86,11 @@ export function groupByDentist(
     const nameFor = (id: number) => findDentist(id)?.name ?? '—';
     const genderFor = (id: number) => findDentist(id)?.gender ?? 'male';
 
-    const ensure = (id: number, name?: string, gender?: 'male' | 'female'): DentistGroup => {
+    const ensure = (
+        id: number,
+        name?: string,
+        gender?: 'male' | 'female',
+    ): DentistGroup => {
         let group = map.get(id);
         if (!group) {
             group = {
@@ -96,7 +115,11 @@ export function groupByDentist(
     }
 
     for (const order of orders) {
-        const group = ensure(order.dentist_id, order.dentist?.name, order.dentist?.gender);
+        const group = ensure(
+            order.dentist_id,
+            order.dentist?.name,
+            order.dentist?.gender,
+        );
         const items = order.items ?? [];
         if (items.length === 0) {
             group.rows.push({ order, item: null });
@@ -110,8 +133,11 @@ export function groupByDentist(
     }
 
     for (const payment of payments) {
-        ensure(payment.dentist_id, payment.dentist?.name, payment.dentist?.gender).paymentsTotal +=
-            payment.amount;
+        ensure(
+            payment.dentist_id,
+            payment.dentist?.name,
+            payment.dentist?.gender,
+        ).paymentsTotal += payment.amount;
     }
 
     for (const group of map.values()) {
@@ -153,163 +179,187 @@ export function InvoiceReport({
                         لا توجد طلبات
                     </div>
                 ) : (
-                    groups.map((group) => (
-                        <div key={group.id} className="space-y-2">
-                            <div className="text-center">
-                                <h4 className="text-2xl font-bold">
-                                    {group.gender === 'female' ? 'الدكتورة' : 'الدكتور'} : {group.name} {group.gender === 'female' ? 'المحترمة' : 'المحترم'}
-                                </h4>
-                            </div>
-                            <div className="rounded-lg border">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>اسم المريض</TableHead>
-                                            <TableHead>التاريخ</TableHead>
-                                            <TableHead>العنصر</TableHead>
-                                            <TableHead>الأسنان</TableHead>
-                                            <TableHead>السعر</TableHead>
-                                            <TableHead>المبلغ</TableHead>
-                                            <TableHead>ملاحظات</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {group.rows.length === 0 && (
+                    groups.map((group) => {
+                        const { title, respect } = dentistHonorific(
+                            group.gender,
+                        );
+
+                        return (
+                            <div key={group.id} className="space-y-2">
+                                <div className="text-center">
+                                    <h4 className="text-2xl font-bold">
+                                        {title} : {group.name} {respect}
+                                    </h4>
+                                </div>
+                                <div className="rounded-lg border">
+                                    <Table>
+                                        <TableHeader>
                                             <TableRow>
-                                                <TableCell
-                                                    colSpan={7}
-                                                    className="text-center text-muted-foreground"
-                                                >
-                                                    لا توجد طلبات جديدة في هذه
-                                                    الفترة
-                                                </TableCell>
+                                                <TableHead>
+                                                    اسم المريض
+                                                </TableHead>
+                                                <TableHead>التاريخ</TableHead>
+                                                <TableHead>العنصر</TableHead>
+                                                <TableHead>الأسنان</TableHead>
+                                                <TableHead>السعر</TableHead>
+                                                <TableHead>المبلغ</TableHead>
+                                                <TableHead>ملاحظات</TableHead>
                                             </TableRow>
-                                        )}
-                                        {group.rows.map(({ order, item }) =>
-                                            item ? (
-                                                <TableRow key={`i-${item.id}`}>
-                                                    <TableCell>
-                                                        {itemPatient(item) || (
-                                                            <Dash />
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap">
-                                                        {formatDate(
-                                                            itemDate(item),
-                                                        ) ||
-                                                            formatDate(
-                                                                order.due_date,
-                                                            ) || <Dash />}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap">
-                                                        {item.type}{' '}
-                                                        <span className="text-muted-foreground">
-                                                            × {item.quantity}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <TeethOdontogram
-                                                            teeth={itemTeeth(
-                                                                item,
-                                                            )}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap tabular-nums">
-                                                        {(
-                                                            item.price ?? 0
-                                                        ).toLocaleString(
-                                                            'en-US',
-                                                        )}{' '}
-                                                        <span className="text-muted-foreground">
-                                                            ×{' '}
-                                                            {item.quantity ?? 0}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="tabular-nums">
-                                                        {itemAmount(
-                                                            item,
-                                                        ).toLocaleString(
-                                                            'en-US',
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-pre-line">
-                                                        {item.notes || <Dash />}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {group.rows.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell
+                                                        colSpan={7}
+                                                        className="text-center text-muted-foreground"
+                                                    >
+                                                        لا توجد طلبات جديدة في
+                                                        هذه الفترة
                                                     </TableCell>
                                                 </TableRow>
-                                            ) : (
-                                                <TableRow key={`o-${order.id}`}>
-                                                    <TableCell>
-                                                        <Dash />
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-nowrap">
-                                                        {formatDate(
-                                                            order.due_date,
-                                                        ) || <Dash />}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Dash />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Dash />
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Dash />
-                                                    </TableCell>
-                                                    <TableCell className="tabular-nums">
-                                                        {order.amount.toLocaleString(
-                                                            'en-US',
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="whitespace-pre-line">
-                                                        {order.notes || (
-                                                            <Dash />
-                                                        )}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ),
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                            <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
-                                {group.opening !== 0 && (
+                                            )}
+                                            {group.rows.map(
+                                                ({ order, item }) =>
+                                                    item ? (
+                                                        <TableRow
+                                                            key={`i-${item.id}`}
+                                                        >
+                                                            <TableCell>
+                                                                {itemPatient(
+                                                                    item,
+                                                                ) || <Dash />}
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-nowrap">
+                                                                {formatDate(
+                                                                    itemDate(
+                                                                        item,
+                                                                    ),
+                                                                ) ||
+                                                                    formatDate(
+                                                                        order.due_date,
+                                                                    ) || (
+                                                                        <Dash />
+                                                                    )}
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-nowrap">
+                                                                {item.type}{' '}
+                                                                <span className="text-muted-foreground">
+                                                                    ×{' '}
+                                                                    {
+                                                                        item.quantity
+                                                                    }
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <TeethOdontogram
+                                                                    teeth={itemTeeth(
+                                                                        item,
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-nowrap tabular-nums">
+                                                                {(
+                                                                    item.price ??
+                                                                    0
+                                                                ).toLocaleString(
+                                                                    'en-US',
+                                                                )}{' '}
+                                                                <span className="text-muted-foreground">
+                                                                    ×{' '}
+                                                                    {item.quantity ??
+                                                                        0}
+                                                                </span>
+                                                            </TableCell>
+                                                            <TableCell className="tabular-nums">
+                                                                {itemAmount(
+                                                                    item,
+                                                                ).toLocaleString(
+                                                                    'en-US',
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-pre-line">
+                                                                {item.notes || (
+                                                                    <Dash />
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ) : (
+                                                        <TableRow
+                                                            key={`o-${order.id}`}
+                                                        >
+                                                            <TableCell>
+                                                                <Dash />
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-nowrap">
+                                                                {formatDate(
+                                                                    order.due_date,
+                                                                ) || <Dash />}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Dash />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Dash />
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Dash />
+                                                            </TableCell>
+                                                            <TableCell className="tabular-nums">
+                                                                {order.amount.toLocaleString(
+                                                                    'en-US',
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="whitespace-pre-line">
+                                                                {order.notes || (
+                                                                    <Dash />
+                                                                )}
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ),
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                                    {group.opening !== 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span>
+                                                رصيد مستحق من الفاتورة الماضية
+                                            </span>
+                                            <span className="tabular-nums">
+                                                {group.opening.toLocaleString(
+                                                    'en-US',
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between">
-                                        <span>
-                                            رصيد مستحق من الفاتورة الماضية
-                                        </span>
+                                        <span>إجمالي طلبات الفترة</span>
                                         <span className="tabular-nums">
-                                            {group.opening.toLocaleString(
+                                            {group.ordersTotal.toLocaleString(
                                                 'en-US',
                                             )}
                                         </span>
                                     </div>
-                                )}
-                                <div className="flex items-center justify-between">
-                                    <span>إجمالي طلبات الفترة</span>
-                                    <span className="tabular-nums">
-                                        {group.ordersTotal.toLocaleString(
-                                            'en-US',
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span>مدفوعات الفترة</span>
-                                    <span className="tabular-nums text-red-600">
-                                        −
-                                        {group.paymentsTotal.toLocaleString(
-                                            'en-US',
-                                        )}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
-                                    <span>المستحق على الطبيب</span>
-                                    <span className="tabular-nums text-green-600">
-                                        {group.due.toLocaleString('en-US')}
-                                    </span>
+                                    <div className="flex items-center justify-between">
+                                        <span>مدفوعات الفترة</span>
+                                        <span className="text-red-600 tabular-nums">
+                                            −
+                                            {group.paymentsTotal.toLocaleString(
+                                                'en-US',
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
+                                        <span>المستحق على الطبيب</span>
+                                        <span className="text-green-600 tabular-nums">
+                                            {group.due.toLocaleString('en-US')}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
 
@@ -357,7 +407,7 @@ export function InvoiceReport({
                 <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
                     <div className="flex items-center justify-between font-semibold">
                         <span>إجمالي مدفوعات الفترة</span>
-                        <span className="tabular-nums text-red-600">
+                        <span className="text-red-600 tabular-nums">
                             {totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
@@ -384,13 +434,13 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between">
                         <span>إجمالي المدفوعات:</span>
-                        <span className="font-semibold tabular-nums text-red-600">
+                        <span className="font-semibold text-red-600 tabular-nums">
                             −{totals.payments.toLocaleString('en-US')}
                         </span>
                     </div>
                     <div className="flex justify-between border-t pt-2">
                         <span className="font-bold">الإجمالي المستحق:</span>
-                        <span className="text-lg font-bold tabular-nums text-green-600">
+                        <span className="text-lg font-bold text-green-600 tabular-nums">
                             {totals.balance.toLocaleString('en-US')}
                         </span>
                     </div>
