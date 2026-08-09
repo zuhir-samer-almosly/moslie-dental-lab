@@ -32,18 +32,22 @@ docker compose -f docker-compose.local.yml exec app php artisan migrate --force
 
 # Ensure local admin user exists with known password
 echo "👤 Ensuring local admin user..."
-docker compose -f docker-compose.local.yml exec app php -r "
-    require '/opt/dental-lab/moslie-dental-lab/vendor/autoload.php';
-    \\\$app = require_once '/opt/dental-lab/moslie-dental-lab/bootstrap/app.php';
-    \\\$kernel = \\\$app->make(Illuminate\Contracts\Console\Kernel::class);
-    \\\$kernel->bootstrap();
-    \\\$user = App\Models\User::firstOrNew(['email' => 'zohermoslie0@gmail.com']);
-    \\\$user->name = 'Zoher Moslie';
-    \\\$user->password = password_hash('password', PASSWORD_BCRYPT);
-    \\\$user->email_verified_at = now();
-    \\\$user->save();
-    echo '✅ Admin user ready: zohermoslie0@gmail.com / password' . PHP_EOL;
-"
+# A quoted heredoc is deliberate: the snippet reaches PHP verbatim, so `$` and
+# `\` need no shell escaping. (`php -r "..."` here silently died on line 3 with
+# `unexpected token "\"` because bash collapsed `\\\$` to a literal `\$`.)
+# `exec -T` is required so the heredoc is piped in as stdin.
+docker compose -f docker-compose.local.yml exec -T app php <<'PHP'
+<?php
+require '/opt/dental-lab/moslie-dental-lab/vendor/autoload.php';
+$app = require_once '/opt/dental-lab/moslie-dental-lab/bootstrap/app.php';
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$user = App\Models\User::firstOrNew(['email' => 'zohermoslie0@gmail.com']);
+$user->name = 'Zoher Moslie';
+$user->password = password_hash('password', PASSWORD_BCRYPT);
+$user->email_verified_at = now();
+$user->save();
+echo "✅ Admin user ready: zohermoslie0@gmail.com / password\n";
+PHP
 
 # Optimize
 echo "⚡ Optimizing application..."
