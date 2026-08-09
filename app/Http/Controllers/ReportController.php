@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Ledger\AccountCode;
 use App\Ledger\LedgerReports;
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
@@ -59,8 +58,8 @@ class ReportController extends Controller
             ->get();
 
         $income = $reports->cashReceipts($from, $to);
-        $breakdown = $reports->expenseBreakdown($from, $to);
-        $outgoing = (int) $breakdown->sum('total');
+        $split = $reports->expenseSplit($from, $to);
+        $outgoing = $split['salaries'] + $split['materials'] + $split['other'];
 
         return inertia('report/index', [
             'orders' => $orders,
@@ -75,14 +74,9 @@ class ReportController extends Controller
                 'earned' => $reports->revenue($from, $to),
                 'orders_value' => (int) $orders->sum('amount'),
                 'orders_count' => $orders->count(),
-                'salaries' => (int) ($breakdown->firstWhere('code', AccountCode::SALARIES->value)['total'] ?? 0),
-                'materials' => (int) ($breakdown->firstWhere('code', AccountCode::MATERIALS->value)['total'] ?? 0),
-                'general_expenses' => (int) $breakdown
-                    ->reject(fn (array $row) => in_array($row['code'], [
-                        AccountCode::SALARIES->value,
-                        AccountCode::MATERIALS->value,
-                    ], true))
-                    ->sum('total'),
+                'salaries' => $split['salaries'],
+                'materials' => $split['materials'],
+                'general_expenses' => $split['other'],
             ],
             'filters' => [
                 'from' => $from,

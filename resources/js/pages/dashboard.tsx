@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
+    ClipboardCheck,
     ClipboardList,
     Clock,
     Coins,
@@ -230,12 +231,19 @@ export default function Dashboard({
                 </div>
 
                 {/* This month's money */}
-                <div className="grid gap-4 sm:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <MoneyCard
                         title="الدخل هذا الشهر"
                         value={stats.income}
                         hint="مدفوعات الأطباء هذا الشهر"
                         icon={TrendingUp}
+                        variant="income"
+                    />
+                    <MoneyCard
+                        title="الأعمال المنجزة"
+                        value={stats.earned}
+                        hint="قيمة الطلبات المستحقة هذا الشهر"
+                        icon={ClipboardCheck}
                         variant="income"
                     />
                     <MoneyCard
@@ -255,7 +263,7 @@ export default function Dashboard({
                 </div>
 
                 {/* Operational numbers */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <MiniStat
                         title="رصيد الصندوق"
                         value={stats.cash_balance}

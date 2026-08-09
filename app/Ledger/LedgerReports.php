@@ -118,6 +118,31 @@ class LedgerReports
     }
 
     /**
+     * Splits the expense breakdown into the three buckets the dashboard and
+     * report pages show: salaries, materials, and everything else — general
+     * expenses, including the fallback account. Kept in one place so the
+     * "neither salaries nor materials" classification can't drift between
+     * the pages that render it.
+     *
+     * @return array{salaries: int, materials: int, other: int}
+     */
+    public function expenseSplit(string $from, string $to): array
+    {
+        $breakdown = $this->expenseBreakdown($from, $to);
+
+        return [
+            'salaries' => (int) ($breakdown->firstWhere('code', AccountCode::SALARIES->value)['total'] ?? 0),
+            'materials' => (int) ($breakdown->firstWhere('code', AccountCode::MATERIALS->value)['total'] ?? 0),
+            'other' => (int) $breakdown
+                ->reject(fn (array $row) => in_array($row['code'], [
+                    AccountCode::SALARIES->value,
+                    AccountCode::MATERIALS->value,
+                ], true))
+                ->sum('total'),
+        ];
+    }
+
+    /**
      * @return Collection<int, array{code: string, name: string, type: string, debit: int, credit: int}>
      */
     public function trialBalance(?string $asOf = null): Collection

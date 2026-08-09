@@ -49,6 +49,9 @@ test('the report gathers every stream for the chosen range and totals them', fun
                 ->where('totals.orders_count', 2)
                 ->where('totals.expenses', 27000) // 20000 + 5000 + 2000
                 ->where('totals.net', 33000)      // 60000 - 27000
+                ->where('totals.salaries', 20000)
+                ->where('totals.materials', 5000)
+                ->where('totals.general_expenses', 2000)
         );
 });
 
@@ -100,11 +103,14 @@ test('report totals come from the ledger', function () {
             ->where('totals.expenses', 40000)
             ->where('totals.net', 160000)
             ->where('totals.earned', 500000)
+            ->where('totals.orders_value', 500000)
             ->where('totals.orders_count', 1)
         );
 
     // Prove the totals are read from the ledger, not recomputed: wipe the
     // ledger while the domain rows survive, and the totals must report zero.
+    // orders_value and orders_count stay put — they're computed from $orders,
+    // not the ledger, and must not be accidentally coupled to it.
     JournalEntry::query()->delete();
 
     $this->get(route('report.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
@@ -113,6 +119,7 @@ test('report totals come from the ledger', function () {
             ->where('totals.expenses', 0)
             ->where('totals.net', 0)
             ->where('totals.earned', 0)
+            ->where('totals.orders_value', 500000)
             ->where('totals.orders_count', 1)
         );
 

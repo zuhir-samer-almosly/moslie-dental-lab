@@ -4,6 +4,7 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
+use App\Models\Expense;
 use App\Models\JournalEntry;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
@@ -36,14 +37,22 @@ test('the dashboard shows this month income, expenses and net', function () {
         'payment_date' => $today,
     ]);
     MaterialPurchase::factory()->create(['amount' => 5000, 'purchase_date' => $today]);
+    Expense::factory()->create(['category' => 'transport', 'amount' => 2000, 'expense_date' => $today]);
 
     $this->get(route('dashboard'))
         ->assertInertia(
             fn ($page) => $page
                 ->component('dashboard')
                 ->where('stats.income', 60000)
-                ->where('stats.expenses', 35000)
-                ->where('stats.net', 25000)
+                ->where('stats.expenses', 37000) // 30000 + 5000 + 2000
+                ->where('stats.net', 23000)
+                // Pairwise-distinct amounts: a swapped SALARIES/MATERIALS
+                // code, or a `general_expenses` reject list missing a code,
+                // would show up here even though the totals above still add
+                // up.
+                ->where('stats.salaries', 30000)
+                ->where('stats.materials', 5000)
+                ->where('stats.general_expenses', 2000)
         );
 });
 

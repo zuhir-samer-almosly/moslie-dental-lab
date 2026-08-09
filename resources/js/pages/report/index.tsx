@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import {
+    ClipboardCheck,
     ClipboardList,
     CreditCard,
     Package,
@@ -184,12 +185,19 @@ export default function ReportIndex({
                 </Card>
 
                 {/* Headline stats */}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <StatCard
                         title="الدخل"
                         value={nf(totals.income)}
                         hint="مدفوعات الأطباء"
                         icon={TrendingUp}
+                        tone="emerald"
+                    />
+                    <StatCard
+                        title="الأعمال المنجزة"
+                        value={nf(totals.earned)}
+                        hint="قيمة الطلبات المستحقة في هذه الفترة"
+                        icon={ClipboardCheck}
                         tone="emerald"
                     />
                     <StatCard

@@ -23,8 +23,8 @@ class DashboardController extends Controller
         $end = $now->copy()->endOfMonth()->toDateString();
 
         $income = $reports->cashReceipts($start, $end);
-        $breakdown = $reports->expenseBreakdown($start, $end);
-        $expenses = (int) $breakdown->sum('total');
+        $split = $reports->expenseSplit($start, $end);
+        $expenses = $split['salaries'] + $split['materials'] + $split['other'];
 
         return inertia('dashboard', [
             'stats' => [
@@ -32,15 +32,9 @@ class DashboardController extends Controller
                 'income' => $income,
                 'expenses' => $expenses,
                 'net' => $income - $expenses,
-                'salaries' => (int) ($breakdown->firstWhere('code', AccountCode::SALARIES->value)['total'] ?? 0),
-                'materials' => (int) ($breakdown->firstWhere('code', AccountCode::MATERIALS->value)['total'] ?? 0),
-                // Everything that is neither salaries nor materials.
-                'general_expenses' => (int) $breakdown
-                    ->reject(fn (array $row) => in_array($row['code'], [
-                        AccountCode::SALARIES->value,
-                        AccountCode::MATERIALS->value,
-                    ], true))
-                    ->sum('total'),
+                'salaries' => $split['salaries'],
+                'materials' => $split['materials'],
+                'general_expenses' => $split['other'],
                 'earned' => $reports->revenue($start, $end),
                 'outstanding' => $reports->balance(AccountCode::RECEIVABLE->value),
                 'cash_balance' => $reports->balance(AccountCode::CASH->value),

@@ -9,6 +9,7 @@ use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
+use App\Models\MaterialPurchase;
 use App\Models\Order;
 
 beforeEach(function () {
@@ -92,6 +93,34 @@ test('the expense breakdown lists one row per account with movement', function (
     ]);
     expect($rows->firstWhere('code', '5220')['name'])->toBe('إيجار');
     expect($this->reports->expensesTotal('2026-06-01', '2026-06-30'))->toBe(120000);
+});
+
+test('the expense split buckets salaries and materials apart from everything else', function () {
+    // beforeEach already posted an 80,000 salary (5000) and a 40,000 rent
+    // expense (5220, which is neither salaries nor materials). Add a
+    // materials purchase so all three buckets are non-zero and
+    // pairwise-distinct — a swapped SALARIES/MATERIALS code, or a dropped
+    // code in the "everything else" reject list, would show up as a wrong
+    // number in one bucket even though the three still sum to the same total.
+    MaterialPurchase::factory()->create(['amount' => 15000, 'purchase_date' => '2026-06-08']);
+
+    $split = $this->reports->expenseSplit('2026-06-01', '2026-06-30');
+
+    expect($split)->toBe([
+        'salaries' => 80000,
+        'materials' => 15000,
+        'other' => 40000,
+    ]);
+    expect($split['salaries'] + $split['materials'] + $split['other'])
+        ->toBe($this->reports->expensesTotal('2026-06-01', '2026-06-30'));
+});
+
+test('the expense split reports zero for a bucket nothing posted to', function () {
+    expect($this->reports->expenseSplit('2026-06-01', '2026-06-30'))->toBe([
+        'salaries' => 80000,
+        'materials' => 0,
+        'other' => 40000,
+    ]);
 });
 
 test('the trial balance is balanced and covers every account with movement', function () {
