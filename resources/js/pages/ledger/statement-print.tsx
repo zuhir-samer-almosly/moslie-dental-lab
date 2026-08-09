@@ -103,7 +103,16 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                     <td className="border border-black p-2 text-left tabular-nums">
                                         {line.credit > 0 ? nf(line.credit) : ''}
                                     </td>
-                                    <td className="border border-black p-2 text-left tabular-nums">
+                                    <td
+                                        className={
+                                            // Matches statement.tsx's inverted convention so the PDF agrees with
+                                            // the on-screen page: positive (owed) = rose, negative (credit) =
+                                            // emerald. Do not "fix" this to the other ledger pages' convention.
+                                            line.balance >= 0
+                                                ? 'border border-black p-2 text-left text-rose-600 tabular-nums'
+                                                : 'border border-black p-2 text-left text-emerald-600 tabular-nums'
+                                        }
+                                    >
                                         {nf(line.balance)}
                                     </td>
                                 </tr>
@@ -117,7 +126,13 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                 >
                                     الرصيد الختامي
                                 </td>
-                                <td className="border border-black p-2 text-left tabular-nums">
+                                <td
+                                    className={
+                                        statement.closing >= 0
+                                            ? 'border border-black p-2 text-left text-rose-600 tabular-nums'
+                                            : 'border border-black p-2 text-left text-emerald-600 tabular-nums'
+                                    }
+                                >
                                     {nf(statement.closing)}
                                 </td>
                             </tr>

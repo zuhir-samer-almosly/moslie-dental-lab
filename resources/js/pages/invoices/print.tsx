@@ -24,7 +24,7 @@ export default function InvoicesPrint(props: InvoiceData) {
     return (
         <>
             <Head title="تقرير الفواتير" />
-            <main className="p-6">
+            <main className="print-invoice p-6">
                 <InvoiceReport {...props} />
             </main>
         </>

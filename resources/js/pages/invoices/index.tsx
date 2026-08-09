@@ -90,7 +90,7 @@ export default function InvoicesIndex(props: InvoiceData) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="الفواتير" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6 print:overflow-visible">
+            <div className="print-invoice flex h-full flex-1 flex-col gap-6 overflow-x-auto p-4 md:p-6 print:overflow-visible">
                 {/* Header */}
                 <div className="space-y-1 print:hidden">
                     <h1 className="text-2xl font-bold tracking-tight">

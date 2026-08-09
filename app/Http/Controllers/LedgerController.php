@@ -93,7 +93,14 @@ class LedgerController extends Controller
     /** كشف حساب — one dentist's receivable movements with a running balance. */
     public function statement(Request $request)
     {
-        return inertia('ledger/statement', $this->buildStatement($request));
+        return inertia('ledger/statement', [
+            ...$this->buildStatement($request),
+            // Only the authenticated page needs the picker list — the
+            // print-view/PDF path is reached over a signed URL with no auth
+            // boundary but the signature, so it gets just the one dentist
+            // buildStatement() already narrowed, not the whole roster.
+            'dentists' => Dentist::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -129,6 +136,12 @@ class LedgerController extends Controller
             ->addChromiumArguments(['disable-dev-shm-usage'])
             ->emulateMedia('print')
             ->format('A4')
+            // The print page has no `<main>` padding to fall back on (it's a
+            // bare div, not the invoice's layout), and puppeteer's actual
+            // default margin isn't something we can verify in this
+            // environment — so set it explicitly rather than trust a
+            // default. 15mm ~= the invoice's 1.5cm.
+            ->margins(15, 15, 15, 15)
             ->showBackground()
             ->waitUntilNetworkIdle(strict: false)
             ->timeout(120);
@@ -155,7 +168,7 @@ class LedgerController extends Controller
         );
     }
 
-    /** @return array{statement: array|null, dentist: Dentist|null, dentists: \Illuminate\Support\Collection, filters: array} */
+    /** @return array{statement: array|null, dentist: Dentist|null, filters: array} */
     private function buildStatement(Request $request): array
     {
         $dentistId = $request->integer('dentist_id') ?: null;
@@ -164,7 +177,11 @@ class LedgerController extends Controller
 
         // Narrowed to the two fields the page actually renders — the full
         // model carries price_list, phone and address, which have no
-        // business traveling into the signed print-view URL's payload.
+        // business traveling into the signed print-view URL's payload. The
+        // full dentist roster is narrower still: it isn't rendered by the
+        // print view/PDF at all, so it lives in statement() instead of here
+        // — shared here, it would ride along on every unauthenticated
+        // signed-URL request too.
         $dentist = $dentistId ? Dentist::find($dentistId, ['id', 'name']) : null;
 
         return [
@@ -172,7 +189,6 @@ class LedgerController extends Controller
                 ? $this->reports->dentistStatement($dentist->id, $from, $to)
                 : null,
             'dentist' => $dentist,
-            'dentists' => Dentist::orderBy('name')->get(['id', 'name']),
             'filters' => ['dentist_id' => $dentistId, 'from' => $from, 'to' => $to],
         ];
     }

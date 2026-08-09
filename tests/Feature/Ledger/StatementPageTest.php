@@ -74,6 +74,7 @@ test('the statement is scoped to the requested dentist and does not leak into an
         'from' => '2026-06-01',
         'to' => '2026-06-30',
     ]))
+        ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('statement.opening', 100000)
             ->has('statement.lines', 2)
@@ -86,6 +87,7 @@ test('the statement is scoped to the requested dentist and does not leak into an
         'from' => '2026-06-01',
         'to' => '2026-06-30',
     ]))
+        ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('statement.opening', 999000)
             ->has('statement.lines', 1)
@@ -189,6 +191,28 @@ test('the print view renders the statement component with the right data', funct
             ->where('statement.opening', 0)
             ->has('statement.lines', 3)
             ->where('statement.closing', 400000)
+        );
+});
+
+test('the print view does not carry the full dentist roster', function () {
+    // The picker list is only for the authenticated page's <select>; the
+    // print-view/PDF path is reached over a signed URL gated by nothing but
+    // the signature, so every other dentist's name has no business riding
+    // along in that payload.
+    Dentist::create(['name' => 'د. آخر']);
+
+    $signed = URL::temporarySignedRoute(
+        'ledger.statement.print-view',
+        now()->addMinutes(2),
+        ['dentist_id' => $this->dentist->id],
+        absolute: false,
+    );
+
+    $this->get($signed)
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('ledger/statement-print')
+            ->missing('dentists')
         );
 });
 

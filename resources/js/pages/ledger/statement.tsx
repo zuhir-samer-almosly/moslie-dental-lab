@@ -237,9 +237,14 @@ export default function Statement({
                                             </TableCell>
                                             <TableCell
                                                 className={
+                                                    // Inverted from every other ledger page on purpose: this is a
+                                                    // receivable statement, so a positive balance means the dentist
+                                                    // still OWES money (rose) and a negative one means they're in
+                                                    // credit / overpaid (emerald). Do not "fix" this to match
+                                                    // trial-balance/cash/journal — the user ruled on this explicitly.
                                                     line.balance >= 0
-                                                        ? 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
-                                                        : 'text-left text-rose-600 tabular-nums dark:text-rose-400'
+                                                        ? 'text-left text-rose-600 tabular-nums dark:text-rose-400'
+                                                        : 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
                                                 }
                                             >
                                                 {nf(line.balance)}
@@ -255,9 +260,10 @@ export default function Statement({
                                     </TableCell>
                                     <TableCell
                                         className={
+                                            // Same inversion as the per-line balance above: positive = owed = rose.
                                             statement.closing >= 0
-                                                ? 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
-                                                : 'text-left text-rose-600 tabular-nums dark:text-rose-400'
+                                                ? 'text-left text-rose-600 tabular-nums dark:text-rose-400'
+                                                : 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
                                         }
                                     >
                                         {nf(statement.closing)}
