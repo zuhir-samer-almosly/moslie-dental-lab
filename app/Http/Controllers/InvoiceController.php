@@ -6,6 +6,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use App\Support\InvoiceFilename;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
@@ -92,9 +93,15 @@ class InvoiceController extends Controller
 
         $contents = $browsershot->pdf();
 
+        $dentistId = $report['filters']['dentist_id'];
+
         return response()->streamDownload(
             fn () => print ($contents),
-            "فاتورة-{$report['filters']['from']}-{$report['filters']['to']}.pdf",
+            InvoiceFilename::for(
+                $dentistId ? $report['dentists']->firstWhere('id', (int) $dentistId) : null,
+                $report['filters']['from'],
+                $report['filters']['to'],
+            ),
             ['Content-Type' => 'application/pdf'],
         );
     }
