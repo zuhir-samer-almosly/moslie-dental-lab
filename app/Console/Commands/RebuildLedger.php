@@ -15,6 +15,7 @@ use App\Models\MaterialPurchase;
 use App\Models\Order;
 use Illuminate\Console\Command;
 use Illuminate\Console\ConfirmableTrait;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -189,7 +190,7 @@ class RebuildLedger extends Command
         }
 
         $ledger->post(
-            now()->toDateString(),
+            $this->openingDate(),
             'رصيد افتتاحي — رأس المال',
             $difference > 0
                 ? [
@@ -201,6 +202,32 @@ class RebuildLedger extends Command
                     Line::credit(AccountCode::CASH->value, -$difference),
                 ],
         );
+    }
+
+    /**
+     * The date an opening balance belongs on: the day before the earliest
+     * entry the rebuild just wrote.
+     *
+     * Dated `now()` instead — as this used to be — the capital injection
+     * arrives *after* every historical movement it is supposed to precede,
+     * so every as-of-month-end cash figure (FinanceController's رصيد الصندوق)
+     * reads the accumulated negative for every past month and then jumps by
+     * the whole injection in the current one. The money was in the box the
+     * whole time; only the entry is new.
+     *
+     * The day *before* the first movement rather than the day of it, so the
+     * opening balance sits outside every period a report can ask for rather
+     * than inside the first one — the ordinary accounting convention, and it
+     * keeps a first-day period movement report free of it. An empty ledger
+     * has no first movement to precede, so today is the floor.
+     */
+    private function openingDate(): string
+    {
+        $earliest = JournalEntry::min('entry_date');
+
+        return $earliest === null
+            ? now()->toDateString()
+            : Carbon::parse($earliest)->subDay()->toDateString();
     }
 
     /** Print the verification report and fail loudly if the books do not balance. */

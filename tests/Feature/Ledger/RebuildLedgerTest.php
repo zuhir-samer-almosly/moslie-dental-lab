@@ -1,6 +1,7 @@
 <?php
 
 use App\Ledger\Ledger;
+use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
@@ -10,6 +11,7 @@ use App\Models\JournalEntry;
 use App\Models\JournalLine;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
+use Illuminate\Support\Carbon;
 
 test('rebuild reproduces entries for every existing record', function () {
     $dentist = Dentist::create(['name' => 'د. سامي']);
@@ -129,6 +131,44 @@ test('cash-on-hand posts the difference to owner capital when counted cash is lo
 
     expect($cash)->toBe(50000);
     expect($capital)->toBe(-250000);
+});
+
+test('the opening capital entry is dated before the ledger starts, not today', function () {
+    // Pin "today" well after the fixture so the two candidate dates can never
+    // coincide: dated now() the entry would land in August, dated correctly
+    // it lands the day before the first movement, in May.
+    $this->travelTo(Carbon::parse('2026-08-09'));
+
+    // 40,000 out on 06-01 and nothing in leaves the cash box at -40,000.
+    Expense::create(['category' => 'rent', 'amount' => 40000, 'expense_date' => '2026-06-01']);
+
+    $this->artisan('ledger:rebuild', ['--cash-on-hand' => 10000])->assertSuccessful();
+
+    $capitalEntry = JournalEntry::query()
+        ->whereHas('lines.account', fn ($q) => $q->where('code', '3000'))
+        ->sole();
+
+    expect($capitalEntry->entry_date->toDateString())->toBe('2026-05-31');
+
+    // The figure that actually matters: the finance page reads the cash box
+    // as of a month end. Dated today, June would have shown the accumulated
+    // -40,000 and August would have jumped by the whole 50,000 injection —
+    // money that was in the box the whole time.
+    $reports = app(LedgerReports::class);
+
+    expect($reports->balance('1000', '2026-06-30'))->toBe(10000);
+    expect($reports->balance('1000', '2026-08-31'))->toBe(10000);
+});
+
+test('the opening capital entry falls back to today when the ledger is empty', function () {
+    // No source rows at all, so there is no first movement to sit before.
+    $this->artisan('ledger:rebuild', ['--cash-on-hand' => 10000])->assertSuccessful();
+
+    $capitalEntry = JournalEntry::query()
+        ->whereHas('lines.account', fn ($q) => $q->where('code', '3000'))
+        ->sole();
+
+    expect($capitalEntry->entry_date->toDateString())->toBe(now()->toDateString());
 });
 
 test('rebuild reports receivables matching the old outstanding formula', function () {
