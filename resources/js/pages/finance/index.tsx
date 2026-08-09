@@ -7,9 +7,9 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { MonthPicker } from '@/components/month-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -122,12 +122,7 @@ export default function FinanceIndex({
                         >
                             <ChevronRight className="size-4" />
                         </Button>
-                        <Input
-                            type="month"
-                            value={month}
-                            className="w-44"
-                            onChange={(e) => goToMonth(e.target.value)}
-                        />
+                        <MonthPicker value={month} onChange={goToMonth} />
                         <Button
                             variant="outline"
                             size="icon"

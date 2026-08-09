@@ -11,11 +11,11 @@ import {
 import { useState } from 'react';
 import { EmployeeFormDialog } from '@/components/employees/employee-form-dialog';
 import { SalaryFormDialog } from '@/components/employees/salary-form-dialog';
+import { MonthPicker } from '@/components/month-picker';
 import { formatDate } from '@/components/order-display';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -264,12 +264,7 @@ export default function EmployeesIndex({
                             >
                                 <ChevronRight className="size-4" />
                             </Button>
-                            <Input
-                                type="month"
-                                value={month}
-                                className="w-44"
-                                onChange={(e) => goToMonth(e.target.value)}
-                            />
+                            <MonthPicker value={month} onChange={goToMonth} />
                             <Button
                                 variant="outline"
                                 size="icon"
