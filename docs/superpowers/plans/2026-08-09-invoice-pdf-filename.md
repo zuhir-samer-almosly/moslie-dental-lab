@@ -65,7 +65,7 @@ it('keeps the generic name when no dentist is selected', function () {
 
 it('strips path separators and other filename-hostile characters', function () {
     expect(InvoiceFilename::for(dentistNamed('أحمد/علي: "ب"'), '2026-07-31', '2026-09-01'))
-        ->toBe('الدكتور أحمد علي ب 2026-07-31 - 2026-09-01.pdf');
+        ->toBe('الدكتور أحمد علي ب المحترم 2026-07-31 - 2026-09-01.pdf');
 });
 
 it('falls back to the generic name when the dentist name sanitizes to nothing', function () {
