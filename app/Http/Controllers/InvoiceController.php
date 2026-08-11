@@ -135,14 +135,21 @@ class InvoiceController extends Controller
         $openingByDentist = [];
 
         if ($from && $to) {
-            // Filter by the order's own date (due_date) and the payment's
-            // date, NOT created_at — an order can be entered today but dated
-            // for a different month, and it belongs in that month's invoice.
+            // due_date is always the EARLIEST of an order's item dates (see
+            // OrderController::store/update), so it's a valid necessary
+            // upper-bound prefilter — but not sufficient on its own: an
+            // order's other items can carry later dates that fall outside
+            // this period, or (when due_date itself precedes $from) it can
+            // still hold a later item that belongs inside this period. Both
+            // directions are resolved per item in scopeOrderToPeriod() below.
             $ordersQuery = Order::with(['dentist', 'items'])
                 ->billable()
-                ->whereBetween('due_date', [$from, $to])
+                ->where('due_date', '<=', $to)
                 ->orderBy('due_date');
 
+            // Filter payments by their own date, NOT created_at — a payment
+            // can be entered today but dated for a different month, and it
+            // belongs in that month's invoice.
             $paymentsQuery = DentistPayment::with('dentist')
                 ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
                 ->orderByRaw('COALESCE(payment_date, created_at)');
@@ -152,7 +159,10 @@ class InvoiceController extends Controller
                 $paymentsQuery->where('dentist_id', $dentistId);
             }
 
-            $orders = $ordersQuery->get();
+            $orders = $ordersQuery->get()
+                ->map(fn (Order $order) => $this->scopeOrderToPeriod($order, $from, $to))
+                ->filter()
+                ->values();
             $payments = $paymentsQuery->get();
 
             // Opening balance: what each dentist owed the day before this
@@ -177,7 +187,14 @@ class InvoiceController extends Controller
 
             $openingTotal = array_sum($openingByDentist);
 
-            $ordersTotal = $orders->sum('amount');
+            // Not `$orders->sum('amount')`: that's the whole order's total,
+            // but `$orders` here only holds the items actually in period —
+            // sum those instead, so the total agrees with what's displayed.
+            $ordersTotal = $orders->sum(
+                fn (Order $order) => $order->items->isEmpty()
+                    ? $order->amount
+                    : $order->items->sum(fn ($item) => $item->price * $item->quantity)
+            );
             $paymentsTotal = $payments->sum('amount');
 
             $totals = [
@@ -202,6 +219,39 @@ class InvoiceController extends Controller
                 'dentist_id' => $dentistId,
             ],
         ];
+    }
+
+    /**
+     * Scope an order to only the items whose own date falls in [$from, $to]
+     * — matching what the report actually displays per item, rather than
+     * treating the order's due_date (the earliest item date) as covering
+     * every item it has. Items without their own date fall back to the
+     * order's due_date, same as the frontend does when rendering. Orders
+     * with no items keep the due_date-only check that already applied
+     * before this order was fetched. Returns null when nothing in the
+     * order belongs to the period, so the caller can drop it.
+     */
+    private function scopeOrderToPeriod(Order $order, string $from, string $to): ?Order
+    {
+        if ($order->items->isEmpty()) {
+            return $order->due_date->between($from, $to) ? $order : null;
+        }
+
+        $matching = $order->items
+            ->filter(function ($item) use ($from, $to, $order) {
+                $date = $item->meta['date'] ?? $order->due_date->toDateString();
+
+                return $date >= $from && $date <= $to;
+            })
+            ->values();
+
+        if ($matching->isEmpty()) {
+            return null;
+        }
+
+        $order->setRelation('items', $matching);
+
+        return $order;
     }
 
     /**
