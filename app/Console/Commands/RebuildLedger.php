@@ -61,6 +61,16 @@ class RebuildLedger extends Command
         Expense::class => 'expense_date',
     ];
 
+    /**
+     * Relations a posting rule reads, eager-loaded so a rebuild does not run
+     * one query per row. OrderPosting splits an order across its items' dates.
+     *
+     * @var array<class-string, list<string>>
+     */
+    private const RELATIONS = [
+        Order::class => ['items'],
+    ];
+
     /** @var array<string, int> class_basename(model) => rows skipped for having no date */
     private array $skippedNoDate = [];
 
@@ -191,7 +201,7 @@ class RebuildLedger extends Command
         $skippedNoDate = 0;
         $skippedOther = 0;
 
-        $model::query()->orderBy('id')->chunkById(500, function ($rows) use ($ledger, $dateColumn, &$posted, &$skippedNoDate, &$skippedOther) {
+        $model::query()->with(self::RELATIONS[$model] ?? [])->orderBy('id')->chunkById(500, function ($rows) use ($ledger, $dateColumn, &$posted, &$skippedNoDate, &$skippedOther) {
             foreach ($rows as $row) {
                 // Ask the real posting rule, not a re-derived heuristic: a
                 // row that fails shouldPost() for a reason other than a null

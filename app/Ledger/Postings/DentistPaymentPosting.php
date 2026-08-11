@@ -5,6 +5,7 @@ namespace App\Ledger\Postings;
 use App\Ledger\AccountCode;
 use App\Ledger\Line;
 use App\Ledger\Posting;
+use App\Ledger\PostsOneEntry;
 use App\Models\DentistPayment;
 use Illuminate\Support\Carbon;
 
@@ -17,6 +18,8 @@ use Illuminate\Support\Carbon;
  */
 final class DentistPaymentPosting implements Posting
 {
+    use PostsOneEntry;
+
     public function __construct(private readonly DentistPayment $payment) {}
 
     public function shouldPost(): bool

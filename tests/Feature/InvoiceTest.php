@@ -214,6 +214,45 @@ test('an item inside the invoice period is included even though its order due_da
         );
 });
 
+test('an item billed inside the period is not also carried in the opening balance', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. مزدوج']);
+
+    // One order straddling two months: 700 of work in July, 300 in August.
+    // due_date is the earliest item date (2026-07-25).
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'قديم', 'quantity' => 1, 'price' => 700, 'date' => '2026-07-25', 'selected_teeth' => []],
+            ['type' => 'جديد', 'quantity' => 1, 'price' => 300, 'date' => '2026-08-02', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    // Billing August alone: only the July item has been earned before the
+    // period, so the opening balance is 700 — not the whole 1,000. The 300
+    // is listed as this period's work; counting it in BOTH lines bills it
+    // twice and the closing balance comes out at 1,300 instead of 1,000.
+    $this->get(route('invoices.index', ['from' => '2026-08-01', 'to' => '2026-08-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('totals.opening', 700)
+            ->where('openingByDentist.'.$dentist->id, 700)
+            ->where('totals.orders', 300)
+            ->where('totals.balance', 1000)
+        );
+
+    // And the closing balance must not depend on where the period starts:
+    // billing July+August together has to reach the same 1,000.
+    $this->get(route('invoices.index', ['from' => '2026-07-01', 'to' => '2026-08-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('totals.opening', 0)
+            ->where('totals.orders', 1000)
+            ->where('totals.balance', 1000)
+        );
+});
+
 test('invoice lines come back in date order, not the order the items were typed', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. ترتيب']);

@@ -24,8 +24,9 @@ class Ledger
 
     /**
      * Rewrite a source record's entries from its current state. The ledger
-     * mirrors what the records say now: an edit replaces the entry, a cancel
-     * removes it. The domain record remains the history of what happened.
+     * mirrors what the records say now: an edit replaces the entries, a
+     * cancel removes them. The domain record remains the history of what
+     * happened.
      */
     public function sync(Model $source): void
     {
@@ -38,7 +39,9 @@ class Ledger
                 return;
             }
 
-            $this->post($posting->date(), $posting->description(), $posting->lines(), $source);
+            foreach ($posting->entries() as $entry) {
+                $this->post($entry->date, $entry->description, $entry->lines, $source);
+            }
         });
     }
 

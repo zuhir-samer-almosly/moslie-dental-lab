@@ -5,12 +5,15 @@ namespace App\Ledger\Postings;
 use App\Ledger\AccountCode;
 use App\Ledger\Line;
 use App\Ledger\Posting;
+use App\Ledger\PostsOneEntry;
 use App\Models\EmployeePayment;
 use Illuminate\Support\Carbon;
 
 /** A salary payout: money leaves the cash box as a salary expense. */
 final class EmployeePaymentPosting implements Posting
 {
+    use PostsOneEntry;
+
     public function __construct(private readonly EmployeePayment $payment) {}
 
     public function shouldPost(): bool
