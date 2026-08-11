@@ -112,17 +112,13 @@ test('sync rolls back forget on posting failure', function () {
                     return true;
                 }
 
-                public function date(): string
+                public function entries(): array
                 {
-                    return '2026-06-02';
+                    return [new \App\Ledger\Entry('2026-06-02', 'test entry', $this->lines())];
                 }
 
-                public function description(): string
-                {
-                    return 'test entry';
-                }
-
-                public function lines(): array
+                /** @return list<\App\Ledger\Line> */
+                private function lines(): array
                 {
                     if ($this->shouldThrow) {
                         // Return an unbalanced posting: 500 debits != 1000 credits

@@ -5,11 +5,10 @@ namespace App\Http\Controllers;
 use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
-use App\Models\DentistPayment;
+use App\Ledger\LedgerReports;
 use App\Models\Order;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -17,17 +16,18 @@ class OrderController extends Controller
 {
     use ResolvesMonth;
 
+    public function __construct(private readonly LedgerReports $reports) {}
+
     /**
      * Display a listing of the resource for a given month.
      */
     public function index(Request $request)
     {
         $orders = Order::with(['dentist', 'items'])->latest()->get();
-        $payments = DentistPayment::all(['dentist_id', 'amount', 'payment_date', 'created_at']);
 
         // Compute carried balances against the FULL history first, so filtering
         // the visible list to one month below doesn't distort them.
-        $this->assignPreviousBalances($orders, $payments);
+        $this->assignPreviousBalances($orders);
 
         // Show one month at a time (consistent with the other ledgers) so the
         // list stays bounded regardless of how many orders exist overall.
@@ -51,65 +51,53 @@ class OrderController extends Controller
     }
 
     /**
-     * Attach each order's `previous_balance`: the dentist's outstanding balance
-     * carried in from BEFORE that order's date — their earlier billable orders
-     * minus their earlier payments.
+     * Attach each order's `previous_balance`: what the dentist already owed
+     * going into that order's date, read from the ledger's receivable account.
      *
-     * Done per dentist with a sorted two-pointer sweep (O(n log n)) rather than
-     * re-scanning the whole order/payment set for every order (O(n²)).
+     * Read rather than recomputed. Summing `orders.amount` by `due_date` here
+     * — as this used to — bills an earlier order whole on its earliest item
+     * date, so an order carrying a later item overstated every balance
+     * between the two: the 300 worked on 2/8 was counted against an order
+     * dated 28/7. The ledger posts each item on its own date (OrderPosting),
+     * so accumulating its daily movements gives the balance that actually
+     * stood on the day.
+     *
+     * Still one pass per dentist rather than a query per order: the movements
+     * come back once, already ordered, and a two-pointer sweep walks them
+     * alongside the orders (O(n log n)).
      *
      * @param  Collection<int, Order>  $orders
-     * @param  Collection<int, DentistPayment>  $payments
      */
-    private function assignPreviousBalances(Collection $orders, Collection $payments): void
+    private function assignPreviousBalances(Collection $orders): void
     {
-        $paymentsByDentist = $payments->groupBy('dentist_id');
+        $movements = $this->reports->receivableMovementsByDentist();
 
         foreach ($orders->groupBy('dentist_id') as $dentistId => $dentistOrders) {
-            // Billable order amounts and payment amounts as [ts, amount] events,
-            // each sorted ascending by date so a single forward pass suffices.
-            $orderEvents = $dentistOrders
-                ->reject(fn (Order $o) => $o->status === 'cancelled')
-                ->map(fn (Order $o) => ['ts' => $o->due_date->timestamp, 'amount' => (int) $o->amount])
-                ->sortBy('ts')
-                ->values()
-                ->all();
+            $byDate = ($movements[$dentistId] ?? collect())->all();
+            $dates = array_keys($byDate);
+            $amounts = array_values($byDate);
 
-            $paymentEvents = ($paymentsByDentist[$dentistId] ?? collect())
-                ->map(fn (DentistPayment $p) => [
-                    'ts' => Carbon::parse($p->payment_date ?? $p->created_at)->timestamp,
-                    'amount' => (int) $p->amount,
-                ])
-                ->sortBy('ts')
-                ->values()
-                ->all();
-
-            // Visit every order (including cancelled — they still show a carried
-            // balance) in ascending date order, accumulating everything that
-            // falls strictly before the current order's date.
-            $sortedOrders = $dentistOrders
-                ->sortBy(fn (Order $o) => $o->due_date->timestamp)
+            // Every order in date order, cancelled ones included: they post
+            // nothing themselves but still show what was owed before them.
+            // Both sides are bare `Y-m-d`, which sorts and compares as a date.
+            $sorted = $dentistOrders
+                ->sortBy(fn (Order $order) => $order->due_date->toDateString())
                 ->values();
 
-            $oi = 0;
-            $pi = 0;
-            $orderSum = 0;
-            $paymentSum = 0;
+            $i = 0;
+            $balance = 0;
 
-            foreach ($sortedOrders as $order) {
-                $cutoff = $order->due_date->timestamp;
+            foreach ($sorted as $order) {
+                // Strictly before: an order never counts itself, and orders
+                // sharing a date all carry the same balance in.
+                $cutoff = $order->due_date->toDateString();
 
-                while ($oi < count($orderEvents) && $orderEvents[$oi]['ts'] < $cutoff) {
-                    $orderSum += $orderEvents[$oi]['amount'];
-                    $oi++;
+                while ($i < count($dates) && $dates[$i] < $cutoff) {
+                    $balance += $amounts[$i];
+                    $i++;
                 }
 
-                while ($pi < count($paymentEvents) && $paymentEvents[$pi]['ts'] < $cutoff) {
-                    $paymentSum += $paymentEvents[$pi]['amount'];
-                    $pi++;
-                }
-
-                $order->previous_balance = $orderSum - $paymentSum;
+                $order->previous_balance = $balance;
             }
         }
     }

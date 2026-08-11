@@ -30,6 +30,26 @@ test('rebuild reproduces entries for every existing record', function () {
     expect(JournalEntry::count())->toBe(3);
 });
 
+test('rebuild splits an order across its item dates and keeps the books reconciled', function () {
+    $dentist = Dentist::create(['name' => 'د. ممتد']);
+    $order = Order::create(['dentist_id' => $dentist->id, 'due_date' => '2026-07-25', 'amount' => 1000, 'status' => 'pending']);
+    $order->items()->create(['type' => 'قديم', 'quantity' => 1, 'price' => 700, 'meta' => ['date' => '2026-07-25']]);
+    $order->items()->create(['type' => 'جديد', 'quantity' => 1, 'price' => 300, 'meta' => ['date' => '2026-08-02']]);
+
+    JournalEntry::query()->delete();
+
+    // The report compares ledger receivables against SUM(orders.amount) minus
+    // payments and fails the command if they disagree — a split order must
+    // still add up to its own amount.
+    $this->artisan('ledger:rebuild')->assertSuccessful();
+
+    expect(JournalEntry::where('source_id', $order->id)->count())->toBe(2);
+
+    $reports = app(LedgerReports::class);
+    expect($reports->receivablesByDentist('2026-07-31')[$dentist->id] ?? 0)->toBe(700);
+    expect($reports->receivablesByDentist()[$dentist->id] ?? 0)->toBe(1000);
+});
+
 test('rebuild is idempotent and produces byte-identical entries on rerun', function () {
     $dentist = Dentist::create(['name' => 'د. سامي']);
     $employee = Employee::factory()->create();

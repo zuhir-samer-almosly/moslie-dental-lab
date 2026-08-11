@@ -5,12 +5,15 @@ namespace App\Ledger\Postings;
 use App\Ledger\AccountCode;
 use App\Ledger\Line;
 use App\Ledger\Posting;
+use App\Ledger\PostsOneEntry;
 use App\Models\MaterialPurchase;
 use Illuminate\Support\Carbon;
 
 /** A material purchase: money leaves the cash box as a materials expense. */
 final class MaterialPurchasePosting implements Posting
 {
+    use PostsOneEntry;
+
     public function __construct(private readonly MaterialPurchase $purchase) {}
 
     public function shouldPost(): bool

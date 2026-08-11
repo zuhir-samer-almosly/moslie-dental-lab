@@ -5,6 +5,7 @@ namespace App\Ledger\Postings;
 use App\Ledger\AccountCode;
 use App\Ledger\Line;
 use App\Ledger\Posting;
+use App\Ledger\PostsOneEntry;
 use App\Models\Account;
 use App\Models\Expense;
 use Illuminate\Support\Carbon;
@@ -16,6 +17,8 @@ use Illuminate\Support\Carbon;
  */
 final class ExpensePosting implements Posting
 {
+    use PostsOneEntry;
+
     /** Account code used when a category has no matching account. */
     private const FALLBACK = '5290'; // أخرى
 
