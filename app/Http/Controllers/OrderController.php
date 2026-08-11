@@ -35,13 +35,39 @@ class OrderController extends Controller
         $end = $month->copy()->endOfMonth();
 
         $visible = $orders
-            ->filter(fn (Order $o) => $o->due_date->between($start, $end))
+            ->filter(fn (Order $o) => $this->orderTouchesMonth($o, $start, $end))
             ->values();
 
         return inertia('orders/index', [
             'orders' => $visible,
             'month' => $month->format('Y-m'),
         ]);
+    }
+
+    /**
+     * Whether an order belongs on this month's list: any item's own date
+     * (falling back to the order's due_date when an item has none) falls
+     * inside [$start, $end], or — for an itemless order — its due_date does.
+     *
+     * due_date alone isn't enough: it's always the EARLIEST of the order's
+     * item dates (see store()/update() below), so an order whose items span
+     * more than one month would otherwise only ever show up in the earliest
+     * month, hiding its later items from their own month's list. This can
+     * make one order appear on two months' lists — deliberately: this page
+     * shows the whole order (every item, one edit/delete action) as a unit,
+     * so it belongs wherever any of its items do.
+     */
+    private function orderTouchesMonth(Order $order, Carbon $start, Carbon $end): bool
+    {
+        if ($order->items->isEmpty()) {
+            return $order->due_date->between($start, $end);
+        }
+
+        return $order->items->contains(function ($item) use ($start, $end, $order) {
+            $date = $item->meta['date'] ?? $order->due_date->toDateString();
+
+            return Carbon::parse($date)->between($start, $end);
+        });
     }
 
     /**

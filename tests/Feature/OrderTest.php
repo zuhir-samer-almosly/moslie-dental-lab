@@ -153,6 +153,36 @@ test('the orders list is scoped to the selected month but balances reflect prior
         );
 });
 
+test('an order spanning two months appears, with all its items, on both months lists', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. ممتد']);
+
+    // due_date is the earliest item date (June), but the second item is
+    // dated in July — it must not be hidden from July's list.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'زركون', 'quantity' => 1, 'price' => 1000, 'date' => '2026-06-28', 'selected_teeth' => []],
+            ['type' => 'ليزر', 'quantity' => 1, 'price' => 500, 'date' => '2026-07-03', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->get(route('orders.index', ['month' => '2026-06']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 2)
+        );
+
+    $this->get(route('orders.index', ['month' => '2026-07']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 2)
+        );
+});
+
 test('deleting an order removes it', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. حذف']);

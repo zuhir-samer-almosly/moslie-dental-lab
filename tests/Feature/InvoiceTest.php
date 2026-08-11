@@ -163,6 +163,57 @@ test('invoice opening totals and the per-dentist map agree, and a credit balance
         );
 });
 
+test('an item outside the invoice period is excluded even though its order due_date is inside it', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. متعدد']);
+
+    // due_date is derived as the EARLIEST item date (2026-08-01), but the
+    // order also has an item dated 2026-08-07 — outside a 1st-4th filter.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'زركون', 'quantity' => 1, 'price' => 1000, 'date' => '2026-08-01', 'selected_teeth' => []],
+            ['type' => 'ليزر', 'quantity' => 1, 'price' => 500, 'date' => '2026-08-07', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->get(route('invoices.index', ['from' => '2026-08-01', 'to' => '2026-08-04']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 1)
+            ->where('orders.0.items.0.type', 'زركون')
+            ->where('totals.orders', 1000)
+        );
+});
+
+test('an item inside the invoice period is included even though its order due_date is before it', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. لاحق']);
+
+    // due_date is the earliest item date (2026-07-25), well before the
+    // filtered period — but a later item on the same order (2026-08-02)
+    // belongs inside it and must still show up.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'قديم', 'quantity' => 1, 'price' => 700, 'date' => '2026-07-25', 'selected_teeth' => []],
+            ['type' => 'جديد', 'quantity' => 1, 'price' => 300, 'date' => '2026-08-02', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->get(route('invoices.index', ['from' => '2026-08-01', 'to' => '2026-08-05']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 1)
+            ->where('orders.0.items.0.type', 'جديد')
+            ->where('totals.orders', 300)
+        );
+});
+
 test('guests cannot access invoices', function () {
     $this->get(route('invoices.index'))->assertRedirect(route('login'));
 });
