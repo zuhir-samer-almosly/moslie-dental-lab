@@ -153,6 +153,61 @@ test('the orders list is scoped to the selected month but balances reflect prior
         );
 });
 
+test('a previous balance counts only the work done before the order, not whole earlier orders', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. متداخل']);
+
+    // An earlier order whose due_date (25/7, its earliest item) precedes the
+    // one below, but whose second item is worked AFTER it.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'أ-تموز', 'quantity' => 1, 'price' => 700, 'date' => '2026-07-25', 'selected_teeth' => []],
+            ['type' => 'أ-آب', 'quantity' => 1, 'price' => 300, 'date' => '2026-08-02', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'ب', 'quantity' => 1, 'price' => 500, 'date' => '2026-07-28', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    // On 28/7 the dentist owes 700 — the other 300 has not been worked yet.
+    // Counting the earlier order whole would say 1,000.
+    $this->get(route('orders.index', ['month' => '2026-07']))
+        ->assertOk()
+        ->assertInertia(function ($page) {
+            $page->has('orders', 2);
+
+            $orders = collect($page->toArray()['props']['orders']);
+
+            expect($orders->firstWhere('items.0.type', 'ب')['previous_balance'])->toBe(700);
+            expect($orders->firstWhere('items.0.type', 'أ-تموز')['previous_balance'])->toBe(0);
+        });
+});
+
+test('previous balances come from the ledger, not recomputed from the domain tables', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. دفتر']);
+
+    seedOrder($dentist->id, 80000, '2026-04-10', '2026-04-10 09:00:00');
+    seedOrder($dentist->id, 20000, '2026-05-10', '2026-05-10 09:00:00');
+
+    // Wipe the ledger and the carried balance must go with it, even though
+    // the orders and payments rows are untouched.
+    \App\Models\JournalEntry::query()->delete();
+
+    $this->get(route('orders.index', ['month' => '2026-05']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('orders.0.previous_balance', 0));
+
+    expect(Order::count())->toBe(2);
+});
+
 test('an order spanning two months shows each month only its own items', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. ممتد']);

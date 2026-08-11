@@ -44,6 +44,31 @@ class LedgerReports
     }
 
     /**
+     * Net receivable movement per dentist per day: how much each dentist's
+     * balance changed on every date anything happened to it, oldest first.
+     *
+     * `receivablesByDentist($asOf)` answers the same question for ONE cutoff
+     * date. Callers that need many cutoffs — a list carrying every order the
+     * balance that stood before it — would otherwise run a query per row;
+     * this returns the movements once, for the caller to accumulate.
+     *
+     * @return Collection<int, Collection<string, int>> dentist_id => [`Y-m-d` => net change]
+     */
+    public function receivableMovementsByDentist(): Collection
+    {
+        return $this->linesForAccount(AccountCode::RECEIVABLE->value)
+            ->whereNotNull('journal_lines.dentist_id')
+            ->groupBy('journal_lines.dentist_id', 'journal_entries.entry_date')
+            ->orderBy('journal_entries.entry_date')
+            ->selectRaw('journal_lines.dentist_id, journal_entries.entry_date, COALESCE(SUM(journal_lines.debit),0) - COALESCE(SUM(journal_lines.credit),0) as movement')
+            ->get()
+            ->groupBy('dentist_id')
+            ->map(fn (Collection $rows) => $rows->mapWithKeys(
+                fn ($row) => [$row->entry_date => (int) $row->movement],
+            ));
+    }
+
+    /**
      * Total of entries in the range that debit one account and credit
      * another. Every entry this app writes has exactly two lines, so this
      * isolates one specific kind of movement — cash in from dentists, say,
