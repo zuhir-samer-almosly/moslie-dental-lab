@@ -143,6 +143,22 @@ export function dentistHonorific(gender: 'male' | 'female'): {
 }
 
 /**
+ * The date a printed line sorts and displays under: the item's own date,
+ * falling back to its order's date when the item carries none — the same
+ * fallback the row itself renders.
+ *
+ * Returns an ISO `yyyy-mm-dd` string, which sorts lexicographically, so
+ * plain string comparison orders these correctly.
+ */
+function rowDate({ order, item }: { order: Order; item: OrderItem | null }) {
+    const value = (item ? itemDate(item) : '') || order.due_date || '';
+
+    // `due_date` serialises as a full ISO timestamp while an item's own date
+    // is a bare yyyy-mm-dd; truncating puts both on the same footing.
+    return value.slice(0, 10);
+}
+
+/**
  * Build a per-dentist statement: previous (opening) balance carried from
  * earlier months + this period's orders − this period's payments = amount due.
  * Dentists with only a carried-over balance (no new orders) still appear.
@@ -214,6 +230,11 @@ export function groupByDentist(
 
     for (const group of map.values()) {
         group.due = group.opening + group.ordersTotal - group.paymentsTotal;
+        // Sort the whole dentist's lines by date, ACROSS orders. Sorting
+        // inside each order isn't enough here: a dentist's rows are several
+        // orders concatenated in due_date order, so a short later order
+        // still printed its lines below a long earlier one that ran past it.
+        group.rows.sort((a, b) => rowDate(a).localeCompare(rowDate(b)));
     }
 
     return [...map.values()];

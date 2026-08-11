@@ -92,7 +92,17 @@ export default function OrdersIndex({
         (sum, order) => sum + (order.items?.length ?? 0),
         0,
     );
-    const totalAmount = filtered.reduce((sum, order) => sum + order.amount, 0);
+    // Sum the visible ITEMS, not `order.amount`: the server sends only the
+    // items dated in the selected month, so an order's full amount would
+    // count work billed to a different month.
+    const totalAmount = filtered.reduce(
+        (sum, order) =>
+            sum +
+            (order.items?.length
+                ? order.items.reduce((n, item) => n + itemAmount(item), 0)
+                : order.amount),
+        0,
+    );
 
     const segments: { key: StatusFilter; label: string }[] = [
         { key: 'all', label: 'الكل' },
