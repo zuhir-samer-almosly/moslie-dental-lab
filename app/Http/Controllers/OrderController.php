@@ -7,6 +7,7 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -34,40 +35,19 @@ class OrderController extends Controller
         $start = $month->copy()->startOfMonth();
         $end = $month->copy()->endOfMonth();
 
+        // Scope to the items dated in this month, not to whole orders: an
+        // order's due_date is only its EARLIEST item date, so matching on it
+        // alone both drags an order's later-dated items into this month and
+        // hides an order whose earliest item fell in an earlier one.
         $visible = $orders
-            ->filter(fn (Order $o) => $this->orderTouchesMonth($o, $start, $end))
+            ->map(fn (Order $o) => OrderPeriod::scope($o, $start->toDateString(), $end->toDateString()))
+            ->filter()
             ->values();
 
         return inertia('orders/index', [
             'orders' => $visible,
             'month' => $month->format('Y-m'),
         ]);
-    }
-
-    /**
-     * Whether an order belongs on this month's list: any item's own date
-     * (falling back to the order's due_date when an item has none) falls
-     * inside [$start, $end], or — for an itemless order — its due_date does.
-     *
-     * due_date alone isn't enough: it's always the EARLIEST of the order's
-     * item dates (see store()/update() below), so an order whose items span
-     * more than one month would otherwise only ever show up in the earliest
-     * month, hiding its later items from their own month's list. This can
-     * make one order appear on two months' lists — deliberately: this page
-     * shows the whole order (every item, one edit/delete action) as a unit,
-     * so it belongs wherever any of its items do.
-     */
-    private function orderTouchesMonth(Order $order, Carbon $start, Carbon $end): bool
-    {
-        if ($order->items->isEmpty()) {
-            return $order->due_date->between($start, $end);
-        }
-
-        return $order->items->contains(function ($item) use ($start, $end, $order) {
-            $date = $item->meta['date'] ?? $order->due_date->toDateString();
-
-            return Carbon::parse($date)->between($start, $end);
-        });
     }
 
     /**

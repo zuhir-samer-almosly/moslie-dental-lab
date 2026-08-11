@@ -214,6 +214,31 @@ test('an item inside the invoice period is included even though its order due_da
         );
 });
 
+test('invoice lines come back in date order, not the order the items were typed', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. ترتيب']);
+
+    // Typed out of order — a 2/8 item entered last, after the 5/8 one.
+    // It must not print at the bottom of the invoice.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'أول', 'quantity' => 1, 'price' => 100, 'date' => '2026-08-01', 'selected_teeth' => []],
+            ['type' => 'خامس', 'quantity' => 1, 'price' => 100, 'date' => '2026-08-05', 'selected_teeth' => []],
+            ['type' => 'ثاني', 'quantity' => 1, 'price' => 100, 'date' => '2026-08-02', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->get(route('invoices.index', ['from' => '2026-08-01', 'to' => '2026-08-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('orders.0.items.0.meta.date', '2026-08-01')
+            ->where('orders.0.items.1.meta.date', '2026-08-02')
+            ->where('orders.0.items.2.meta.date', '2026-08-05')
+        );
+});
+
 test('guests cannot access invoices', function () {
     $this->get(route('invoices.index'))->assertRedirect(route('login'));
 });

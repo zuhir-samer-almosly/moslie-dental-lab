@@ -7,6 +7,7 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
 use App\Support\InvoiceFilename;
+use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
@@ -141,7 +142,7 @@ class InvoiceController extends Controller
             // order's other items can carry later dates that fall outside
             // this period, or (when due_date itself precedes $from) it can
             // still hold a later item that belongs inside this period. Both
-            // directions are resolved per item in scopeOrderToPeriod() below.
+            // directions are resolved per item by OrderPeriod::scope().
             $ordersQuery = Order::with(['dentist', 'items'])
                 ->billable()
                 ->where('due_date', '<=', $to)
@@ -160,7 +161,7 @@ class InvoiceController extends Controller
             }
 
             $orders = $ordersQuery->get()
-                ->map(fn (Order $order) => $this->scopeOrderToPeriod($order, $from, $to))
+                ->map(fn (Order $order) => OrderPeriod::scope($order, $from, $to))
                 ->filter()
                 ->values();
             $payments = $paymentsQuery->get();
@@ -219,39 +220,6 @@ class InvoiceController extends Controller
                 'dentist_id' => $dentistId,
             ],
         ];
-    }
-
-    /**
-     * Scope an order to only the items whose own date falls in [$from, $to]
-     * — matching what the report actually displays per item, rather than
-     * treating the order's due_date (the earliest item date) as covering
-     * every item it has. Items without their own date fall back to the
-     * order's due_date, same as the frontend does when rendering. Orders
-     * with no items keep the due_date-only check that already applied
-     * before this order was fetched. Returns null when nothing in the
-     * order belongs to the period, so the caller can drop it.
-     */
-    private function scopeOrderToPeriod(Order $order, string $from, string $to): ?Order
-    {
-        if ($order->items->isEmpty()) {
-            return $order->due_date->between($from, $to) ? $order : null;
-        }
-
-        $matching = $order->items
-            ->filter(function ($item) use ($from, $to, $order) {
-                $date = $item->meta['date'] ?? $order->due_date->toDateString();
-
-                return $date >= $from && $date <= $to;
-            })
-            ->values();
-
-        if ($matching->isEmpty()) {
-            return null;
-        }
-
-        $order->setRelation('items', $matching);
-
-        return $order;
     }
 
     /**
