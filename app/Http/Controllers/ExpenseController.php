@@ -6,6 +6,7 @@ use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreExpenseRequest;
 use App\Http\Requests\UpdateExpenseRequest;
 use App\Models\Expense;
+use App\Money\Rate;
 use Illuminate\Http\Request;
 
 class ExpenseController extends Controller
@@ -40,7 +41,9 @@ class ExpenseController extends Controller
      */
     public function create()
     {
-        return inertia('expenses/create');
+        return inertia('expenses/create', [
+            'todayRate' => Rate::on(now()->toDateString()),
+        ]);
     }
 
     /**
@@ -48,7 +51,11 @@ class ExpenseController extends Controller
      */
     public function store(StoreExpenseRequest $request)
     {
-        Expense::create($request->validated());
+        $expense = Expense::create($request->payload());
+
+        if ($expense->isForeign()) {
+            Rate::remember($expense->expense_date, $expense->rate);
+        }
 
         return redirect()->route('expenses.index')
             ->with('success', 'تم تسجيل المصروف بنجاح');
@@ -61,6 +68,7 @@ class ExpenseController extends Controller
     {
         return inertia('expenses/edit', [
             'expense' => $expense,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -69,7 +77,11 @@ class ExpenseController extends Controller
      */
     public function update(UpdateExpenseRequest $request, Expense $expense)
     {
-        $expense->update($request->validated());
+        $expense->update($request->payload());
+
+        if ($expense->isForeign()) {
+            Rate::remember($expense->expense_date, $expense->rate);
+        }
 
         return redirect()->route('expenses.index')
             ->with('success', 'تم تحديث المصروف بنجاح');

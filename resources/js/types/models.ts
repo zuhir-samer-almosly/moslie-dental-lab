@@ -4,7 +4,15 @@ export interface Dentist {
     gender: 'male' | 'female';
     phone: string | null;
     address: string | null;
-    price_list: Record<string, number> | null;
+    /**
+     * A dentist's own prices. `price` is in the natural unit of its currency:
+     * whole lira for SYP, cents for USD. A dollar price is a quote — it
+     * converts to lira at the day's rate when an order uses it.
+     */
+    price_list: Record<
+        string,
+        { price: number; currency: 'SYP' | 'USD' }
+    > | null;
     created_at: string;
     updated_at: string;
 }
@@ -30,7 +38,13 @@ export interface OrderItem {
     order_id: number;
     type: string;
     quantity: number;
+    /** Always lira. Derived from the fields below when the quote was in dollars. */
     price: number;
+    currency?: 'SYP' | 'USD';
+    /** US cents, when the dentist's price list quoted this work type in dollars. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day the order used the quote. */
+    rate?: string | null;
     notes: string | null;
     meta: Record<string, unknown> | null;
     created_at: string;
@@ -41,7 +55,14 @@ export interface DentistPayment {
     id: number;
     dentist_id: number;
     dentist?: Dentist;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the payment. */
+    rate?: string | null;
     payment_date?: string;
     created_at: string;
     updated_at: string;
@@ -63,7 +84,14 @@ export interface EmployeePayment {
     id: number;
     employee_id: number;
     employee?: Employee;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     payment_date?: string;
     notes: string | null;
     created_at: string;
@@ -75,7 +103,14 @@ export interface MaterialPurchase {
     name: string;
     supplier: string | null;
     quantity: string | null;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     purchase_date?: string;
     notes: string | null;
     created_at: string;
@@ -86,7 +121,14 @@ export interface Expense {
     id: number;
     category: string;
     description: string | null;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     expense_date?: string;
     notes: string | null;
     created_at: string;

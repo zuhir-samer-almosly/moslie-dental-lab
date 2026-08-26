@@ -1,3 +1,5 @@
+import ApproxUsd from '@/components/money/approx-usd';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import {
     Dash,
     formatDate,
@@ -15,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { formatRate, formatSyp, formatUsd } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { Dentist, DentistPayment, Order, OrderItem } from '@/types';
 
@@ -49,6 +52,8 @@ export type InvoiceData = {
     } | null;
     openingByDentist: Record<string, number>;
     dentists: Dentist[];
+    /** The rate on the period's last day, for reading the totals in dollars. */
+    closingRate: string | null;
     filters: {
         from: string | null;
         to: string | null;
@@ -150,6 +155,41 @@ export function dentistHonorific(gender: 'male' | 'female'): {
  * Returns an ISO `yyyy-mm-dd` string, which sorts lexicographically, so
  * plain string comparison orders these correctly.
  */
+/**
+ * What a payment was handed over as, for the invoice the dentist reads.
+ *
+ * Two $100 payments a fortnight apart land on different lira figures, and
+ * without this the invoice just shows two unequal numbers with no reason
+ * given. Naming the rate beside the dollars is what makes the total arguable
+ * — the dentist can check it against the day he paid.
+ *
+ * The number spans are forced `dir="ltr"`: the invoice is RTL, and the bidi
+ * algorithm otherwise drags the dollar sign away from its digits.
+ */
+function PaymentOrigin({ payment }: { payment: DentistPayment }) {
+    if (
+        payment.currency !== 'USD' ||
+        payment.original_amount === null ||
+        payment.original_amount === undefined ||
+        payment.rate === null ||
+        payment.rate === undefined
+    ) {
+        return <Dash />;
+    }
+
+    return (
+        <span className="whitespace-nowrap">
+            <span dir="ltr" className="font-medium tabular-nums">
+                ${formatUsd(payment.original_amount)}
+            </span>
+            {' بسعر '}
+            <span dir="ltr" className="tabular-nums">
+                {formatRate(payment.rate)}
+            </span>
+        </span>
+    );
+}
+
 function rowDate({ order, item }: { order: Order; item: OrderItem | null }) {
     const value = (item ? itemDate(item) : '') || order.due_date || '';
 
@@ -247,12 +287,18 @@ export function InvoiceReport({
     openingByDentist,
     dentists,
     filters,
+    closingRate,
 }: InvoiceData) {
     if (!orders || !payments || !totals) {
         return null;
     }
 
     const groups = groupByDentist(orders, payments, openingByDentist, dentists);
+    // Only widen the table when there is something to put in the column, so an
+    // all-lira invoice looks exactly as it always did.
+    const hasForeignPayment = payments.some(
+        (payment) => payment.currency === 'USD',
+    );
 
     return (
         <div className="space-y-6">
@@ -351,17 +397,18 @@ export function InvoiceReport({
                                                                 />
                                                             </TableCell>
                                                             <TableCell className="whitespace-nowrap tabular-nums">
-                                                                {(
+                                                                {formatSyp(
                                                                     item.price ??
-                                                                    0
-                                                                ).toLocaleString(
-                                                                    'en-US',
+                                                                        0,
                                                                 )}{' '}
                                                                 <span className="text-muted-foreground">
                                                                     ×{' '}
                                                                     {item.quantity ??
                                                                         0}
                                                                 </span>
+                                                                <ForeignOrigin
+                                                                    money={item}
+                                                                />
                                                             </TableCell>
                                                             <TableCell className="tabular-nums">
                                                                 {itemAmount(
@@ -468,13 +515,16 @@ export function InvoiceReport({
                             <TableRow>
                                 <TableHead>التاريخ</TableHead>
                                 <TableHead>المبلغ</TableHead>
+                                {hasForeignPayment && (
+                                    <TableHead>التفاصيل</TableHead>
+                                )}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {payments.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={2}
+                                        colSpan={hasForeignPayment ? 3 : 2}
                                         className="text-center"
                                     >
                                         لا توجد مدفوعات
@@ -495,10 +545,15 @@ export function InvoiceReport({
                                                 PAYMENT_TONE,
                                             )}
                                         >
-                                            {payment.amount.toLocaleString(
-                                                'en-US',
-                                            )}
+                                            {formatSyp(payment.amount)}
                                         </TableCell>
+                                        {hasForeignPayment && (
+                                            <TableCell className="text-muted-foreground">
+                                                <PaymentOrigin
+                                                    payment={payment}
+                                                />
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             )}
@@ -547,10 +602,16 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between border-t pt-2">
                         <span className="font-bold">الإجمالي المستحق:</span>
-                        <DueAmount
-                            value={totals.balance}
-                            className="text-lg font-bold"
-                        />
+                        <span className="flex flex-col items-end">
+                            <DueAmount
+                                value={totals.balance}
+                                className="text-lg font-bold"
+                            />
+                            <ApproxUsd
+                                syp={totals.balance}
+                                rate={closingRate}
+                            />
+                        </span>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,9 @@
 import { useForm } from '@inertiajs/react';
 import { useEffect } from 'react';
 import InputError from '@/components/input-error';
+import CurrencyAmountField, {
+    type CurrencyAmount,
+} from '@/components/money/currency-amount-field';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
@@ -12,7 +15,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { Employee, EmployeePayment } from '@/types';
@@ -25,12 +27,14 @@ export function SalaryFormDialog({
     employees,
     payment,
     presetEmployeeId,
+    todayRate,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     employees: Employee[];
     payment?: EmployeePayment | null;
     presetEmployeeId?: number | null;
+    todayRate: string | null;
 }) {
     const isEdit = Boolean(payment);
 
@@ -42,6 +46,9 @@ export function SalaryFormDialog({
         useForm({
             employee_id: '',
             amount: '',
+            currency: 'SYP' as CurrencyAmount['currency'],
+            original_amount: '',
+            rate: '',
             payment_date: today(),
             notes: '',
         });
@@ -54,6 +61,15 @@ export function SalaryFormDialog({
             setData({
                 employee_id: payment.employee_id.toString(),
                 amount: payment.amount.toString(),
+                currency: (payment.currency ??
+                    'SYP') as CurrencyAmount['currency'],
+                // Stored in cents; the field edits whole dollars.
+                original_amount:
+                    payment.original_amount === null ||
+                    payment.original_amount === undefined
+                        ? ''
+                        : (payment.original_amount / 100).toFixed(2),
+                rate: payment.rate ?? '',
                 payment_date: payment.payment_date ?? today(),
                 notes: payment.notes ?? '',
             });
@@ -113,18 +129,15 @@ export function SalaryFormDialog({
                         <InputError message={errors.employee_id} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="amount">المبلغ</Label>
-                        <Input
-                            id="amount"
-                            type="number"
-                            min="1"
-                            value={data.amount}
-                            onChange={(e) => setData('amount', e.target.value)}
-                            required
-                        />
-                        <InputError message={errors.amount} />
-                    </div>
+                    <CurrencyAmountField
+                        label="المبلغ"
+                        value={data}
+                        onChange={(patch) =>
+                            setData((prev) => ({ ...prev, ...patch }))
+                        }
+                        errors={errors}
+                        todayRate={todayRate}
+                    />
 
                     <div className="grid gap-2">
                         <Label htmlFor="payment_date">التاريخ</Label>

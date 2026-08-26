@@ -14,11 +14,17 @@ import type { Dentist } from '@/types';
 /** A new dentist starts from the default work types; an existing one from theirs. */
 const toRows = (dentist?: Dentist | null): PriceRow[] =>
     dentist
-        ? Object.entries(dentist.price_list ?? {}).map(([name, price]) => ({
-            name,
-            price,
-        }))
-        : DEFAULT_WORK_TYPES.map((name) => ({ name, price: 0 }));
+        ? Object.entries(dentist.price_list ?? {}).map(([name, entry]) => ({
+              name,
+              // Dollar prices are stored in cents; the row edits whole dollars.
+              price: entry.currency === 'USD' ? entry.price / 100 : entry.price,
+              currency: entry.currency,
+          }))
+        : DEFAULT_WORK_TYPES.map((name) => ({
+              name,
+              price: 0,
+              currency: 'SYP' as const,
+          }));
 
 /**
  * The one dentist form in the app. Rendered three ways: the standalone
@@ -69,7 +75,16 @@ export default function DentistForm({
         price_list: Object.fromEntries(
             payload.price_list
                 .filter((row) => row.name.trim() !== '')
-                .map((row) => [row.name.trim(), row.price]),
+                .map((row) => [
+                    row.name.trim(),
+                    {
+                        price:
+                            row.currency === 'USD'
+                                ? Math.round(row.price * 100)
+                                : Math.round(row.price),
+                        currency: row.currency,
+                    },
+                ]),
         ),
         // Only the standalone pages want to land on the list afterwards; the
         // dialogs must stay on whatever page they opened over.
@@ -127,7 +142,7 @@ export default function DentistForm({
             <div className="grid gap-2">
                 <Label>الجنس *</Label>
                 <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex cursor-pointer items-center gap-2">
                         <input
                             type="radio"
                             name="gender"
@@ -138,7 +153,7 @@ export default function DentistForm({
                         />
                         <span>ذكر</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex cursor-pointer items-center gap-2">
                         <input
                             type="radio"
                             name="gender"

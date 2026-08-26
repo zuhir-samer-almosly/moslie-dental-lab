@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { useEffect } from 'react';
+import ForeignOrigin from '@/components/money/foreign-origin';
 
 /**
  * The bare statement document, with no app chrome around it — this is the
@@ -16,6 +17,10 @@ type StatementLine = {
     debit: number;
     credit: number;
     balance: number;
+    /** What the money was handed over as. Only payments carry a conversion. */
+    currency?: 'SYP' | 'USD';
+    original_amount?: number | null;
+    rate?: string | null;
 };
 
 type Props = {
@@ -102,6 +107,7 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                     </td>
                                     <td className="border border-black p-2 text-left tabular-nums">
                                         {line.credit > 0 ? nf(line.credit) : ''}
+                                        <ForeignOrigin money={line} />
                                     </td>
                                     <td
                                         className={

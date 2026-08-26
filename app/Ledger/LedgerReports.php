@@ -3,6 +3,7 @@
 namespace App\Ledger;
 
 use App\Models\Account;
+use App\Models\DentistPayment;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -255,12 +256,23 @@ class LedgerReports
             ->when($to, fn ($q) => $q->where('journal_entries.entry_date', '<=', $to))
             ->orderBy('journal_entries.entry_date')
             ->orderBy('journal_lines.id')
+            // What the money was handed over as, for the lines where a single
+            // answer exists. Only payments qualify: an order's entry
+            // aggregates its items, which may be quoted in different
+            // currencies, so no one pair of dollars-and-rate describes it.
+            ->leftJoin('dentist_payments', function ($join) {
+                $join->on('dentist_payments.id', '=', 'journal_entries.source_id')
+                    ->where('journal_entries.source_type', '=', (new DentistPayment)->getMorphClass());
+            })
             ->select(
                 'journal_lines.id',
                 'journal_entries.entry_date',
                 'journal_entries.description',
                 'journal_lines.debit',
                 'journal_lines.credit',
+                'dentist_payments.currency',
+                'dentist_payments.original_amount',
+                'dentist_payments.rate',
             )
             ->get()
             ->map(function ($row) use (&$running) {
@@ -273,6 +285,17 @@ class LedgerReports
                     'debit' => (int) $row->debit,
                     'credit' => (int) $row->credit,
                     'balance' => $running,
+                    // A line with no payment behind it is lira by definition:
+                    // the lira is the currency of record.
+                    'currency' => $row->currency ?? 'SYP',
+                    'original_amount' => $row->original_amount === null ? null : (int) $row->original_amount,
+                    // Normalised by hand: a raw DECIMAL read comes back as a
+                    // string on MySQL and a number on SQLite, and the suite
+                    // runs SQLite while production runs MySQL. Formatting it
+                    // here keeps the shape the same on both.
+                    'rate' => $row->rate === null
+                        ? null
+                        : number_format((float) $row->rate, 6, '.', ''),
                 ];
             });
 

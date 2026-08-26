@@ -15,7 +15,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
+export default function OrdersCreate({
+    dentists,
+    todayRate,
+}: {
+    dentists: Dentist[];
+    todayRate: string | null;
+}) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="إضافة طلب" />
@@ -44,6 +50,7 @@ export default function OrdersCreate({ dentists }: { dentists: Dentist[] }) {
 
                 <OrderForm
                     dentists={dentists}
+                    todayRate={todayRate}
                     method="post"
                     action="/orders"
                     submitLabel="حفظ"

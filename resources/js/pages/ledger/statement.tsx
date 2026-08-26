@@ -1,5 +1,6 @@
 import { Head, router } from '@inertiajs/react';
 import { Printer } from 'lucide-react';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
@@ -28,6 +29,10 @@ type StatementLine = {
     debit: number;
     credit: number;
     balance: number;
+    /** What the money was handed over as. Only payments carry a conversion. */
+    currency?: 'SYP' | 'USD';
+    original_amount?: number | null;
+    rate?: string | null;
 };
 
 type Props = {
@@ -222,6 +227,7 @@ export default function Statement({
                                                 {line.credit > 0
                                                     ? nf(line.credit)
                                                     : ''}
+                                                <ForeignOrigin money={line} />
                                             </TableCell>
                                             <TableCell
                                                 className={

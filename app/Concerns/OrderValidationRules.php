@@ -26,7 +26,13 @@ trait OrderValidationRules
             'items' => ['required', 'array', 'min:1'],
             'items.*.type' => ['required', 'string'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
-            'items.*.price' => ['required', 'integer', 'min:0'],
+            'items.*.currency' => ['nullable', 'in:SYP,USD'],
+            // Absent currency means lira, so an item that never heard of
+            // currency keeps submitting a bare price and still validates.
+            'items.*.price' => ['required_unless:items.*.currency,USD', 'nullable', 'integer', 'min:0'],
+            // Dollar quotes are held in cents, matching the price list.
+            'items.*.original_amount' => ['required_if:items.*.currency,USD', 'nullable', 'integer', 'min:1'],
+            'items.*.rate' => ['required_if:items.*.currency,USD', 'nullable', 'numeric', 'min:0.000001'],
             'items.*.notes' => ['nullable', 'string'],
             'items.*.date' => ['required', 'date'],
             'items.*.patient_name' => ['nullable', 'string', 'max:255'],

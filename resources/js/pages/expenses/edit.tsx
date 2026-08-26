@@ -1,6 +1,9 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
+import CurrencyAmountField, {
+    type CurrencyAmount,
+} from '@/components/money/currency-amount-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
@@ -23,7 +26,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function ExpensesEdit({ expense }: { expense: Expense }) {
+export default function ExpensesEdit({
+    expense,
+    todayRate,
+}: {
+    expense: Expense;
+    todayRate: string | null;
+}) {
     const activeCategories = useExpenseCategories();
     const categoryLabels = useExpenseCategoryLabels();
     // The picker offers active categories, plus this expense's own category
@@ -41,6 +50,13 @@ export default function ExpensesEdit({ expense }: { expense: Expense }) {
         category: expense.category,
         description: expense.description ?? '',
         amount: expense.amount.toString(),
+        currency: (expense.currency ?? 'SYP') as CurrencyAmount['currency'],
+        original_amount:
+            expense.original_amount === null ||
+            expense.original_amount === undefined
+                ? ''
+                : (expense.original_amount / 100).toFixed(2),
+        rate: expense.rate ?? '',
         expense_date: (expense.expense_date || expense.created_at).split(
             'T',
         )[0],
@@ -110,20 +126,15 @@ export default function ExpensesEdit({ expense }: { expense: Expense }) {
                                 <InputError message={errors.description} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="amount">المبلغ</Label>
-                                <Input
-                                    id="amount"
-                                    type="number"
-                                    min="1"
-                                    value={data.amount}
-                                    onChange={(e) =>
-                                        setData('amount', e.target.value)
-                                    }
-                                    required
-                                />
-                                <InputError message={errors.amount} />
-                            </div>
+                            <CurrencyAmountField
+                                label="المبلغ"
+                                value={data}
+                                onChange={(patch) =>
+                                    setData((prev) => ({ ...prev, ...patch }))
+                                }
+                                errors={errors}
+                                todayRate={todayRate}
+                            />
 
                             <div className="grid gap-2">
                                 <Label htmlFor="expense_date">التاريخ</Label>

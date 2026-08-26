@@ -169,8 +169,10 @@ class RedenominateMoney extends Command
 
         foreach ($this->dentistsWithPriceList() as $dentist) {
             foreach ($this->decodePriceList($dentist->price_list) as $key => $value) {
-                if (is_numeric($value)) {
-                    $entries[] = [$dentist->id, $key, (int) $value];
+                $price = $this->liraPrice($value);
+
+                if ($price !== null) {
+                    $entries[] = [$dentist->id, $key, $price];
                 }
             }
         }
@@ -276,8 +278,10 @@ class RedenominateMoney extends Command
             }
 
             foreach ($list as $key => $value) {
-                if (is_numeric($value)) {
-                    $list[$key] = $this->divide((int) $value, $divisor);
+                $price = $this->liraPrice($value);
+
+                if ($price !== null) {
+                    $list[$key] = $this->withLiraPrice($value, $this->divide($price, $divisor));
                 }
             }
 
@@ -287,6 +291,32 @@ class RedenominateMoney extends Command
         }
 
         return $touched;
+    }
+
+    /**
+     * The lira price inside a price-list entry, or null when there is none to
+     * divide.
+     *
+     * Entries come in two shapes: a bare number, written before prices carried
+     * a currency and always meaning lira, and `['price' => n, 'currency' => c]`.
+     * A dollar price is not lira — a lira redenomination must leave it exactly
+     * where it is.
+     */
+    private function liraPrice(mixed $entry): ?int
+    {
+        if (is_array($entry)) {
+            return ($entry['currency'] ?? 'SYP') === 'SYP' && is_numeric($entry['price'] ?? null)
+                ? (int) $entry['price']
+                : null;
+        }
+
+        return is_numeric($entry) ? (int) $entry : null;
+    }
+
+    /** Put a divided price back in whatever shape its entry already had. */
+    private function withLiraPrice(mixed $entry, int $price): mixed
+    {
+        return is_array($entry) ? ['price' => $price] + $entry : $price;
     }
 
     private function divide(int $value, int $divisor): int

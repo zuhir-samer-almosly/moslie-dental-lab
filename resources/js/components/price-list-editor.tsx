@@ -1,10 +1,17 @@
 import { Plus, Trash2 } from 'lucide-react';
+import CurrencyToggle from '@/components/money/currency-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export type PriceRow = {
     name: string;
+    /**
+     * In the natural unit of its currency: whole lira, or dollars with
+     * decimals. The form converts a dollar price to cents on submit, which is
+     * what the column holds.
+     */
     price: number;
+    currency: 'SYP' | 'USD';
 };
 
 /**
@@ -48,17 +55,30 @@ export default function PriceListEditor({
         fieldValue: string,
     ) => {
         const next = [...value];
+        const row = next[index];
         next[index] = {
-            ...next[index],
+            ...row,
             [field]:
                 field === 'price'
-                    ? Math.round(parseFloat(fieldValue)) || 0
+                    ? // A dollar price keeps its cents; a lira one never has any.
+                      (row.currency === 'USD'
+                          ? parseFloat(fieldValue)
+                          : Math.round(parseFloat(fieldValue))) || 0
                     : fieldValue,
         };
         onChange(next);
     };
 
-    const addRow = () => onChange([...value, { name: '', price: 0 }]);
+    const setCurrency = (index: number, currency: PriceRow['currency']) => {
+        const next = [...value];
+        // Switching currency changes what the number means, so it is cleared
+        // rather than silently reinterpreted as the other currency.
+        next[index] = { ...next[index], currency, price: 0 };
+        onChange(next);
+    };
+
+    const addRow = () =>
+        onChange([...value, { name: '', price: 0, currency: 'SYP' }]);
     const removeRow = (index: number) =>
         onChange(value.filter((_, i) => i !== index));
 
@@ -88,12 +108,19 @@ export default function PriceListEditor({
                             <Input
                                 type="number"
                                 min="0"
+                                step={row.currency === 'USD' ? '0.01' : '1'}
                                 value={row.price || ''}
                                 onChange={(e) =>
                                     updateRow(index, 'price', e.target.value)
                                 }
                                 placeholder="السعر"
-                                className="w-32"
+                                className="w-28"
+                            />
+                            <CurrencyToggle
+                                value={row.currency}
+                                onChange={(currency) =>
+                                    setCurrency(index, currency)
+                                }
                             />
                             <Button
                                 type="button"

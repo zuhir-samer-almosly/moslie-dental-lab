@@ -18,9 +18,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function OrdersEdit({
     order,
     dentists,
+    todayRate,
 }: {
     order: Order;
     dentists: Dentist[];
+    todayRate: string | null;
 }) {
     const items: OrderItemForm[] = (order.items || []).map((item) => {
         const meta = item.meta as Record<string, unknown> | null;
@@ -32,6 +34,9 @@ export default function OrdersEdit({
             notes: item.notes || '',
             date: (meta?.date as string) || today(),
             selected_teeth: (meta?.selected_teeth as number[]) || [],
+            currency: item.currency ?? 'SYP',
+            original_amount: item.original_amount ?? 0,
+            rate: item.rate ?? '',
         };
     });
 
@@ -63,6 +68,7 @@ export default function OrdersEdit({
 
                 <OrderForm
                     dentists={dentists}
+                    todayRate={todayRate}
                     method="put"
                     action={`/orders/${order.id}`}
                     submitLabel="تحديث"

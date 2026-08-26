@@ -6,6 +6,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use App\Money\Rate;
 use App\Support\InvoiceFilename;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
@@ -214,6 +215,9 @@ class InvoiceController extends Controller
             'totals' => $totals,
             'openingByDentist' => (object) $openingByDentist,
             'dentists' => $dentists,
+            // The lira totals read back in dollars are priced at the period's
+            // last day, which is how the owner reads a finished month.
+            'closingRate' => Rate::on($to),
             'filters' => [
                 'from' => $from,
                 'to' => $to,

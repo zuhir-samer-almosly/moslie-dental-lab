@@ -37,7 +37,10 @@ it('divides every money column by 100', function () {
         ->and($salary->fresh()->amount)->toBe(1_500)
         ->and($material->fresh()->amount)->toBe(450)
         ->and($expense->fresh()->amount)->toBe(123)
-        ->and($dentist->fresh()->price_list)->toBe(['زيركون' => 800, 'خزف' => 1_250]);
+        ->and($dentist->fresh()->price_list)->toBe([
+            'زيركون' => ['price' => 800, 'currency' => 'SYP'],
+            'خزف' => ['price' => 1_250, 'currency' => 'SYP'],
+        ]);
 });
 
 it('keeps an order amount equal to the sum of its divided items', function () {

@@ -8,6 +8,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { LedgerTabs } from '@/components/ledger-tabs';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import { MonthPicker } from '@/components/month-picker';
 import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatSyp } from '@/lib/money';
 import type { BreadcrumbItem, Expense } from '@/types';
 import { useExpenseCategoryLabels } from '@/types';
 
@@ -159,9 +161,11 @@ export default function ExpensesIndex({
                                                 {expense.description || '-'}
                                             </TableCell>
                                             <TableCell className="font-semibold text-rose-600 tabular-nums dark:text-rose-400">
-                                                {expense.amount.toLocaleString(
-                                                    'en-US',
-                                                )}
+                                                {formatSyp(expense.amount)}
+                                                <ForeignOrigin
+                                                    money={expense}
+                                                    className="text-rose-700/70 dark:text-rose-400/70"
+                                                />
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {formatDate(

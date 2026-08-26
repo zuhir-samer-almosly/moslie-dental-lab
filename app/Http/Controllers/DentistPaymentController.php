@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDentistPaymentRequest;
 use App\Http\Requests\UpdateDentistPaymentRequest;
 use App\Models\DentistPayment;
+use App\Money\Rate;
 
 class DentistPaymentController extends Controller
 {
@@ -29,6 +30,7 @@ class DentistPaymentController extends Controller
 
         return inertia('payments/create', [
             'dentists' => $dentists,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -37,7 +39,11 @@ class DentistPaymentController extends Controller
      */
     public function store(StoreDentistPaymentRequest $request)
     {
-        DentistPayment::create($request->validated());
+        $payment = DentistPayment::create($request->payload());
+
+        if ($payment->isForeign()) {
+            Rate::remember($payment->payment_date, $payment->rate);
+        }
 
         return redirect()->route('payments.index')
             ->with('success', 'تم إضافة الدفعة بنجاح');
@@ -53,6 +59,7 @@ class DentistPaymentController extends Controller
         return inertia('payments/edit', [
             'payment' => $dentistPayment,
             'dentists' => $dentists,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -61,7 +68,11 @@ class DentistPaymentController extends Controller
      */
     public function update(UpdateDentistPaymentRequest $request, DentistPayment $dentistPayment)
     {
-        $dentistPayment->update($request->validated());
+        $dentistPayment->update($request->payload());
+
+        if ($dentistPayment->isForeign()) {
+            Rate::remember($dentistPayment->payment_date, $dentistPayment->rate);
+        }
 
         return redirect()->route('payments.index')
             ->with('success', 'تم تحديث الدفعة بنجاح');

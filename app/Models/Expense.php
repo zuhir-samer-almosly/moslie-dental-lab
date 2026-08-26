@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasForeignCurrency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class Expense extends Model
 {
     /** @use HasFactory<\Database\Factories\ExpenseFactory> */
-    use HasFactory;
+    use HasFactory, HasForeignCurrency;
 
     protected $fillable = [
         'category',
@@ -19,5 +20,8 @@ class Expense extends Model
         'amount',
         'expense_date',
         'notes',
+        'currency',
+        'original_amount',
+        'rate',
     ];
 }
