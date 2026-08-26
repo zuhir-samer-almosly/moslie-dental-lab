@@ -11,6 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import WorkTypeCombobox from '@/components/work-type-combobox';
+import {
+    formatRate,
+    formatSyp,
+    formatUsd,
+    rateValue,
+    usdToSyp,
+} from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { Dentist, Order } from '@/types';
 import { ORDER_STATUSES } from '@/types';
@@ -19,10 +26,15 @@ export type OrderItemForm = {
     type: string;
     patient_name: string;
     quantity: number;
+    /** Always lira. Derived from the two fields below when the quote is in dollars. */
     price: number;
     notes: string;
     date: string;
     selected_teeth: number[];
+    currency: 'SYP' | 'USD';
+    /** US cents, when the dentist's price list quotes this work type in dollars. */
+    original_amount: number;
+    rate: string;
 };
 
 export type OrderFormValues = {
@@ -46,12 +58,14 @@ export default function OrderForm({
     method,
     action,
     submitLabel,
+    todayRate,
 }: {
     dentists: Dentist[];
     initialValues: OrderFormValues;
     method: 'post' | 'put';
     action: string;
     submitLabel: string;
+    todayRate: string | null;
 }) {
     const form = useForm<OrderFormValues>(initialValues);
     const { data, setData, processing, errors } = form;
@@ -65,30 +79,80 @@ export default function OrderForm({
         ? Object.keys(getSelectedDentist()?.price_list ?? {})
         : [];
 
-    const getDentistPrice = useCallback(
-        (type: string): number | null => {
-            const dentist = getSelectedDentist();
-            if (dentist?.price_list && type in dentist.price_list) {
+    /**
+     * The price fields a work type implies, from the dentist's own list.
+     *
+     * A dollar quote is converted here, at the rate recorded for today, and
+     * the item carries lira from then on — the quote and its rate ride along
+     * so the invoice can show what the price came from. If no rate has been
+     * recorded yet the rate is left empty for the user to type; the price is
+     * then 0 until they do, rather than silently pricing the work at nothing.
+     */
+    const quoteFields = useCallback(
+        (
+            type: string,
+        ): Pick<
+            OrderItemForm,
+            'price' | 'currency' | 'original_amount' | 'rate'
+        > | null => {
+            const entry = getSelectedDentist()?.price_list?.[type];
+            if (!entry) {
+                return null;
+            }
+
+            if (entry.currency === 'USD') {
+                const rate = rateValue(todayRate);
+                const parsed = parseFloat(rate);
+                return {
+                    currency: 'USD',
+                    original_amount: entry.price,
+                    rate,
+                    price: Number.isFinite(parsed)
+                        ? usdToSyp(entry.price / 100, parsed)
+                        : 0,
+                };
+            }
+
+            return {
+                currency: 'SYP',
+                original_amount: 0,
+                rate: '',
                 // Round: legacy price lists may hold decimals, but the server
                 // only accepts integer item prices.
-                return Math.round(dentist.price_list[type]);
-            }
-            return null;
+                price: Math.round(entry.price),
+            };
         },
-        [getSelectedDentist],
+        [getSelectedDentist, todayRate],
     );
 
     const handleDentistChange = (value: string) => {
         setData((prev) => {
             const dentist = dentists.find((d) => d.id.toString() === value);
             const updatedItems = prev.items.map((item) => {
-                if (dentist?.price_list && item.type in dentist.price_list) {
+                const entry = dentist?.price_list?.[item.type];
+                if (!entry) {
+                    return item;
+                }
+                if (entry.currency === 'USD') {
+                    const rate = item.rate || rateValue(todayRate);
+                    const parsed = parseFloat(rate);
                     return {
                         ...item,
-                        price: Math.round(dentist.price_list[item.type]),
+                        currency: 'USD' as const,
+                        original_amount: entry.price,
+                        rate,
+                        price: Number.isFinite(parsed)
+                            ? usdToSyp(entry.price / 100, parsed)
+                            : 0,
                     };
                 }
-                return item;
+                return {
+                    ...item,
+                    currency: 'SYP' as const,
+                    original_amount: 0,
+                    rate: '',
+                    price: Math.round(entry.price),
+                };
             });
             return { ...prev, dentist_id: value, items: updatedItems };
         });
@@ -140,7 +204,7 @@ export default function OrderForm({
 
     const addItem = () => {
         const defaultType = workTypeNames[0] || '';
-        const price = getDentistPrice(defaultType) ?? 0;
+        const quote = quoteFields(defaultType);
         scrollToLastItem.current = true;
         setData('items', [
             ...data.items,
@@ -148,10 +212,13 @@ export default function OrderForm({
                 type: defaultType,
                 patient_name: '',
                 quantity: 1,
-                price,
+                price: quote?.price ?? 0,
                 notes: '',
                 date: today(),
                 selected_teeth: [],
+                currency: quote?.currency ?? 'SYP',
+                original_amount: quote?.original_amount ?? 0,
+                rate: quote?.rate ?? '',
             },
         ]);
     };
@@ -173,12 +240,37 @@ export default function OrderForm({
 
         // Auto-fill price when work type changes
         if (field === 'type') {
-            const dentistPrice = getDentistPrice(value as string);
-            if (dentistPrice !== null) {
-                newItems[index].price = dentistPrice;
+            const quote = quoteFields(value as string);
+            if (quote !== null) {
+                newItems[index] = { ...newItems[index], ...quote };
             }
         }
 
+        // Typing a lira price by hand overrides the dentist's dollar quote, so
+        // the item stops claiming a conversion it no longer reflects.
+        if (field === 'price') {
+            newItems[index] = {
+                ...newItems[index],
+                currency: 'SYP',
+                original_amount: 0,
+                rate: '',
+            };
+        }
+
+        setData('items', newItems);
+    };
+
+    /** Re-price a dollar-quoted item when its rate is edited. */
+    const updateItemRate = (index: number, rate: string) => {
+        const newItems = [...data.items];
+        const parsed = parseFloat(rate);
+        newItems[index] = {
+            ...newItems[index],
+            rate,
+            price: Number.isFinite(parsed)
+                ? usdToSyp(newItems[index].original_amount / 100, parsed)
+                : 0,
+        };
         setData('items', newItems);
     };
 
@@ -468,29 +560,66 @@ export default function OrderForm({
 
                                         <div className="grid gap-2">
                                             <Label className={labelClass}>
-                                                السعر
+                                                {item.currency === 'USD'
+                                                    ? 'سعر الصرف'
+                                                    : 'السعر'}
                                             </Label>
-                                            <Input
-                                                type="number"
-                                                min="0"
-                                                value={item.price || ''}
-                                                onChange={(e) =>
-                                                    updateItem(
-                                                        index,
-                                                        'price',
-                                                        parseInt(
-                                                            e.target.value,
-                                                        ) || 0,
-                                                    )
-                                                }
-                                                className={fieldClass}
-                                            />
-                                            <InputError
-                                                message={itemError(
-                                                    index,
-                                                    'price',
-                                                )}
-                                            />
+                                            {item.currency === 'USD' ? (
+                                                <>
+                                                    <Input
+                                                        type="number"
+                                                        min="0.000001"
+                                                        step="0.000001"
+                                                        value={item.rate}
+                                                        onChange={(e) =>
+                                                            updateItemRate(
+                                                                index,
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className={fieldClass}
+                                                    />
+                                                    <p
+                                                        dir="ltr"
+                                                        className="text-end text-xs text-muted-foreground tabular-nums"
+                                                    >
+                                                        {item.rate
+                                                            ? `$${formatUsd(item.original_amount)} × ${formatRate(item.rate)} = ${formatSyp(item.price)} ل.س`
+                                                            : `$${formatUsd(item.original_amount)} — أدخل سعر الصرف`}
+                                                    </p>
+                                                    <InputError
+                                                        message={itemError(
+                                                            index,
+                                                            'rate',
+                                                        )}
+                                                    />
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        value={item.price || ''}
+                                                        onChange={(e) =>
+                                                            updateItem(
+                                                                index,
+                                                                'price',
+                                                                parseInt(
+                                                                    e.target
+                                                                        .value,
+                                                                ) || 0,
+                                                            )
+                                                        }
+                                                        className={fieldClass}
+                                                    />
+                                                    <InputError
+                                                        message={itemError(
+                                                            index,
+                                                            'price',
+                                                        )}
+                                                    />
+                                                </>
+                                            )}
                                         </div>
 
                                         <div className="grid gap-2">

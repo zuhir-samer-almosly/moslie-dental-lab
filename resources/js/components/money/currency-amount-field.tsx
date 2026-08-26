@@ -1,7 +1,7 @@
 import InputError from '@/components/input-error';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { formatSyp, usdToSyp } from '@/lib/money';
+import { formatSyp, rateValue, usdToSyp } from '@/lib/money';
 
 export type CurrencyAmount = {
     currency: 'SYP' | 'USD';
@@ -47,7 +47,7 @@ export default function CurrencyAmountField({
                   {
                       currency,
                       amount: '',
-                      rate: value.rate || (todayRate ?? ''),
+                      rate: value.rate || rateValue(todayRate),
                   }
                 : { currency, original_amount: '', rate: '' },
         );

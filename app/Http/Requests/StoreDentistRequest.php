@@ -27,9 +27,12 @@ class StoreDentistRequest extends FormRequest
             'phone' => ['nullable', 'string', 'unique:dentists,phone'],
             'address' => ['nullable', 'string'],
             'price_list' => ['nullable', 'array'],
+            'price_list.*' => ['array:price,currency'],
             // Integer to match order items' price rule — a decimal here would
-            // auto-fill into the order form and then fail its validation.
-            'price_list.*' => ['integer', 'min:0'],
+            // auto-fill into the order form and then fail its validation. A
+            // dollar price is held in cents, so it is a whole number too.
+            'price_list.*.price' => ['required', 'integer', 'min:0'],
+            'price_list.*.currency' => ['required', 'in:SYP,USD'],
         ];
     }
 }

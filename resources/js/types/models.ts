@@ -4,7 +4,15 @@ export interface Dentist {
     gender: 'male' | 'female';
     phone: string | null;
     address: string | null;
-    price_list: Record<string, number> | null;
+    /**
+     * A dentist's own prices. `price` is in the natural unit of its currency:
+     * whole lira for SYP, cents for USD. A dollar price is a quote — it
+     * converts to lira at the day's rate when an order uses it.
+     */
+    price_list: Record<
+        string,
+        { price: number; currency: 'SYP' | 'USD' }
+    > | null;
     created_at: string;
     updated_at: string;
 }
@@ -30,7 +38,13 @@ export interface OrderItem {
     order_id: number;
     type: string;
     quantity: number;
+    /** Always lira. Derived from the fields below when the quote was in dollars. */
     price: number;
+    currency?: 'SYP' | 'USD';
+    /** US cents, when the dentist's price list quoted this work type in dollars. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day the order used the quote. */
+    rate?: string | null;
     notes: string | null;
     meta: Record<string, unknown> | null;
     created_at: string;

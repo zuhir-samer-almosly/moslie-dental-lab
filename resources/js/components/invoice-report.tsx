@@ -1,3 +1,4 @@
+import ForeignOrigin from '@/components/money/foreign-origin';
 import {
     Dash,
     formatDate,
@@ -392,17 +393,18 @@ export function InvoiceReport({
                                                                 />
                                                             </TableCell>
                                                             <TableCell className="whitespace-nowrap tabular-nums">
-                                                                {(
+                                                                {formatSyp(
                                                                     item.price ??
-                                                                    0
-                                                                ).toLocaleString(
-                                                                    'en-US',
+                                                                        0,
                                                                 )}{' '}
                                                                 <span className="text-muted-foreground">
                                                                     ×{' '}
                                                                     {item.quantity ??
                                                                         0}
                                                                 </span>
+                                                                <ForeignOrigin
+                                                                    money={item}
+                                                                />
                                                             </TableCell>
                                                             <TableCell className="tabular-nums">
                                                                 {itemAmount(

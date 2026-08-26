@@ -26,6 +26,21 @@ export const formatRate = (rate: string | number): string => {
 };
 
 /**
+ * A stored rate as a plain editable number: "130.000000" becomes "130".
+ *
+ * Deliberately not `formatRate`, which groups thousands — a rate of 12,500
+ * with a separator in it would break both the number input and the server's
+ * numeric validation.
+ */
+export const rateValue = (rate: string | null | undefined): string => {
+    if (rate === null || rate === undefined || rate === '') {
+        return '';
+    }
+    const value = parseFloat(rate);
+    return Number.isFinite(value) ? String(value) : '';
+};
+
+/**
  * Mirror of `App\Money\Rate::toSyp` for previewing a conversion while the
  * user types. The server always recomputes it — this never decides what is
  * stored, it only shows what will be.

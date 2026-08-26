@@ -65,13 +65,18 @@ test('storing a dentist from the order page redirects back and saves the price l
         ->post(route('dentists.store'), [
             'name' => 'د. خالد',
             'gender' => 'male',
-            'price_list' => ['خزف' => 90000, 'زيركون' => 150000],
+            'price_list' => [
+                'خزف' => ['price' => 90000, 'currency' => 'SYP'],
+                'زيركون' => ['price' => 150000, 'currency' => 'SYP'],
+            ],
         ])
         ->assertRedirect(route('orders.create'))
         ->assertSessionHas('success');
 
-    expect(Dentist::firstWhere('name', 'د. خالد')->price_list)
-        ->toBe(['خزف' => 90000, 'زيركون' => 150000]);
+    expect(Dentist::firstWhere('name', 'د. خالد')->price_list)->toBe([
+        'خزف' => ['price' => 90000, 'currency' => 'SYP'],
+        'زيركون' => ['price' => 150000, 'currency' => 'SYP'],
+    ]);
 });
 
 test('storing a dentist from the standalone page redirects to the index', function () {
@@ -103,13 +108,18 @@ test('updating one work type price leaves the rest of the price list intact', fu
         ->put(route('dentists.update', $dentist), [
             'name' => 'د. سامر',
             'gender' => 'male',
-            'price_list' => ['خزف' => 110000, 'زيركون' => 150000],
+            'price_list' => [
+                'خزف' => ['price' => 110000, 'currency' => 'SYP'],
+                'زيركون' => ['price' => 150000, 'currency' => 'SYP'],
+            ],
         ])
         ->assertRedirect(route('orders.create'))
         ->assertSessionHas('success');
 
-    expect($dentist->fresh()->price_list)
-        ->toBe(['خزف' => 110000, 'زيركون' => 150000]);
+    expect($dentist->fresh()->price_list)->toBe([
+        'خزف' => ['price' => 110000, 'currency' => 'SYP'],
+        'زيركون' => ['price' => 150000, 'currency' => 'SYP'],
+    ]);
 });
 
 test('the standalone dentist pages still load', function () {

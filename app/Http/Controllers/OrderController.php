@@ -7,6 +7,7 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Ledger\LedgerReports;
 use App\Models\Order;
+use App\Money\Rate;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -111,6 +112,7 @@ class OrderController extends Controller
 
         return inertia('orders/create', [
             'dentists' => $dentists,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -123,6 +125,7 @@ class OrderController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
+        $items = $this->withLiraPrices($items);
         // Calculate total from items
         $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
         // The order's due date is derived from the earliest item date.
@@ -151,6 +154,7 @@ class OrderController extends Controller
         return inertia('orders/edit', [
             'order' => $order,
             'dentists' => $dentists,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -163,6 +167,7 @@ class OrderController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
+        $items = $this->withLiraPrices($items);
         // Calculate total from items
         $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
         // The order's due date is derived from the earliest item date.
@@ -189,6 +194,35 @@ class OrderController extends Controller
      * @param  array<string, mixed>  $item
      * @return array<string, mixed>
      */
+    /**
+     * Resolve every item's lira price before anything sums them.
+     *
+     * An item quoted in dollars is a *quote*: it converts at the rate given
+     * with it, and the order holds lira from then on. Doing it here means the
+     * order's amount and the item rows are derived from one conversion rather
+     * than two that could drift — `App\Money\Rate` is the only thing that
+     * converts, here and in the model.
+     *
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    private function withLiraPrices(array $items): array
+    {
+        return array_map(function (array $item) {
+            if (($item['currency'] ?? 'SYP') !== 'USD') {
+                $item['currency'] = 'SYP';
+                $item['original_amount'] = null;
+                $item['rate'] = null;
+
+                return $item;
+            }
+
+            $item['price'] = Rate::toSyp((int) $item['original_amount'], (string) $item['rate']);
+
+            return $item;
+        }, $items);
+    }
+
     private function itemAttributes(array $item): array
     {
         $meta = [
