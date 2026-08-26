@@ -23,11 +23,14 @@ export default function CurrencyAmountField({
     onChange,
     errors,
     todayRate,
+    label = 'المبلغ',
 }: {
     value: CurrencyAmount;
     onChange: (patch: Partial<CurrencyAmount>) => void;
     errors: Partial<Record<keyof CurrencyAmount, string>>;
     todayRate: string | null;
+    /** What this money is called on its own form — "المبلغ", "السعر". */
+    label?: string;
 }) {
     const dollars = parseFloat(value.original_amount);
     const rate = parseFloat(value.rate);
@@ -84,7 +87,7 @@ export default function CurrencyAmountField({
 
             {value.currency === 'SYP' ? (
                 <div className="grid gap-2">
-                    <Label htmlFor="amount">المبلغ بالليرة</Label>
+                    <Label htmlFor="amount">{label} بالليرة</Label>
                     <Input
                         id="amount"
                         type="number"
@@ -100,7 +103,7 @@ export default function CurrencyAmountField({
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="original_amount">
-                                المبلغ بالدولار
+                                {label} بالدولار
                             </Label>
                             <Input
                                 id="original_amount"

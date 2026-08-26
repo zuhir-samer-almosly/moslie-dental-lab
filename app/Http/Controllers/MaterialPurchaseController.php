@@ -6,6 +6,7 @@ use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreMaterialPurchaseRequest;
 use App\Http\Requests\UpdateMaterialPurchaseRequest;
 use App\Models\MaterialPurchase;
+use App\Money\Rate;
 use Illuminate\Http\Request;
 
 class MaterialPurchaseController extends Controller
@@ -40,7 +41,9 @@ class MaterialPurchaseController extends Controller
      */
     public function create()
     {
-        return inertia('material-purchases/create');
+        return inertia('material-purchases/create', [
+            'todayRate' => Rate::on(now()->toDateString()),
+        ]);
     }
 
     /**
@@ -48,7 +51,11 @@ class MaterialPurchaseController extends Controller
      */
     public function store(StoreMaterialPurchaseRequest $request)
     {
-        MaterialPurchase::create($request->validated());
+        $materialPurchase = MaterialPurchase::create($request->payload());
+
+        if ($materialPurchase->isForeign()) {
+            Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
+        }
 
         return redirect()->route('material-purchases.index')
             ->with('success', 'تم تسجيل المادة بنجاح');
@@ -61,6 +68,7 @@ class MaterialPurchaseController extends Controller
     {
         return inertia('material-purchases/edit', [
             'purchase' => $materialPurchase,
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 
@@ -69,7 +77,11 @@ class MaterialPurchaseController extends Controller
      */
     public function update(UpdateMaterialPurchaseRequest $request, MaterialPurchase $materialPurchase)
     {
-        $materialPurchase->update($request->validated());
+        $materialPurchase->update($request->payload());
+
+        if ($materialPurchase->isForeign()) {
+            Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
+        }
 
         return redirect()->route('material-purchases.index')
             ->with('success', 'تم تحديث المادة بنجاح');

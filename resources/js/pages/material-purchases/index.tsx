@@ -8,6 +8,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { LedgerTabs } from '@/components/ledger-tabs';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import { MonthPicker } from '@/components/month-picker';
 import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatSyp } from '@/lib/money';
 import type { BreadcrumbItem, MaterialPurchase } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -159,9 +161,11 @@ export default function MaterialPurchasesIndex({
                                                 {purchase.quantity || '-'}
                                             </TableCell>
                                             <TableCell className="font-semibold text-rose-600 tabular-nums dark:text-rose-400">
-                                                {purchase.amount.toLocaleString(
-                                                    'en-US',
-                                                )}
+                                                {formatSyp(purchase.amount)}
+                                                <ForeignOrigin
+                                                    money={purchase}
+                                                    className="text-rose-700/70 dark:text-rose-400/70"
+                                                />
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {formatDate(

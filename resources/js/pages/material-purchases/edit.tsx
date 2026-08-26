@@ -1,6 +1,9 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
+import CurrencyAmountField, {
+    type CurrencyAmount,
+} from '@/components/money/currency-amount-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DateInput } from '@/components/ui/date-input';
@@ -23,14 +26,23 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function MaterialPurchasesEdit({
     purchase,
+    todayRate,
 }: {
     purchase: MaterialPurchase;
+    todayRate: string | null;
 }) {
     const { data, setData, put, processing, errors } = useForm({
         name: purchase.name,
         supplier: purchase.supplier ?? '',
         quantity: purchase.quantity ?? '',
         amount: purchase.amount.toString(),
+        currency: (purchase.currency ?? 'SYP') as CurrencyAmount['currency'],
+        original_amount:
+            purchase.original_amount === null ||
+            purchase.original_amount === undefined
+                ? ''
+                : (purchase.original_amount / 100).toFixed(2),
+        rate: purchase.rate ?? '',
         purchase_date: (purchase.purchase_date || purchase.created_at).split(
             'T',
         )[0],
@@ -107,20 +119,15 @@ export default function MaterialPurchasesEdit({
                                 <InputError message={errors.quantity} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="amount">السعر</Label>
-                                <Input
-                                    id="amount"
-                                    type="number"
-                                    min="1"
-                                    value={data.amount}
-                                    onChange={(e) =>
-                                        setData('amount', e.target.value)
-                                    }
-                                    required
-                                />
-                                <InputError message={errors.amount} />
-                            </div>
+                            <CurrencyAmountField
+                                label="السعر"
+                                value={data}
+                                onChange={(patch) =>
+                                    setData((prev) => ({ ...prev, ...patch }))
+                                }
+                                errors={errors}
+                                todayRate={todayRate}
+                            />
 
                             <div className="grid gap-2">
                                 <Label htmlFor="purchase_date">التاريخ</Label>

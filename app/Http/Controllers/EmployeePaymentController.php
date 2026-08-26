@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEmployeePaymentRequest;
 use App\Http\Requests\UpdateEmployeePaymentRequest;
 use App\Models\EmployeePayment;
+use App\Money\Rate;
 
 class EmployeePaymentController extends Controller
 {
@@ -13,7 +14,11 @@ class EmployeePaymentController extends Controller
      */
     public function store(StoreEmployeePaymentRequest $request)
     {
-        EmployeePayment::create($request->validated());
+        $employeePayment = EmployeePayment::create($request->payload());
+
+        if ($employeePayment->isForeign()) {
+            Rate::remember($employeePayment->payment_date, $employeePayment->rate);
+        }
 
         return redirect()->back()
             ->with('success', 'تم تسجيل الراتب بنجاح');
@@ -24,7 +29,11 @@ class EmployeePaymentController extends Controller
      */
     public function update(UpdateEmployeePaymentRequest $request, EmployeePayment $employeePayment)
     {
-        $employeePayment->update($request->validated());
+        $employeePayment->update($request->payload());
+
+        if ($employeePayment->isForeign()) {
+            Rate::remember($employeePayment->payment_date, $employeePayment->rate);
+        }
 
         return redirect()->back()
             ->with('success', 'تم تحديث الراتب بنجاح');

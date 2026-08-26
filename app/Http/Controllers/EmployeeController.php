@@ -7,6 +7,7 @@ use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
+use App\Money\Rate;
 use Illuminate\Http\Request;
 
 class EmployeeController extends Controller
@@ -38,6 +39,7 @@ class EmployeeController extends Controller
             'payments' => $payments,
             'month' => $month->format('Y-m'),
             'total' => (int) $payments->sum('amount'),
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 

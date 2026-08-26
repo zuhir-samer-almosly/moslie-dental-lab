@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import { EmployeeFormDialog } from '@/components/employees/employee-form-dialog';
 import { SalaryFormDialog } from '@/components/employees/salary-form-dialog';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import { MonthPicker } from '@/components/month-picker';
 import { formatDate } from '@/components/order-display';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatSyp } from '@/lib/money';
 import type { BreadcrumbItem, Employee, EmployeePayment } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -51,11 +53,13 @@ export default function EmployeesIndex({
     payments,
     month,
     total,
+    todayRate,
 }: {
     employees: Employee[];
     payments: EmployeePayment[];
     month: string;
     total: number;
+    todayRate: string | null;
 }) {
     const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false);
     const [editingEmployee, setEditingEmployee] = useState<Employee | null>(
@@ -313,9 +317,11 @@ export default function EmployeesIndex({
                                                     {payment.employee?.name}
                                                 </TableCell>
                                                 <TableCell className="font-semibold text-rose-600 tabular-nums dark:text-rose-400">
-                                                    {payment.amount.toLocaleString(
-                                                        'en-US',
-                                                    )}
+                                                    {formatSyp(payment.amount)}
+                                                    <ForeignOrigin
+                                                        money={payment}
+                                                        className="text-rose-700/70 dark:text-rose-400/70"
+                                                    />
                                                 </TableCell>
                                                 <TableCell className="whitespace-nowrap text-muted-foreground">
                                                     {formatDate(
@@ -375,6 +381,7 @@ export default function EmployeesIndex({
                 employees={employees}
                 payment={editingPayment}
                 presetEmployeeId={salaryPresetId}
+                todayRate={todayRate}
             />
         </AppLayout>
     );

@@ -84,7 +84,14 @@ export interface EmployeePayment {
     id: number;
     employee_id: number;
     employee?: Employee;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     payment_date?: string;
     notes: string | null;
     created_at: string;
@@ -96,7 +103,14 @@ export interface MaterialPurchase {
     name: string;
     supplier: string | null;
     quantity: string | null;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     purchase_date?: string;
     notes: string | null;
     created_at: string;
@@ -107,7 +121,14 @@ export interface Expense {
     id: number;
     category: string;
     description: string | null;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the transaction. */
+    rate?: string | null;
     expense_date?: string;
     notes: string | null;
     created_at: string;

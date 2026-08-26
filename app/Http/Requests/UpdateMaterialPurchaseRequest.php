@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Concerns\MoneyValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateMaterialPurchaseRequest extends FormRequest
 {
+    use MoneyValidationRules;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -25,9 +28,20 @@ class UpdateMaterialPurchaseRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'supplier' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'string', 'max:255'],
-            'amount' => ['required', 'integer', 'min:1'],
             'purchase_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
+            ...$this->moneyRules(),
         ];
+    }
+
+    /**
+     * Validated data with the dollar amount converted to the cents the
+     * column holds, ready to hand straight to the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function payload(): array
+    {
+        return $this->moneyPayload($this->validated());
     }
 }

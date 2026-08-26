@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\HasForeignCurrency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class MaterialPurchase extends Model
 {
     /** @use HasFactory<\Database\Factories\MaterialPurchaseFactory> */
-    use HasFactory;
+    use HasFactory, HasForeignCurrency;
 
     protected $fillable = [
         'name',
@@ -20,5 +21,8 @@ class MaterialPurchase extends Model
         'amount',
         'purchase_date',
         'notes',
+        'currency',
+        'original_amount',
+        'rate',
     ];
 }
