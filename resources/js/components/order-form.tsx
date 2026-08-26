@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import DentalChart from '@/components/dental-chart';
 import DentistsManagerDialog from '@/components/dentists/dentists-manager-dialog';
 import InputError from '@/components/input-error';
+import CurrencyToggle from '@/components/money/currency-toggle';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
@@ -257,6 +258,48 @@ export default function OrderForm({
             };
         }
 
+        setData('items', newItems);
+    };
+
+    /**
+     * Switch one line between lira and dollars by hand.
+     *
+     * The dentist's price list only supplies a *default*: a work type typed
+     * freehand, or one the dentist has no dollar price for, must still be
+     * chargeable in dollars, because the currency belongs to the deal rather
+     * than to the price list.
+     */
+    const setItemCurrency = (index: number, currency: 'SYP' | 'USD') => {
+        const newItems = [...data.items];
+        newItems[index] =
+            currency === 'USD'
+                ? {
+                      ...newItems[index],
+                      currency,
+                      original_amount: newItems[index].original_amount || 0,
+                      rate: newItems[index].rate || rateValue(todayRate),
+                      price: 0,
+                  }
+                : {
+                      ...newItems[index],
+                      currency,
+                      original_amount: 0,
+                      rate: '',
+                  };
+        setData('items', newItems);
+    };
+
+    /** Edit a dollar line's amount, typed in dollars and held in cents. */
+    const updateItemDollars = (index: number, dollars: string) => {
+        const newItems = [...data.items];
+        const parsed = parseFloat(dollars);
+        const cents = Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+        const rate = parseFloat(newItems[index].rate);
+        newItems[index] = {
+            ...newItems[index],
+            original_amount: cents,
+            price: Number.isFinite(rate) ? usdToSyp(cents / 100, rate) : 0,
+        };
         setData('items', newItems);
     };
 
@@ -559,39 +602,93 @@ export default function OrderForm({
                                         </div>
 
                                         <div className="grid gap-2">
-                                            <Label className={labelClass}>
-                                                {item.currency === 'USD'
-                                                    ? 'سعر الصرف'
-                                                    : 'السعر'}
-                                            </Label>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <Label className={labelClass}>
+                                                    السعر
+                                                </Label>
+                                                <CurrencyToggle
+                                                    value={item.currency}
+                                                    onChange={(currency) =>
+                                                        setItemCurrency(
+                                                            index,
+                                                            currency,
+                                                        )
+                                                    }
+                                                />
+                                            </div>
                                             {item.currency === 'USD' ? (
                                                 <>
-                                                    <Input
-                                                        type="number"
-                                                        min="0.000001"
-                                                        step="0.000001"
-                                                        value={item.rate}
-                                                        onChange={(e) =>
-                                                            updateItemRate(
-                                                                index,
-                                                                e.target.value,
-                                                            )
-                                                        }
-                                                        className={fieldClass}
-                                                    />
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="grid gap-1">
+                                                            <span className="text-[11px] text-muted-foreground">
+                                                                بالدولار
+                                                            </span>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                step="0.01"
+                                                                value={
+                                                                    item.original_amount
+                                                                        ? item.original_amount /
+                                                                          100
+                                                                        : ''
+                                                                }
+                                                                onChange={(e) =>
+                                                                    updateItemDollars(
+                                                                        index,
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                className={
+                                                                    fieldClass
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="grid gap-1">
+                                                            <span className="text-[11px] text-muted-foreground">
+                                                                سعر الصرف
+                                                            </span>
+                                                            <Input
+                                                                type="number"
+                                                                min="0.000001"
+                                                                step="0.000001"
+                                                                value={
+                                                                    item.rate
+                                                                }
+                                                                onChange={(e) =>
+                                                                    updateItemRate(
+                                                                        index,
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                className={
+                                                                    fieldClass
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
                                                     <p
                                                         dir="ltr"
                                                         className="text-end text-xs text-muted-foreground tabular-nums"
                                                     >
-                                                        {item.rate
+                                                        {item.original_amount &&
+                                                        item.rate
                                                             ? `$${formatUsd(item.original_amount)} × ${formatRate(item.rate)} = ${formatSyp(item.price)} ل.س`
-                                                            : `$${formatUsd(item.original_amount)} — أدخل سعر الصرف`}
+                                                            : 'أدخل المبلغ وسعر الصرف'}
                                                     </p>
                                                     <InputError
-                                                        message={itemError(
-                                                            index,
-                                                            'rate',
-                                                        )}
+                                                        message={
+                                                            itemError(
+                                                                index,
+                                                                'original_amount',
+                                                            ) ||
+                                                            itemError(
+                                                                index,
+                                                                'rate',
+                                                            )
+                                                        }
                                                     />
                                                 </>
                                             ) : (

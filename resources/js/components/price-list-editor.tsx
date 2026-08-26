@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from 'lucide-react';
+import CurrencyToggle from '@/components/money/currency-toggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -115,28 +116,12 @@ export default function PriceListEditor({
                                 placeholder="السعر"
                                 className="w-28"
                             />
-                            <div className="flex shrink-0 overflow-hidden rounded-md border">
-                                {(
-                                    [
-                                        ['SYP', 'ل.س'],
-                                        ['USD', '$'],
-                                    ] as const
-                                ).map(([code, label]) => (
-                                    <button
-                                        key={code}
-                                        type="button"
-                                        onClick={() => setCurrency(index, code)}
-                                        aria-pressed={row.currency === code}
-                                        className={`w-10 py-1.5 text-xs transition-colors ${
-                                            row.currency === code
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'text-muted-foreground hover:bg-muted'
-                                        }`}
-                                    >
-                                        {label}
-                                    </button>
-                                ))}
-                            </div>
+                            <CurrencyToggle
+                                value={row.currency}
+                                onChange={(currency) =>
+                                    setCurrency(index, currency)
+                                }
+                            />
                             <Button
                                 type="button"
                                 variant="ghost"
