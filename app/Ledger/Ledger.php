@@ -23,6 +23,62 @@ class Ledger
     ];
 
     /**
+     * Records whose sync has been deferred, keyed by identity so a record
+     * queued many times syncs once. Null when not deferring.
+     *
+     * @var array<string, array{class-string<Model>, mixed}>|null
+     */
+    private ?array $deferred = null;
+
+    /**
+     * Collapse every sync inside $work into one sync per distinct record.
+     *
+     * Writing an order's items fires the item observer once per item, and each
+     * of those re-posts the whole order — so ten items wrote the entry set ten
+     * times over, quadratic in the item count. Inside this scope those syncs
+     * are collected instead and run once each after $work returns, still
+     * inside the caller's transaction so the ledger and the domain tables
+     * commit or roll back together.
+     *
+     * Deletes are not deferred: `forget()` is cheap, exact, and must take
+     * effect immediately for a later sync in the same batch to see the truth.
+     */
+    public function defer(callable $work): mixed
+    {
+        if ($this->deferred !== null) {
+            // Already inside a deferral — join it rather than flushing early,
+            // or a nested scope would post a half-written batch.
+            return $work();
+        }
+
+        $this->deferred = [];
+
+        try {
+            $result = $work();
+        } catch (\Throwable $e) {
+            // The transaction is rolling back; the queued syncs are moot.
+            $this->deferred = null;
+
+            throw $e;
+        }
+
+        $pending = $this->deferred;
+        $this->deferred = null;
+
+        foreach ($pending as [$class, $id]) {
+            // Re-read rather than reuse the queued instance: that was a
+            // snapshot from partway through the batch, and the posting has to
+            // reflect what the batch finished with. A record deleted before
+            // the flush has already been forgotten, so skipping it is right.
+            if ($model = $class::query()->find($id)) {
+                $this->sync($model);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
      * Rewrite a source record's entries from its current state. The ledger
      * mirrors what the records say now: an edit replaces the entries, a
      * cancel removes them. The domain record remains the history of what
@@ -30,6 +86,12 @@ class Ledger
      */
     public function sync(Model $source): void
     {
+        if ($this->deferred !== null) {
+            $this->deferred[$source->getMorphClass().':'.$source->getKey()] = [$source::class, $source->getKey()];
+
+            return;
+        }
+
         DB::transaction(function () use ($source) {
             $this->forget($source);
 

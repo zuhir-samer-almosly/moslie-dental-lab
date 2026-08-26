@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Ledger\Ledger;
 use Carbon\CarbonImmutable;
 use Google\Client as GoogleClient;
 use Google\Service\Drive as GoogleDrive;
@@ -21,7 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // One Ledger per request. Ledger::defer() collapses a batch of syncs
+        // into one per record, and the observers that queue into it resolve
+        // the Ledger from the container — so the controller opening the scope
+        // and the observer filling it have to be holding the same object.
+        $this->app->singleton(Ledger::class);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
+use App\Ledger\Ledger;
 use App\Ledger\LedgerReports;
 use App\Models\Order;
 use App\Money\Rate;
@@ -17,7 +18,10 @@ class OrderController extends Controller
 {
     use ResolvesMonth;
 
-    public function __construct(private readonly LedgerReports $reports) {}
+    public function __construct(
+        private readonly LedgerReports $reports,
+        private readonly Ledger $ledger,
+    ) {}
 
     /**
      * Display a listing of the resource for a given month.
@@ -131,13 +135,13 @@ class OrderController extends Controller
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        DB::transaction(function () use ($validated, $items) {
+        DB::transaction(fn () => $this->ledger->defer(function () use ($validated, $items) {
             $order = Order::create($validated);
 
             foreach ($items as $item) {
                 $order->items()->create($this->itemAttributes($item));
             }
-        });
+        }));
 
         return redirect()->route('orders.index')
             ->with('success', 'تم إضافة الطلب بنجاح');
@@ -173,7 +177,7 @@ class OrderController extends Controller
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        DB::transaction(function () use ($order, $validated, $items) {
+        DB::transaction(fn () => $this->ledger->defer(function () use ($order, $validated, $items) {
             $order->update($validated);
 
             // Delete old items and create new ones
@@ -181,7 +185,7 @@ class OrderController extends Controller
             foreach ($items as $item) {
                 $order->items()->create($this->itemAttributes($item));
             }
-        });
+        }));
 
         return redirect()->route('orders.index')
             ->with('success', 'تم تحديث الطلب بنجاح');
