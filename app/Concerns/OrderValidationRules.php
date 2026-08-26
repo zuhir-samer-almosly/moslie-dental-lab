@@ -31,8 +31,15 @@ trait OrderValidationRules
             // currency keeps submitting a bare price and still validates.
             'items.*.price' => ['required_unless:items.*.currency,USD', 'nullable', 'integer', 'min:0'],
             // Dollar quotes are held in cents, matching the price list.
-            'items.*.original_amount' => ['required_if:items.*.currency,USD', 'nullable', 'integer', 'min:1'],
-            'items.*.rate' => ['required_if:items.*.currency,USD', 'nullable', 'numeric', 'min:0.000001'],
+            //
+            // `exclude_unless` rather than `required_if`: a lira line still
+            // carries these keys, zeroed, because the form keeps one shape for
+            // every row. They describe nothing on such a line, so they are
+            // dropped from the data outright instead of being held to rules
+            // meant for a dollar line — a zero placeholder must not fail min:1
+            // and take the whole order down with it.
+            'items.*.original_amount' => ['exclude_unless:items.*.currency,USD', 'required', 'integer', 'min:1'],
+            'items.*.rate' => ['exclude_unless:items.*.currency,USD', 'required', 'numeric', 'min:0.000001'],
             'items.*.notes' => ['nullable', 'string'],
             'items.*.date' => ['required', 'date'],
             'items.*.patient_name' => ['nullable', 'string', 'max:255'],

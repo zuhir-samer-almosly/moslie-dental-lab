@@ -95,3 +95,89 @@ test('a dollar-quoted item keeps what it was quoted at', function () {
         ->original_amount->toBe(1700)
         ->rate->toBe('13.000000');
 });
+
+/**
+ * The payloads below are copied verbatim from the browser's POST body.
+ *
+ * The earlier tests in this file hand-built their items and left out the keys
+ * they did not care about, which let `nullable` short-circuit rules that the
+ * real form trips. An order form that cannot save is not a subtle failure —
+ * it was only invisible because the tests were politer than the client.
+ */
+test('the exact payload the form sends for a lira item saves', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => (string) $dentist->id,
+        'status' => 'pending',
+        'notes' => '',
+        'items' => [[
+            'type' => 'جسر',
+            'patient_name' => '',
+            'quantity' => 1,
+            'price' => 250,
+            'notes' => '',
+            'date' => '2026-08-26',
+            'selected_teeth' => [],
+            // The form always sends these, zeroed, for a lira line.
+            'currency' => 'SYP',
+            'original_amount' => 0,
+            'rate' => '',
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    expect(Order::with('items')->sole())
+        ->amount->toBe(250)
+        ->and(Order::with('items')->sole()->items->first())
+        ->price->toBe(250)
+        ->currency->toBe('SYP')
+        ->original_amount->toBeNull()
+        ->rate->toBeNull();
+});
+
+test('the exact payload the form sends for a dollar item saves', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => (string) $dentist->id,
+        'status' => 'pending',
+        'notes' => '',
+        'items' => [[
+            'type' => 'خزف',
+            'patient_name' => '',
+            'quantity' => 1,
+            // A dollar line still carries the derived lira price.
+            'price' => 2210,
+            'notes' => '',
+            'date' => '2026-08-26',
+            'selected_teeth' => [],
+            'currency' => 'USD',
+            'original_amount' => 1700,
+            'rate' => '130',
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    expect(Order::with('items')->sole()->items->first())
+        ->price->toBe(2210)
+        ->original_amount->toBe(1700);
+});
+
+test('a price of zero on a lira item is still allowed', function () {
+    // A line can legitimately be free — the old rule was min:0 and stays so.
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => (string) $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'إصلاح', 'quantity' => 1, 'price' => 0,
+            'date' => '2026-08-26', 'selected_teeth' => [],
+            'currency' => 'SYP', 'original_amount' => 0, 'rate' => '',
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    expect(Order::sole()->amount)->toBe(0);
+});

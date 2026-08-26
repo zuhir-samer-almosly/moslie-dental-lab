@@ -23,8 +23,14 @@ trait MoneyValidationRules
             // Absent currency means lira, so a form that never heard of
             // currency keeps submitting a bare amount and still validates.
             $field => ['required_unless:currency,USD', 'nullable', 'integer', 'min:1'],
-            'original_amount' => ['required_if:currency,USD', 'nullable', 'numeric', 'min:0.01'],
-            'rate' => ['required_if:currency,USD', 'nullable', 'numeric', 'min:0.000001'],
+            // `exclude_unless` rather than `required_if`: a lira row may still
+            // carry these keys — the order form sends them zeroed, the rest
+            // send them empty — and on such a row they describe nothing. They
+            // are dropped from the data outright rather than held to rules
+            // meant for a foreign row, so a placeholder cannot fail a minimum
+            // and take the whole save down with it.
+            'original_amount' => ['exclude_unless:currency,USD', 'required', 'numeric', 'min:0.01'],
+            'rate' => ['exclude_unless:currency,USD', 'required', 'numeric', 'min:0.000001'],
         ];
     }
 

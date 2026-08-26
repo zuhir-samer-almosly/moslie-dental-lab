@@ -208,3 +208,27 @@ test('editing a dollar payment re-posts the ledger at the new lira value', funct
 
     expect(app(LedgerReports::class)->balance(AccountCode::CASH->value))->toBe(1400);
 });
+
+test('a zeroed dollar placeholder on a lira payment is ignored, not rejected', function () {
+    // The order form sends 0 for the dollar fields on a lira line while the
+    // payment form sends ''. That difference was accidental, and the 0 shape
+    // broke order saving outright. The rules should not care either way:
+    // on a lira row these fields describe nothing.
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'amount' => 25000,
+        'currency' => 'SYP',
+        'original_amount' => 0,
+        'rate' => 0,
+    ])->assertRedirect(route('payments.index'))->assertSessionHasNoErrors();
+
+    expect(DentistPayment::sole())
+        ->amount->toBe(25000)
+        ->currency->toBe('SYP')
+        ->original_amount->toBeNull()
+        ->rate->toBeNull();
+});
