@@ -139,3 +139,72 @@ test('a lira payment records no rate', function () {
 
     expect(\App\Models\ExchangeRate::count())->toBe(0);
 });
+
+test('a lira payment can be edited into a dollar one', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'amount' => 25000,
+    ]);
+
+    $this->put(route('payments.update', $payment), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'currency' => 'USD',
+        'original_amount' => '100',
+        'rate' => '13',
+    ])->assertRedirect(route('payments.index'));
+
+    expect($payment->fresh())
+        ->amount->toBe(1300)
+        ->currency->toBe('USD')
+        ->original_amount->toBe(10000);
+});
+
+test('a dollar payment edited back to lira drops its conversion', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'currency' => 'USD',
+        'original_amount' => 100_00,
+        'rate' => '13',
+    ]);
+
+    $this->put(route('payments.update', $payment), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'amount' => 25000,
+    ])->assertRedirect(route('payments.index'));
+
+    expect($payment->fresh())
+        ->amount->toBe(25000)
+        ->currency->toBe('SYP')
+        ->original_amount->toBeNull()
+        ->rate->toBeNull();
+});
+
+test('editing a dollar payment re-posts the ledger at the new lira value', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'currency' => 'USD',
+        'original_amount' => 100_00,
+        'rate' => '13',
+    ]);
+
+    $this->put(route('payments.update', $payment), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'currency' => 'USD',
+        'original_amount' => '100',
+        'rate' => '14',
+    ]);
+
+    expect(app(LedgerReports::class)->balance(AccountCode::CASH->value))->toBe(1400);
+});
