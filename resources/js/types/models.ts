@@ -41,7 +41,14 @@ export interface DentistPayment {
     id: number;
     dentist_id: number;
     dentist?: Dentist;
+    /** Always lira — the currency of record. Set from the fields below when foreign. */
     amount: number;
+    /** What the money arrived as. Absent on rows written before multi-currency. */
+    currency?: 'SYP' | 'USD';
+    /** US cents, when `currency` is USD. */
+    original_amount?: number | null;
+    /** Lira per 1 USD, frozen at the day of the payment. */
+    rate?: string | null;
     payment_date?: string;
     created_at: string;
     updated_at: string;

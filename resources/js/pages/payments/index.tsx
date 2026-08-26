@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react';
+import ForeignOrigin from '@/components/money/foreign-origin';
 import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatSyp } from '@/lib/money';
 import type { BreadcrumbItem, DentistPayment } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -90,10 +92,11 @@ export default function PaymentsIndex({
                                                 {payment.dentist?.name}
                                             </TableCell>
                                             <TableCell className="font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
-                                                +
-                                                {payment.amount.toLocaleString(
-                                                    'en-US',
-                                                )}
+                                                +{formatSyp(payment.amount)}
+                                                <ForeignOrigin
+                                                    money={payment}
+                                                    className="text-emerald-700/70 dark:text-emerald-400/70"
+                                                />
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {formatDate(

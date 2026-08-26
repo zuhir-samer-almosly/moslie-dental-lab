@@ -1,11 +1,13 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import InputError from '@/components/input-error';
+import CurrencyAmountField, {
+    type CurrencyAmount,
+} from '@/components/money/currency-amount-field';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist, DentistPayment } from '@/types';
@@ -24,9 +26,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function PaymentsEdit({
     payment,
     dentists,
+    todayRate,
 }: {
     payment: DentistPayment;
     dentists: Dentist[];
+    todayRate: string | null;
 }) {
     const { data, setData, put, processing, errors } = useForm({
         dentist_id: payment.dentist_id.toString(),
@@ -34,6 +38,14 @@ export default function PaymentsEdit({
         payment_date:
             payment.payment_date ||
             new Date(payment.created_at).toISOString().split('T')[0],
+        currency: (payment.currency ?? 'SYP') as CurrencyAmount['currency'],
+        // Stored in cents; the field edits whole dollars the way they were handed over.
+        original_amount:
+            payment.original_amount === null ||
+            payment.original_amount === undefined
+                ? ''
+                : (payment.original_amount / 100).toFixed(2),
+        rate: payment.rate ?? '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -88,20 +100,14 @@ export default function PaymentsEdit({
                                 <InputError message={errors.dentist_id} />
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="amount">المبلغ</Label>
-                                <Input
-                                    id="amount"
-                                    type="number"
-                                    min="1"
-                                    value={data.amount}
-                                    onChange={(e) =>
-                                        setData('amount', e.target.value)
-                                    }
-                                    required
-                                />
-                                <InputError message={errors.amount} />
-                            </div>
+                            <CurrencyAmountField
+                                value={data}
+                                onChange={(patch) =>
+                                    setData((prev) => ({ ...prev, ...patch }))
+                                }
+                                errors={errors}
+                                todayRate={todayRate}
+                            />
 
                             <div className="grid gap-2">
                                 <Label htmlFor="payment_date">التاريخ</Label>
