@@ -17,8 +17,15 @@ class Rate
      * The rate in effect on a date: the newest one recorded on or before it,
      * so days the owner did not set a rate inherit the last one he did.
      */
-    public static function on(string $date): ?string
+    public static function on(?string $date): ?string
     {
+        // No date, no rate. Reports can be asked for an unbounded or
+        // not-yet-valid period, and that must not become a 500 before their
+        // own validation has had a chance to answer.
+        if ($date === null) {
+            return null;
+        }
+
         return ExchangeRate::query()
             ->where('rate_date', '<=', $date)
             ->orderByDesc('rate_date')

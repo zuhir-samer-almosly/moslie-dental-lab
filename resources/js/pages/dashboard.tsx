@@ -16,6 +16,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import ApproxUsd from '@/components/money/approx-usd';
 import { formatDate, StatusPill } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
@@ -50,6 +51,8 @@ type DashboardProps = {
     stats: DashboardStats;
     recentOrders: Order[];
     recentPayments: DentistPayment[];
+    /** Today's rate, for reading the headline totals in dollars. */
+    todayRate: string | null;
 };
 
 const nf = (value: number) => value.toLocaleString('en-US');
@@ -75,12 +78,15 @@ function MoneyCard({
     hint,
     icon: Icon,
     variant,
+    rate,
 }: {
     title: string;
     value: number;
     hint: string;
     icon: LucideIcon;
     variant: 'income' | 'expense' | 'net-positive' | 'net-negative';
+    /** Today's rate, for reading the figure back in dollars. */
+    rate: string | null;
 }) {
     return (
         <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-6">
@@ -112,9 +118,8 @@ function MoneyCard({
             >
                 {nf(value)}
             </span>
-            <span className="text-[13px] text-muted-foreground">
-                {hint}
-            </span>
+            <ApproxUsd syp={value} rate={rate} />
+            <span className="text-[13px] text-muted-foreground">{hint}</span>
         </div>
     );
 }
@@ -200,6 +205,7 @@ export default function Dashboard({
     stats,
     recentOrders,
     recentPayments,
+    todayRate,
 }: DashboardProps) {
     const { auth } = usePage().props;
     const netNegative = stats.net < 0;
@@ -238,6 +244,7 @@ export default function Dashboard({
                         hint="مدفوعات الأطباء هذا الشهر"
                         icon={TrendingUp}
                         variant="income"
+                        rate={todayRate}
                     />
                     <MoneyCard
                         title="الأعمال المنجزة"
@@ -245,6 +252,7 @@ export default function Dashboard({
                         hint="قيمة الطلبات المستحقة هذا الشهر"
                         icon={ClipboardCheck}
                         variant="income"
+                        rate={todayRate}
                     />
                     <MoneyCard
                         title="المصروفات هذا الشهر"
@@ -252,6 +260,7 @@ export default function Dashboard({
                         hint={`رواتب ${nf(stats.salaries)} + مواد ${nf(stats.materials)} + مصاريف ${nf(stats.general_expenses)}`}
                         icon={TrendingDown}
                         variant="expense"
+                        rate={todayRate}
                     />
                     <MoneyCard
                         title="صافي الربح"
@@ -259,6 +268,7 @@ export default function Dashboard({
                         hint={netNegative ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
                         icon={Wallet}
                         variant={netNegative ? 'net-negative' : 'net-positive'}
+                        rate={todayRate}
                     />
                 </div>
 

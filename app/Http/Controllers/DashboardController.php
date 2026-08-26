@@ -8,6 +8,7 @@ use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Employee;
 use App\Models\Order;
+use App\Money\Rate;
 use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
@@ -44,6 +45,7 @@ class DashboardController extends Controller
             ],
             'recentOrders' => Order::with(['dentist', 'items'])->latest()->take(5)->get(),
             'recentPayments' => DentistPayment::with('dentist')->latest()->take(5)->get(),
+            'todayRate' => Rate::on(now()->toDateString()),
         ]);
     }
 }

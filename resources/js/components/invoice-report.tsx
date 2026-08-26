@@ -1,3 +1,4 @@
+import ApproxUsd from '@/components/money/approx-usd';
 import ForeignOrigin from '@/components/money/foreign-origin';
 import {
     Dash,
@@ -51,6 +52,8 @@ export type InvoiceData = {
     } | null;
     openingByDentist: Record<string, number>;
     dentists: Dentist[];
+    /** The rate on the period's last day, for reading the totals in dollars. */
+    closingRate: string | null;
     filters: {
         from: string | null;
         to: string | null;
@@ -284,6 +287,7 @@ export function InvoiceReport({
     openingByDentist,
     dentists,
     filters,
+    closingRate,
 }: InvoiceData) {
     if (!orders || !payments || !totals) {
         return null;
@@ -598,10 +602,16 @@ export function InvoiceReport({
                     </div>
                     <div className="flex justify-between border-t pt-2">
                         <span className="font-bold">الإجمالي المستحق:</span>
-                        <DueAmount
-                            value={totals.balance}
-                            className="text-lg font-bold"
-                        />
+                        <span className="flex flex-col items-end">
+                            <DueAmount
+                                value={totals.balance}
+                                className="text-lg font-bold"
+                            />
+                            <ApproxUsd
+                                syp={totals.balance}
+                                rate={closingRate}
+                            />
+                        </span>
                     </div>
                 </div>
             </div>

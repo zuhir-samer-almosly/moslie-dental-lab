@@ -6,6 +6,7 @@ use App\Concerns\ResolvesMonth;
 use App\Ledger\AccountCode;
 use App\Ledger\LedgerReports;
 use App\Models\Account;
+use App\Money\Rate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -53,6 +54,7 @@ class FinanceController extends Controller
             'expensesByMaterial' => $this->expensesByMaterial($start, $end),
             'expensesByCategory' => $this->expensesByCategory($categories),
             'trend' => $this->trend($month),
+            'closingRate' => Rate::on($end),
         ]);
     }
 

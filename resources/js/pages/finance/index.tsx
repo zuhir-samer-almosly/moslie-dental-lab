@@ -7,6 +7,8 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+import ApproxUsd from '@/components/money/approx-usd';
 import { MonthPicker } from '@/components/month-picker';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -52,6 +54,8 @@ type FinanceProps = {
     expensesByMaterial: NamedTotal[];
     expensesByCategory: NamedTotal[];
     trend: TrendRow[];
+    /** The rate on the month's last day, for reading the totals in dollars. */
+    closingRate: string | null;
 };
 
 const nf = (value: number) => value.toLocaleString('en-US');
@@ -83,6 +87,7 @@ export default function FinanceIndex({
     expensesByMaterial,
     expensesByCategory,
     trend,
+    closingRate,
 }: FinanceProps) {
     const goToMonth = (next: string) => {
         router.get(
@@ -139,6 +144,7 @@ export default function FinanceIndex({
                     <StatCard
                         title="الدخل"
                         value={nf(income)}
+                        approx={<ApproxUsd syp={income} rate={closingRate} />}
                         hint="مدفوعات الأطباء هذا الشهر"
                         icon={TrendingUp}
                         tone="emerald"
@@ -146,6 +152,7 @@ export default function FinanceIndex({
                     <StatCard
                         title="المصروفات"
                         value={nf(expenses)}
+                        approx={<ApproxUsd syp={expenses} rate={closingRate} />}
                         hint="الرواتب وما في حكمها"
                         icon={TrendingDown}
                         tone="rose"
@@ -153,6 +160,7 @@ export default function FinanceIndex({
                     <StatCard
                         title="صافي الربح"
                         value={nf(net)}
+                        approx={<ApproxUsd syp={net} rate={closingRate} />}
                         hint={net < 0 ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
                         icon={Wallet}
                         tone={net < 0 ? 'rose' : 'blue'}
@@ -332,12 +340,15 @@ function StatCard({
     hint,
     icon: Icon,
     tone,
+    approx,
 }: {
     title: string;
     value: string | number;
     hint: string;
     icon: LucideIcon;
     tone: StatTone;
+    /** The same figure read back in dollars, when a rate is known. */
+    approx?: ReactNode;
 }) {
     return (
         <Card className="gap-0 py-0">
@@ -349,6 +360,7 @@ function StatCard({
                     <p className="text-3xl font-bold tracking-tight tabular-nums">
                         {value}
                     </p>
+                    {approx}
                     <p className="text-xs text-muted-foreground">{hint}</p>
                 </div>
                 <div

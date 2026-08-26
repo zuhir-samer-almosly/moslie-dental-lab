@@ -50,3 +50,11 @@ test('only one rate can be recorded per day', function () {
     expect(fn () => ExchangeRate::create(['rate_date' => '2026-08-01', 'rate' => '14']))
         ->toThrow(\Illuminate\Database\QueryException::class);
 });
+
+test('asking for the rate on no date at all gives no rate', function () {
+    // Reports can be opened with no period chosen yet; that must not explode
+    // before their own validation has answered.
+    ExchangeRate::create(['rate_date' => '2026-08-01', 'rate' => '13']);
+
+    expect(Rate::on(null))->toBeNull();
+});
