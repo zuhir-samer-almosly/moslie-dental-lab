@@ -54,12 +54,22 @@ export default function PaymentsCreate({
     /**
      * Switching dentists mid-form must not leave a stale amount typed for
      * the previous dentist's currency sitting in state — a lira figure
-     * surviving under a dollar dentist, or vice versa. Every money field
-     * resets with the dentist.
+     * surviving under a dollar dentist, or vice versa. Reset only when the
+     * currency actually crosses that line; switching between two lira (or
+     * two dollar) dentists keeps whatever the user already typed.
      */
     const handleDentistChange = (value: string) => {
         const dentist = dentists.find((d) => d.id.toString() === value);
         const isDollar = dentist?.currency === 'USD';
+
+        // Reset the money fields only when dollar-ness actually changes —
+        // switching between two lira dentists (or two dollar dentists) must
+        // not throw away a figure the user already typed.
+        if (isDollar === dollarDentist) {
+            setData('dentist_id', value);
+            return;
+        }
+
         setData((prev) => ({
             ...prev,
             dentist_id: value,

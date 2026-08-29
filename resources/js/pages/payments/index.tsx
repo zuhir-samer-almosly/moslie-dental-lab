@@ -13,7 +13,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import { formatSyp } from '@/lib/money';
+import { formatMoney } from '@/lib/money';
 import type { BreadcrumbItem, DentistPayment } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -22,6 +22,16 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/payments',
     },
 ];
+
+/**
+ * A payment's own total, in its own currency — a native dollar payment's
+ * `amount` is 0 by design, so the lira column is never what gets shown.
+ * Mirrors `orderTotal` in orders/index.tsx.
+ */
+const paymentAmount = (payment: DentistPayment): number =>
+    payment.currency === 'USD'
+        ? (payment.original_amount ?? 0)
+        : payment.amount;
 
 export default function PaymentsIndex({
     payments,
@@ -92,7 +102,22 @@ export default function PaymentsIndex({
                                                 {payment.dentist?.name}
                                             </TableCell>
                                             <TableCell className="font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
-                                                +{formatSyp(payment.amount)}
+                                                <span
+                                                    dir={
+                                                        payment.currency ===
+                                                        'USD'
+                                                            ? 'ltr'
+                                                            : undefined
+                                                    }
+                                                >
+                                                    +
+                                                    {formatMoney(
+                                                        paymentAmount(
+                                                            payment,
+                                                        ),
+                                                        payment.currency,
+                                                    )}
+                                                </span>
                                                 <ForeignOrigin
                                                     money={payment}
                                                     className="text-emerald-700/70 dark:text-emerald-400/70"

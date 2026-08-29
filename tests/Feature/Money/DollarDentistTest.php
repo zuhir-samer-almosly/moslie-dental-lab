@@ -3,7 +3,9 @@
 // tests/Feature/Money/DollarDentistTest.php
 
 use App\Ledger\AccountCode;
+use App\Ledger\LedgerReports;
 use App\Models\Account;
+use App\Models\ExchangeRate;
 use App\Money\Currency;
 
 test('the chart carries a dollar cash, receivable and revenue account', function () {
@@ -358,8 +360,6 @@ test('moving an order from a dollar dentist to a lira dentist nulls out its orig
         ->and($order->valueInOwnCurrency())->toBe(250);
 });
 
-use App\Ledger\LedgerReports;
-
 test('a dollar order posts to the dollar accounts and nowhere else', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
@@ -398,7 +398,7 @@ test('five hundred ordered less two hundred paid is exactly three hundred owed',
     ])->assertSessionHasNoErrors();
 
     // A month later, at a rate that has moved a long way. It must not matter.
-    \App\Models\ExchangeRate::create(['rate_date' => '2026-10-01', 'rate' => '250']);
+    ExchangeRate::create(['rate_date' => '2026-10-01', 'rate' => '250']);
 
     $this->post(route('payments.store'), [
         'dentist_id' => $dentist->id,
@@ -413,4 +413,104 @@ test('five hundred ordered less two hundred paid is exactly three hundred owed',
         ->and($reports->balance('1001'))->toBe(20000) // $200 in the dollar box
         ->and($reports->balance('1000'))->toBe(0)     // and none in the lira box
         ->and($reports->balance('1100'))->toBe(0);
+});
+
+test('a factory-built order posts by its dentist currency even when the row disagrees', function () {
+    // OrderFactory always sets currency => 'SYP' (Task 5's default), so a
+    // directly-constructed row for a dollar dentist starts out disagreeing
+    // with its own dentist. OrderPosting must resolve the account AND the
+    // unit from the dentist — never from this stale column — or the entry
+    // silently posts a dollar figure into the lira accounts.
+    $dollarDentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    Order::factory()->for($dollarDentist)->create([
+        'currency' => 'SYP',
+        'amount' => 0,
+        'original_amount' => 400_00,
+    ]);
+
+    $reports = app(LedgerReports::class);
+
+    expect($reports->balance('1101'))->toBe(40000)
+        ->and($reports->balance('4001'))->toBe(40000)
+        ->and($reports->balance('1100'))->toBe(0)
+        ->and($reports->balance('4000'))->toBe(0);
+});
+
+test('updating a dollar dentist payment keeps it in dollars and reposts the ledger', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-09-01',
+        'currency' => 'USD',
+        'original_amount' => 100_00,
+    ]);
+
+    $this->put(route('payments.update', $payment), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-09-01',
+        'currency' => 'USD',
+        'original_amount' => '150',
+    ])->assertSessionHasNoErrors();
+
+    expect($payment->fresh())
+        ->original_amount->toBe(15000)
+        ->amount->toBe(0)
+        ->rate->toBeNull();
+
+    // The Rate::remember guard must not fire for a native dollar edit either
+    // — there is no rate to remember.
+    expect(app(LedgerReports::class)->balance('1001'))->toBe(15000)
+        ->and(ExchangeRate::count())->toBe(0);
+});
+
+test('editing a payment to move it from a lira dentist to a dollar dentist posts natively', function () {
+    $this->actingAs(User::factory()->create());
+    $liraDentist = Dentist::create(['name' => 'د. أحمد']);
+    $dollarDentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $payment = DentistPayment::create([
+        'dentist_id' => $liraDentist->id,
+        'payment_date' => '2026-09-01',
+        'amount' => 25000,
+    ]);
+
+    $this->put(route('payments.update', $payment), [
+        'dentist_id' => $dollarDentist->id,
+        'payment_date' => '2026-09-01',
+        'currency' => 'USD',
+        'original_amount' => '200',
+    ])->assertSessionHasNoErrors();
+
+    expect($payment->fresh())
+        ->dentist_id->toBe($dollarDentist->id)
+        ->currency->toBe('USD')
+        ->original_amount->toBe(20000)
+        ->amount->toBe(0)
+        ->rate->toBeNull();
+
+    $reports = app(LedgerReports::class);
+
+    expect($reports->balance('1001'))->toBe(20000)
+        // The lira accounts, which held this payment a moment ago, are clean.
+        ->and($reports->balance('1000'))->toBe(0)
+        ->and($reports->balance('1100'))->toBe(0);
+});
+
+test('a malformed dentist_id on a payment fails validation instead of crashing', function () {
+    // dentist_id[]=1 makes input('dentist_id') an array; Dentist::find() on
+    // an array returns a Collection, and an unguarded ?->isDollar() would
+    // throw BadMethodCallException before validation gets a chance to
+    // reject it with a 422/302 — the same bug class closed for Dentist's own
+    // currency field in 16fba87.
+    $this->actingAs(User::factory()->create());
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => ['1'],
+        'payment_date' => '2026-09-01',
+        'amount' => 25000,
+    ])->assertSessionHasErrors('dentist_id');
+
+    expect(DentistPayment::count())->toBe(0);
 });
