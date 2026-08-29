@@ -7,6 +7,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Account;
 use App\Models\ExchangeRate;
 use App\Money\Currency;
+use Illuminate\Support\Facades\DB;
 
 test('the chart carries a dollar cash, receivable and revenue account', function () {
     expect(Account::chart()->get('1001'))->not->toBeNull()
@@ -676,4 +677,99 @@ test('the statement page for a dollar dentist reads in dollars, without throwing
         ->where('statement.closing', 50000)
         ->where('statement.lines.0.currency', 'USD')
     );
+});
+
+test('rebuilding the ledger reproduces a dollar dentist exactly', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ]);
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id, 'payment_date' => '2026-09-20',
+        'currency' => 'USD', 'original_amount' => '200',
+    ]);
+
+    $before = app(LedgerReports::class)->balance('1101');
+
+    $this->artisan('ledger:rebuild', ['--force' => true])->assertExitCode(0);
+
+    expect(app(LedgerReports::class)->balance('1101'))->toBe($before)->toBe(30000);
+});
+
+test('redenominating never touches a native dollar row', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ]);
+
+    $this->artisan('money:redenominate', ['--force' => true])->assertExitCode(0);
+
+    // Cents are not lira. Dividing them by 100 would turn $500 into $5.
+    expect(Order::sole()->original_amount)->toBe(50000)
+        ->and(Order::sole()->items->first()->original_amount)->toBe(50000);
+});
+
+test('the exclusion is a real SQL guard, not just an accident of the lira column already being zero', function () {
+    // The app forces a native dollar row's lira column to 0 on write (see
+    // App\Concerns\HasForeignCurrency::applyExchangeRate()), so through the
+    // normal write path `order_items.price`, `orders.amount` and
+    // `dentist_payments.amount` are always 0 already and dividing 0 by
+    // anything is a no-op — which is why the test above would keep passing
+    // even with the exclusion deleted. money:redenominate works in raw SQL
+    // with no model in the loop, so its guard must hold even for a row that
+    // violates that invariant (bad legacy data, a bug upstream). These rows
+    // are inserted directly, bypassing HasForeignCurrency's saving hook, to
+    // prove the command's own WHERE clauses — not the model layer — are
+    // what keep native dollar cents away from the divisor.
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $orderId = DB::table('orders')->insertGetId([
+        'dentist_id' => $dentist->id, 'due_date' => '2026-09-01', 'status' => 'pending',
+        'amount' => 500, 'currency' => 'USD', 'original_amount' => 50000,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('order_items')->insert([
+        'order_id' => $orderId, 'type' => 'زيركون', 'quantity' => 1,
+        'price' => 500, 'currency' => 'USD', 'original_amount' => 50000, 'rate' => null,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('dentist_payments')->insert([
+        'dentist_id' => $dentist->id, 'amount' => 200,
+        'currency' => 'USD', 'original_amount' => 20000, 'rate' => null,
+        'payment_date' => '2026-09-20', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->artisan('money:redenominate', ['--force' => true])->assertExitCode(0);
+
+    expect(DB::table('order_items')->where('order_id', $orderId)->value('price'))->toBe(500)
+        ->and(DB::table('orders')->where('id', $orderId)->value('amount'))->toBe(500)
+        ->and(DB::table('dentist_payments')->where('dentist_id', $dentist->id)->value('amount'))->toBe(200);
+});
+
+test('an item-less native dollar order survives redenomination even though its amount was never derived from items', function () {
+    // Same reasoning as above, aimed squarely at divideOrders()'s item-less
+    // branch and findIndivisible()'s itemlessOrders() scan — the one place
+    // an order's own amount is divided directly rather than recomputed from
+    // (already-protected) items.
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $orderId = DB::table('orders')->insertGetId([
+        'dentist_id' => $dentist->id, 'due_date' => '2026-09-01', 'status' => 'pending',
+        'amount' => 500, 'currency' => 'USD', 'original_amount' => 50000,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->artisan('money:redenominate', ['--force' => true])->assertExitCode(0);
+
+    expect(DB::table('orders')->where('id', $orderId)->value('amount'))->toBe(500);
 });
