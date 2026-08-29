@@ -8,6 +8,7 @@ use App\Ledger\Line;
 use App\Ledger\Posting;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Money\Currency;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,8 +25,14 @@ use Illuminate\Support\Collection;
  * period's opening balance carries work that the same period then lists again
  * as its own, and the invoice bills it twice.
  *
- * Valued from `orders.amount` rather than the `total` items accessor, because
- * that is what the existing reports use — the items only decide *when* each
+ * Valued in whole lira or cents depending on the order's DENTIST — never the
+ * order row's own `currency` column, which OrderController keeps in sync on
+ * every real write but which a directly constructed row (a factory, a test)
+ * can leave stale. Reading the dentist is the same authority
+ * `OrderItem::nativeCurrency()` already uses, so an item's unit and the
+ * order's account can never disagree. Valued from `orders.amount`/
+ * `orders.original_amount` rather than the `total` items accessor, because
+ * that is what the existing reports use; the items only decide *when* each
  * part of that amount was earned.
  */
 final class OrderPosting implements Posting
@@ -34,19 +41,21 @@ final class OrderPosting implements Posting
 
     public function shouldPost(): bool
     {
-        return $this->order->status !== 'cancelled' && (int) $this->order->amount !== 0;
+        return $this->order->status !== 'cancelled' && $this->valueInDentistCurrency() !== 0;
     }
 
     /** @return list<Entry> */
     public function entries(): array
     {
+        $currency = $this->dentistCurrency();
+
         return $this->amountsByDate()
             ->map(fn (int $amount, string $date) => new Entry(
                 $date,
                 "طلب #{$this->order->id}",
                 [
-                    Line::debit(AccountCode::RECEIVABLE->value, $amount, $this->order->dentist_id),
-                    Line::credit(AccountCode::REVENUE->value, $amount),
+                    Line::debit(AccountCode::receivableFor($currency), $amount, $this->order->dentist_id),
+                    Line::credit(AccountCode::revenueFor($currency), $amount),
                 ],
             ))
             ->values()
@@ -66,7 +75,7 @@ final class OrderPosting implements Posting
     private function amountsByDate(): Collection
     {
         $dueDate = Carbon::parse($this->order->due_date)->toDateString();
-        $amount = (int) $this->order->amount;
+        $amount = $this->valueInDentistCurrency();
         $items = $this->order->items;
 
         if ($items->isEmpty()) {
@@ -75,14 +84,18 @@ final class OrderPosting implements Posting
 
         $byDate = $items
             ->groupBy(fn (OrderItem $item) => $item->meta['date'] ?? $dueDate)
-            ->map(fn (Collection $group) => (int) $group->sum(fn (OrderItem $item) => $item->quantity * $item->price));
+            ->map(fn (Collection $group) => (int) $group->sum(
+                fn (OrderItem $item) => $item->quantity * $item->valueInOwnCurrency()
+            ));
 
-        // `orders.amount` stays the authority for what an order is WORTH, so
-        // splitting it by date can never change a total. The two agree by
-        // construction — OrderController recomputes `amount` from the items on
-        // every write, and `money:redenominate` recomputes it too — so this is
-        // normally zero. Should a row ever drift, the difference belongs on the
-        // order's own date rather than silently vanishing from the books.
+        // This order's own value in its dentist's currency stays the authority
+        // for what it is WORTH, so splitting it by date can never change a
+        // total. The two agree by construction — OrderController recomputes
+        // `amount` (and `original_amount`, for a dollar dentist) from the
+        // items on every write, and `money:redenominate` recomputes it too —
+        // so this is normally zero. Should a row ever drift, the difference
+        // belongs on the order's own date rather than silently vanishing
+        // from the books.
         $residual = $amount - $byDate->sum();
 
         if ($residual !== 0) {
@@ -92,5 +105,33 @@ final class OrderPosting implements Posting
         return $byDate
             ->reject(fn (int $value) => $value === 0)
             ->sortKeys();
+    }
+
+    /**
+     * The single authority for what currency this order's money is in: its
+     * DENTIST's, resolved fresh every time rather than trusted from the order
+     * row's own `currency` column. `entries()` picks the account pair from
+     * this; `amountsByDate()`/`valueInDentistCurrency()` pick the unit from
+     * it too — the same call, so the two can never come from different
+     * places. A row whose `currency` column disagrees with its dentist (a
+     * factory default, a stale edit) is resolved as the dentist says, not as
+     * the row claims.
+     */
+    private function dentistCurrency(): Currency
+    {
+        return $this->order->dentist->billingCurrency();
+    }
+
+    /**
+     * This order's value in `dentistCurrency()`'s minor unit: cents for a
+     * dollar dentist, whole lira otherwise. Deliberately not
+     * `Order::valueInOwnCurrency()`, which trusts the row's own `currency`
+     * column instead of the dentist.
+     */
+    private function valueInDentistCurrency(): int
+    {
+        return $this->dentistCurrency() === Currency::USD
+            ? (int) $this->order->original_amount
+            : (int) $this->order->amount;
     }
 }

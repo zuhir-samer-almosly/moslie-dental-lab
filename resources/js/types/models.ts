@@ -1,6 +1,18 @@
 export interface Dentist {
     id: number;
     name: string;
+    /**
+     * What this dentist is quoted, billed and paid in. A USD dentist's money
+     * is native dollars: cents, converted by nothing, and no rate anywhere.
+     */
+    currency?: 'SYP' | 'USD';
+    /**
+     * Whether anything has posted to this dentist's ledger account yet.
+     * Populated only where the currency-editing form needs it (the dentists
+     * index and edit pages) — absent elsewhere, including the plain
+     * `Dentist::all()` pickers on the order and payment pages.
+     */
+    has_ledger_lines?: boolean;
     gender: 'male' | 'female';
     phone: string | null;
     address: string | null;
@@ -23,6 +35,10 @@ export interface Order {
     dentist?: Dentist;
     due_date: string;
     amount: number;
+    /** What this order is billed in. USD orders hold cents in `original_amount`. */
+    currency?: 'SYP' | 'USD';
+    /** Total in US cents, when `currency` is USD. `amount` is then 0. */
+    original_amount?: number | null;
     status: 'pending' | 'completed' | 'cancelled' | 'recieved';
     notes: string | null;
     meta: Record<string, unknown> | null;

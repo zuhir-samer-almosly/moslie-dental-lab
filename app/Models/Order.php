@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Money\Currency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -15,10 +16,24 @@ class Order extends Model
     /** @use HasFactory<\Database\Factories\OrderFactory> */
     use HasFactory;
 
+    /**
+     * A freshly-instantiated (unsaved) model has no 'currency' key in its
+     * attribute array unless one is given explicitly — mass assignment only
+     * sets what's passed. Mirrors the migration's own `default('SYP')` so a
+     * brand-new in-memory instance already agrees with what the row will get
+     * once saved, and so `billingCurrency()` never throws on an unsaved or
+     * factory-built order that never set `currency` explicitly.
+     */
+    protected $attributes = [
+        'currency' => 'SYP',
+    ];
+
     protected $fillable = [
         'dentist_id',
         'due_date',
         'amount',
+        'currency',
+        'original_amount',
         'status',
         'notes',
         'meta',
@@ -27,6 +42,7 @@ class Order extends Model
     protected $casts = [
         'meta' => 'array',
         'due_date' => 'date',
+        'original_amount' => 'integer',
     ];
 
     /**
@@ -61,6 +77,41 @@ class Order extends Model
     public function scopeBillable($query)
     {
         return $query->where('status', '!=', 'cancelled');
+    }
+
+    /**
+     * The currency this order is billed in — its dentist's currency at the
+     * time it was saved.
+     *
+     * Named `billingCurrency()` rather than `currency()` for the same reason
+     * as `Dentist::billingCurrency()`: a method named exactly like the
+     * `currency` column collides with Eloquent's relationship resolution the
+     * moment a hydrated row is missing that column (e.g. a narrowed
+     * `select()`), throwing a confusing LogicException. The guard below keeps
+     * failure loud instead of silently defaulting a dollar order's money to
+     * lira.
+     */
+    public function billingCurrency(): Currency
+    {
+        if (! array_key_exists('currency', $this->getAttributes())) {
+            throw new \LogicException(
+                'Order #'.$this->id.' was loaded without its `currency` column, so its '
+                .'billing currency is unknowable. Select the column, or do not ask.'
+            );
+        }
+
+        return Currency::from($this->currency ?? Currency::SYP->value);
+    }
+
+    /**
+     * What this order is worth in its own currency's minor unit — cents for a
+     * dollar dentist, whole lira otherwise. What OrderPosting books.
+     */
+    public function valueInOwnCurrency(): int
+    {
+        return $this->billingCurrency() === Currency::USD
+            ? (int) $this->original_amount
+            : (int) $this->amount;
     }
 
     protected function total(): \Illuminate\Database\Eloquent\Casts\Attribute

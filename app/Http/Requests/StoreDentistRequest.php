@@ -23,6 +23,10 @@ class StoreDentistRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            // 'sometimes' + 'required' rather than 'nullable': an absent key
+            // is fine (the model default supplies SYP), but an explicit null
+            // must be rejected, not passed through to a NOT NULL column.
+            'currency' => ['sometimes', 'required', 'in:SYP,USD'],
             'gender' => ['required', 'in:male,female'],
             'phone' => ['nullable', 'string', 'unique:dentists,phone'],
             'address' => ['nullable', 'string'],

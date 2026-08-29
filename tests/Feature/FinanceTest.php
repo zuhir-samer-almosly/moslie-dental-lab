@@ -291,3 +291,25 @@ test('finance figures are read from the ledger, not recomputed from domain table
             ->where('categories', [])
         );
 });
+
+test('the finance page reports a dollar dentist\'s cash-in without blending it into lira income', function () {
+    $this->actingAs(User::factory()->create());
+
+    $lira = Dentist::create(['name' => 'د. ليرة']);
+    Order::create(['dentist_id' => $lira->id, 'due_date' => '2026-06-10', 'amount' => 500000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $lira->id, 'amount' => 200000, 'payment_date' => '2026-06-15']);
+
+    $dollar = Dentist::create(['name' => 'د. دولار', 'currency' => 'USD']);
+    Order::create(['dentist_id' => $dollar->id, 'due_date' => '2026-06-10', 'amount' => 0, 'original_amount' => 50000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $dollar->id, 'original_amount' => 30000, 'payment_date' => '2026-06-15']);
+
+    // Both currencies are non-zero in the same month: a regression that
+    // summed `income` and `incomeUsd` (330000, not 200000) would fail this
+    // assertion, whereas a test with only one currency populated could pass
+    // a blended sum by accident.
+    $this->get(route('finance.index', ['month' => '2026-06']))
+        ->assertInertia(fn ($page) => $page
+            ->where('income', 200000)
+            ->where('incomeUsd', 30000)
+        );
+});

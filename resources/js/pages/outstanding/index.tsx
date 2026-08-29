@@ -9,6 +9,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
@@ -23,6 +24,7 @@ type DentistBalance = {
     id: number;
     name: string;
     phone: string | null;
+    currency: 'SYP' | 'USD';
     orders_total: number;
     payments_total: number;
     outstanding: number;
@@ -31,13 +33,13 @@ type DentistBalance = {
 type OutstandingProps = {
     dentists: DentistBalance[];
     totalOutstanding: number;
+    totalOutstandingUsd: number;
 };
-
-const nf = (value: number) => value.toLocaleString('en-US');
 
 export default function OutstandingIndex({
     dentists,
     totalOutstanding,
+    totalOutstandingUsd,
 }: OutstandingProps) {
     const owing = dentists.filter((d) => d.outstanding > 0);
 
@@ -56,16 +58,33 @@ export default function OutstandingIndex({
                     </p>
                 </div>
 
-                <Card>
-                    <CardContent className="flex items-center justify-between p-5">
-                        <span className="text-sm text-muted-foreground">
-                            إجمالي المستحق على جميع الأطباء
-                        </span>
-                        <span className="text-2xl font-bold tabular-nums">
-                            {nf(totalOutstanding)}
-                        </span>
-                    </CardContent>
-                </Card>
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <Card>
+                        <CardContent className="flex items-center justify-between p-5">
+                            <span className="text-sm text-muted-foreground">
+                                إجمالي المستحق بالليرة
+                            </span>
+                            <span className="text-2xl font-bold tabular-nums">
+                                {formatMoney(totalOutstanding, 'SYP')}
+                            </span>
+                        </CardContent>
+                    </Card>
+                    {totalOutstandingUsd > 0 && (
+                        <Card>
+                            <CardContent className="flex items-center justify-between p-5">
+                                <span className="text-sm text-muted-foreground">
+                                    إجمالي المستحق بالدولار
+                                </span>
+                                <span
+                                    dir="ltr"
+                                    className="text-2xl font-bold tabular-nums"
+                                >
+                                    {formatMoney(totalOutstandingUsd, 'USD')}
+                                </span>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
 
                 <div className="rounded-lg border">
                     <Table>
@@ -104,10 +123,32 @@ export default function OutstandingIndex({
                                             {dentist.phone ?? '—'}
                                         </TableCell>
                                         <TableCell className="text-left tabular-nums">
-                                            {nf(dentist.orders_total)}
+                                            <span
+                                                dir={
+                                                    dentist.currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    dentist.orders_total,
+                                                    dentist.currency,
+                                                )}
+                                            </span>
                                         </TableCell>
                                         <TableCell className="text-left tabular-nums">
-                                            {nf(dentist.payments_total)}
+                                            <span
+                                                dir={
+                                                    dentist.currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    dentist.payments_total,
+                                                    dentist.currency,
+                                                )}
+                                            </span>
                                         </TableCell>
                                         <TableCell
                                             className={cn(
@@ -115,7 +156,18 @@ export default function OutstandingIndex({
                                                 'text-red-600 dark:text-red-400',
                                             )}
                                         >
-                                            {nf(dentist.outstanding)}
+                                            <span
+                                                dir={
+                                                    dentist.currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    dentist.outstanding,
+                                                    dentist.currency,
+                                                )}
+                                            </span>
                                         </TableCell>
                                     </TableRow>
                                 ))

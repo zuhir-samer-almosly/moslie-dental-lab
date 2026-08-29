@@ -61,6 +61,7 @@ export default function DentistForm({
         clearErrors,
     } = useForm({
         name: dentist?.name ?? '',
+        currency: dentist?.currency ?? ('SYP' as const),
         gender: dentist?.gender ?? 'male',
         phone: dentist?.phone ?? '',
         address: dentist?.address ?? '',
@@ -69,6 +70,7 @@ export default function DentistForm({
 
     transform((payload) => ({
         name: payload.name,
+        currency: payload.currency,
         gender: payload.gender,
         phone: payload.phone,
         address: payload.address,
@@ -79,10 +81,11 @@ export default function DentistForm({
                     row.name.trim(),
                     {
                         price:
-                            row.currency === 'USD'
+                            payload.currency === 'USD' || row.currency === 'USD'
                                 ? Math.round(row.price * 100)
                                 : Math.round(row.price),
-                        currency: row.currency,
+                        currency:
+                            payload.currency === 'USD' ? 'USD' : row.currency,
                     },
                 ]),
         ),
@@ -169,6 +172,49 @@ export default function DentistForm({
             </div>
 
             <div className="grid gap-2">
+                <Label>العملة *</Label>
+                <div className="flex gap-4">
+                    <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                            type="radio"
+                            name="dentist_currency"
+                            value="SYP"
+                            checked={data.currency === 'SYP'}
+                            onChange={() => setData('currency', 'SYP')}
+                            disabled={dentist?.has_ledger_lines === true}
+                            className="accent-primary"
+                        />
+                        <span>ليرة</span>
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-2">
+                        <input
+                            type="radio"
+                            name="dentist_currency"
+                            value="USD"
+                            checked={data.currency === 'USD'}
+                            onChange={() => setData('currency', 'USD')}
+                            disabled={dentist?.has_ledger_lines === true}
+                            className="accent-primary"
+                        />
+                        <span>دولار</span>
+                    </label>
+                </div>
+                {dentist?.has_ledger_lines === true ? (
+                    <p className="text-sm text-muted-foreground">
+                        لا يمكن تغيير العملة لأن حساب هذا الطبيب عليه حركات
+                        مسجلة بالفعل.
+                    </p>
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        طبيب الدولار تُسعَّر وتُفوتر وتُسدَّد حساباته بالدولار
+                        بالكامل، دون أي تحويل إلى الليرة. لا يمكن تغيير العملة
+                        بعد تسجيل أول حركة على حسابه.
+                    </p>
+                )}
+                <InputError message={errors.currency} />
+            </div>
+
+            <div className="grid gap-2">
                 <Label htmlFor="phone">الهاتف</Label>
                 <Input
                     id="phone"
@@ -198,6 +244,7 @@ export default function DentistForm({
                 <PriceListEditor
                     value={data.price_list}
                     onChange={(rows) => setData('price_list', rows)}
+                    dentistCurrency={data.currency}
                 />
                 <InputError message={errors.price_list} />
             </div>

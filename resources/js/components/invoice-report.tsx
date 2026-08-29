@@ -3,7 +3,6 @@ import ForeignOrigin from '@/components/money/foreign-origin';
 import {
     Dash,
     formatDate,
-    itemAmount,
     itemDate,
     itemPatient,
     itemTeeth,
@@ -17,9 +16,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { formatRate, formatSyp, formatUsd } from '@/lib/money';
+import { formatMoney, formatRate, formatUsd } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { Dentist, DentistPayment, Order, OrderItem } from '@/types';
+
+type MoneyCurrency = 'SYP' | 'USD';
 
 /**
  * The invoice document itself — everything that ends up on paper, and nothing
@@ -34,6 +35,8 @@ type DentistGroup = {
     id: number;
     name: string;
     gender: 'male' | 'female';
+    /** This dentist's own billing currency — every figure in this group is in it. */
+    currency: MoneyCurrency;
     opening: number;
     rows: { order: Order; item: OrderItem | null }[];
     ordersTotal: number;
@@ -41,15 +44,28 @@ type DentistGroup = {
     due: number;
 };
 
+type InvoiceTotals = {
+    opening: number;
+    orders: number;
+    payments: number;
+    balance: number;
+};
+
 export type InvoiceData = {
     orders: Order[] | null;
     payments: DentistPayment[] | null;
-    totals: {
-        opening: number;
-        orders: number;
-        payments: number;
-        balance: number;
-    } | null;
+    totals: InvoiceTotals | null;
+    /**
+     * The same shape as `totals`, but in dollars — present only when no
+     * single dentist is selected, since that's the only time the report
+     * spans both currencies. Kept apart from `totals`, never added to it.
+     */
+    totalsUsd?: InvoiceTotals | null;
+    /**
+     * The currency `totals` is denominated in: the selected dentist's own
+     * currency, or SYP when the report spans every dentist.
+     */
+    currency: MoneyCurrency;
     openingByDentist: Record<string, number>;
     dentists: Dentist[];
     /** The rate on the period's last day, for reading the totals in dollars. */
@@ -99,7 +115,8 @@ function dueTone(due: number): string {
  * A balance owed, with its unit. Since the redenomination divided every stored
  * amount by 100, a bare figure is ambiguous against any invoice printed before
  * it — the unit is what disambiguates, so it rides along with the two figures
- * a reader actually takes off the page.
+ * a reader actually takes off the page. A dollar figure carries its own `$`
+ * (from `formatMoney`) instead, so no separate unit label is needed there.
  *
  * `inline-flex` keeps the digits and the unit in one bidi run: RTL reordering
  * would otherwise be free to move the Arabic label away from the Latin digit
@@ -109,9 +126,11 @@ function dueTone(due: number): string {
  */
 function DueAmount({
     value,
+    currency,
     className,
 }: {
     value: number;
+    currency: MoneyCurrency;
     className?: string;
 }) {
     return (
@@ -122,12 +141,17 @@ function DueAmount({
                 className,
             )}
         >
-            <span className="tabular-nums">
-                {value.toLocaleString('en-US')}
+            <span
+                dir={currency === 'USD' ? 'ltr' : undefined}
+                className="tabular-nums"
+            >
+                {formatMoney(value, currency)}
             </span>
-            <span className="text-sm font-normal whitespace-nowrap text-muted-foreground">
-                ليرة جديدة
-            </span>
+            {currency === 'SYP' && (
+                <span className="text-sm font-normal whitespace-nowrap text-muted-foreground">
+                    ليرة جديدة
+                </span>
+            )}
         </span>
     );
 }
@@ -199,6 +223,45 @@ function rowDate({ order, item }: { order: Order; item: OrderItem | null }) {
 }
 
 /**
+ * An order's own value, in its own currency's minor unit — cents for a
+ * dollar dentist, whole lira otherwise. Mirrors `Order::valueInOwnCurrency()`:
+ * `amount` is the lira column, `original_amount` the dollar one, and exactly
+ * one of them is non-zero depending on `currency`.
+ */
+function orderOwnValue(order: Order, currency: MoneyCurrency): number {
+    return currency === 'USD'
+        ? (order.original_amount ?? 0)
+        : (order.amount ?? 0);
+}
+
+/** An item's own unit price, in its own currency's minor unit. */
+function itemOwnValue(item: OrderItem, currency: MoneyCurrency): number {
+    return currency === 'USD' ? (item.original_amount ?? 0) : (item.price ?? 0);
+}
+
+/** An item's line total: its own unit value times quantity. */
+function itemLineTotal(item: OrderItem, currency: MoneyCurrency): number {
+    return itemOwnValue(item, currency) * (item.quantity ?? 0);
+}
+
+/**
+ * A payment's own value, in its own currency's minor unit. Deliberately NOT
+ * keyed off `payment.currency` — that's what the money was HANDED OVER as,
+ * and a lira dentist can still pay in dollars (converted). The `currency`
+ * passed in here is the dentist's own billing currency, which is what
+ * decides whether `amount` (lira) or `original_amount` (cents) is the row's
+ * real value.
+ */
+function paymentOwnValue(
+    payment: DentistPayment,
+    currency: MoneyCurrency,
+): number {
+    return currency === 'USD'
+        ? (payment.original_amount ?? 0)
+        : (payment.amount ?? 0);
+}
+
+/**
  * Build a per-dentist statement: previous (opening) balance carried from
  * earlier months + this period's orders − this period's payments = amount due.
  * Dentists with only a carried-over balance (no new orders) still appear.
@@ -213,11 +276,15 @@ export function groupByDentist(
     const findDentist = (id: number) => dentists.find((d) => d.id === id);
     const nameFor = (id: number) => findDentist(id)?.name ?? '—';
     const genderFor = (id: number) => findDentist(id)?.gender ?? 'male';
+    // Authority for a dentist's currency is the dentist himself, never a row.
+    const currencyFor = (id: number): MoneyCurrency =>
+        findDentist(id)?.currency ?? 'SYP';
 
     const ensure = (
         id: number,
         name?: string,
         gender?: 'male' | 'female',
+        currency?: MoneyCurrency,
     ): DentistGroup => {
         let group = map.get(id);
         if (!group) {
@@ -225,6 +292,7 @@ export function groupByDentist(
                 id,
                 name: name ?? nameFor(id),
                 gender: gender ?? genderFor(id),
+                currency: currency ?? currencyFor(id),
                 opening: 0,
                 rows: [],
                 ordersTotal: 0,
@@ -247,25 +315,28 @@ export function groupByDentist(
             order.dentist_id,
             order.dentist?.name,
             order.dentist?.gender,
+            order.dentist?.currency,
         );
         const items = order.items ?? [];
         if (items.length === 0) {
             group.rows.push({ order, item: null });
-            group.ordersTotal += order.amount;
+            group.ordersTotal += orderOwnValue(order, group.currency);
         } else {
             for (const item of items) {
                 group.rows.push({ order, item });
-                group.ordersTotal += itemAmount(item);
+                group.ordersTotal += itemLineTotal(item, group.currency);
             }
         }
     }
 
     for (const payment of payments) {
-        ensure(
+        const group = ensure(
             payment.dentist_id,
             payment.dentist?.name,
             payment.dentist?.gender,
-        ).paymentsTotal += payment.amount;
+            payment.dentist?.currency,
+        );
+        group.paymentsTotal += paymentOwnValue(payment, group.currency);
     }
 
     for (const group of map.values()) {
@@ -284,6 +355,8 @@ export function InvoiceReport({
     orders,
     payments,
     totals,
+    totalsUsd,
+    currency,
     openingByDentist,
     dentists,
     filters,
@@ -295,9 +368,26 @@ export function InvoiceReport({
 
     const groups = groupByDentist(orders, payments, openingByDentist, dentists);
     // Only widen the table when there is something to put in the column, so an
-    // all-lira invoice looks exactly as it always did.
+    // all-lira invoice looks exactly as it always did. A native dollar
+    // payment carries `currency: 'USD'` too but has no rate to show — a pure
+    // dollar-dentist invoice must show no rate column at all, so this checks
+    // the payment's DENTIST, not the payment's own currency.
     const hasForeignPayment = payments.some(
-        (payment) => payment.currency === 'USD',
+        (payment) =>
+            payment.currency === 'USD' &&
+            (payment.dentist?.currency ?? 'SYP') !== 'USD',
+    );
+    // A dollar dentist's own currency never has a rate — no lira figure was
+    // ever converted to reach it, so there's nothing for ApproxUsd to prove.
+    const showApproxUsd = currency !== 'USD';
+    // "Nothing happened in dollars this period" — a stray "$0.00" beside a
+    // real lira total would read as though something did.
+    const hasUsdActivity = Boolean(
+        totalsUsd &&
+        (totalsUsd.opening !== 0 ||
+            totalsUsd.orders !== 0 ||
+            totalsUsd.payments !== 0 ||
+            totalsUsd.balance !== 0),
     );
 
     return (
@@ -397,25 +487,53 @@ export function InvoiceReport({
                                                                 />
                                                             </TableCell>
                                                             <TableCell className="whitespace-nowrap tabular-nums">
-                                                                {formatSyp(
-                                                                    item.price ??
-                                                                        0,
-                                                                )}{' '}
+                                                                <span
+                                                                    dir={
+                                                                        group.currency ===
+                                                                        'USD'
+                                                                            ? 'ltr'
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {formatMoney(
+                                                                        itemOwnValue(
+                                                                            item,
+                                                                            group.currency,
+                                                                        ),
+                                                                        group.currency,
+                                                                    )}
+                                                                </span>{' '}
                                                                 <span className="text-muted-foreground">
                                                                     ×{' '}
                                                                     {item.quantity ??
                                                                         0}
                                                                 </span>
-                                                                <ForeignOrigin
-                                                                    money={item}
-                                                                />
+                                                                {group.currency !==
+                                                                    'USD' && (
+                                                                    <ForeignOrigin
+                                                                        money={
+                                                                            item
+                                                                        }
+                                                                    />
+                                                                )}
                                                             </TableCell>
                                                             <TableCell className="tabular-nums">
-                                                                {itemAmount(
-                                                                    item,
-                                                                ).toLocaleString(
-                                                                    'en-US',
-                                                                )}
+                                                                <span
+                                                                    dir={
+                                                                        group.currency ===
+                                                                        'USD'
+                                                                            ? 'ltr'
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {formatMoney(
+                                                                        itemLineTotal(
+                                                                            item,
+                                                                            group.currency,
+                                                                        ),
+                                                                        group.currency,
+                                                                    )}
+                                                                </span>
                                                             </TableCell>
                                                             <TableCell className="whitespace-pre-line">
                                                                 {item.notes || (
@@ -445,9 +563,22 @@ export function InvoiceReport({
                                                                 <Dash />
                                                             </TableCell>
                                                             <TableCell className="tabular-nums">
-                                                                {order.amount.toLocaleString(
-                                                                    'en-US',
-                                                                )}
+                                                                <span
+                                                                    dir={
+                                                                        group.currency ===
+                                                                        'USD'
+                                                                            ? 'ltr'
+                                                                            : undefined
+                                                                    }
+                                                                >
+                                                                    {formatMoney(
+                                                                        orderOwnValue(
+                                                                            order,
+                                                                            group.currency,
+                                                                        ),
+                                                                        group.currency,
+                                                                    )}
+                                                                </span>
                                                             </TableCell>
                                                             <TableCell className="whitespace-pre-line">
                                                                 {order.notes || (
@@ -466,38 +597,63 @@ export function InvoiceReport({
                                             <span>
                                                 رصيد مستحق من الفاتورة الماضية
                                             </span>
-                                            <span className="tabular-nums">
-                                                {group.opening.toLocaleString(
-                                                    'en-US',
+                                            <span
+                                                dir={
+                                                    group.currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                                className="tabular-nums"
+                                            >
+                                                {formatMoney(
+                                                    group.opening,
+                                                    group.currency,
                                                 )}
                                             </span>
                                         </div>
                                     )}
                                     <div className="flex items-center justify-between">
                                         <span>إجمالي طلبات الفترة</span>
-                                        <span className="tabular-nums">
-                                            {group.ordersTotal.toLocaleString(
-                                                'en-US',
+                                        <span
+                                            dir={
+                                                group.currency === 'USD'
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
+                                            className="tabular-nums"
+                                        >
+                                            {formatMoney(
+                                                group.ordersTotal,
+                                                group.currency,
                                             )}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span>مدفوعات الفترة</span>
                                         <span
+                                            dir={
+                                                group.currency === 'USD'
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
                                             className={cn(
                                                 PAYMENT_TONE,
                                                 'tabular-nums',
                                             )}
                                         >
                                             −
-                                            {group.paymentsTotal.toLocaleString(
-                                                'en-US',
+                                            {formatMoney(
+                                                group.paymentsTotal,
+                                                group.currency,
                                             )}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between border-t border-border pt-1 font-bold">
                                         <span>المستحق على الطبيب</span>
-                                        <DueAmount value={group.due} />
+                                        <DueAmount
+                                            value={group.due}
+                                            currency={group.currency}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -531,40 +687,73 @@ export function InvoiceReport({
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                payments.map((payment) => (
-                                    <TableRow key={payment.id}>
-                                        <TableCell>
-                                            {formatDate(
-                                                payment.payment_date ||
-                                                    payment.created_at,
-                                            )}
-                                        </TableCell>
-                                        <TableCell
-                                            className={cn(
-                                                'font-semibold',
-                                                PAYMENT_TONE,
-                                            )}
-                                        >
-                                            {formatSyp(payment.amount)}
-                                        </TableCell>
-                                        {hasForeignPayment && (
-                                            <TableCell className="text-muted-foreground">
-                                                <PaymentOrigin
-                                                    payment={payment}
-                                                />
+                                payments.map((payment) => {
+                                    // Authority for a payment's value is its
+                                    // dentist's own billing currency, never
+                                    // `payment.currency` — that's just what
+                                    // it was handed over as.
+                                    const paymentCurrency: MoneyCurrency =
+                                        payment.dentist?.currency ?? 'SYP';
+
+                                    return (
+                                        <TableRow key={payment.id}>
+                                            <TableCell>
+                                                {formatDate(
+                                                    payment.payment_date ||
+                                                        payment.created_at,
+                                                )}
                                             </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))
+                                            <TableCell
+                                                className={cn(
+                                                    'font-semibold',
+                                                    PAYMENT_TONE,
+                                                )}
+                                            >
+                                                <span
+                                                    dir={
+                                                        paymentCurrency ===
+                                                        'USD'
+                                                            ? 'ltr'
+                                                            : undefined
+                                                    }
+                                                >
+                                                    {formatMoney(
+                                                        paymentOwnValue(
+                                                            payment,
+                                                            paymentCurrency,
+                                                        ),
+                                                        paymentCurrency,
+                                                    )}
+                                                </span>
+                                            </TableCell>
+                                            {hasForeignPayment && (
+                                                <TableCell className="text-muted-foreground">
+                                                    {paymentCurrency !==
+                                                        'USD' && (
+                                                        <PaymentOrigin
+                                                            payment={payment}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                            )}
+                                        </TableRow>
+                                    );
+                                })
                             )}
                         </TableBody>
                     </Table>
                 </div>
                 <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
                     <div className="flex items-center justify-between font-semibold">
-                        <span>إجمالي مدفوعات الفترة</span>
-                        <span className={cn(PAYMENT_TONE, 'tabular-nums')}>
-                            {totals.payments.toLocaleString('en-US')}
+                        <span>
+                            إجمالي مدفوعات الفترة
+                            {hasUsdActivity && ' (ليرة)'}
+                        </span>
+                        <span
+                            dir={currency === 'USD' ? 'ltr' : undefined}
+                            className={cn(PAYMENT_TONE, 'tabular-nums')}
+                        >
+                            {formatMoney(totals.payments, currency)}
                         </span>
                     </div>
                 </div>
@@ -576,43 +765,93 @@ export function InvoiceReport({
                 <div className="grid gap-2">
                     {totals.opening !== 0 && (
                         <div className="flex justify-between">
-                            <span>رصيد مستحق من الفاتورة الماضية:</span>
-                            <span className="font-semibold tabular-nums">
-                                {totals.opening.toLocaleString('en-US')}
+                            <span>
+                                رصيد مستحق من الفاتورة الماضية
+                                {hasUsdActivity && ' (ليرة)'}:
+                            </span>
+                            <span
+                                dir={currency === 'USD' ? 'ltr' : undefined}
+                                className="font-semibold tabular-nums"
+                            >
+                                {formatMoney(totals.opening, currency)}
                             </span>
                         </div>
                     )}
                     <div className="flex justify-between">
-                        <span>إجمالي الطلبات:</span>
-                        <span className="font-semibold tabular-nums">
-                            {totals.orders.toLocaleString('en-US')}
+                        <span>
+                            إجمالي الطلبات
+                            {hasUsdActivity && ' (ليرة)'}:
+                        </span>
+                        <span
+                            dir={currency === 'USD' ? 'ltr' : undefined}
+                            className="font-semibold tabular-nums"
+                        >
+                            {formatMoney(totals.orders, currency)}
                         </span>
                     </div>
                     <div className="flex justify-between">
-                        <span>إجمالي المدفوعات:</span>
+                        <span>
+                            إجمالي المدفوعات
+                            {hasUsdActivity && ' (ليرة)'}:
+                        </span>
                         <span
+                            dir={currency === 'USD' ? 'ltr' : undefined}
                             className={cn(
                                 'font-semibold',
                                 PAYMENT_TONE,
                                 'tabular-nums',
                             )}
                         >
-                            −{totals.payments.toLocaleString('en-US')}
+                            −{formatMoney(totals.payments, currency)}
                         </span>
                     </div>
-                    <div className="flex justify-between border-t pt-2">
-                        <span className="font-bold">الإجمالي المستحق:</span>
-                        <span className="flex flex-col items-end">
-                            <DueAmount
-                                value={totals.balance}
-                                className="text-lg font-bold"
-                            />
-                            <ApproxUsd
-                                syp={totals.balance}
-                                rate={closingRate}
-                            />
-                        </span>
-                    </div>
+                    {totalsUsd && hasUsdActivity ? (
+                        <div className="space-y-1 border-t pt-2">
+                            <div className="flex justify-between">
+                                <span className="font-bold">مجموع الليرة:</span>
+                                <span className="flex flex-col items-end">
+                                    <DueAmount
+                                        value={totals.balance}
+                                        currency={currency}
+                                        className="text-lg font-bold"
+                                    />
+                                    {showApproxUsd && (
+                                        <ApproxUsd
+                                            syp={totals.balance}
+                                            rate={closingRate}
+                                        />
+                                    )}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="font-bold">
+                                    مجموع الدولار:
+                                </span>
+                                <DueAmount
+                                    value={totalsUsd.balance}
+                                    currency="USD"
+                                    className="text-lg font-bold"
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex justify-between border-t pt-2">
+                            <span className="font-bold">الإجمالي المستحق:</span>
+                            <span className="flex flex-col items-end">
+                                <DueAmount
+                                    value={totals.balance}
+                                    currency={currency}
+                                    className="text-lg font-bold"
+                                />
+                                {showApproxUsd && (
+                                    <ApproxUsd
+                                        syp={totals.balance}
+                                        rate={closingRate}
+                                    />
+                                )}
+                            </span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

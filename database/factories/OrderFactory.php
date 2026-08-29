@@ -20,6 +20,7 @@ class OrderFactory extends Factory
             'dentist_id' => \App\Models\Dentist::factory(),
             'due_date' => fake()->dateTimeThisYear()->format('Y-m-d'),
             'amount' => fake()->numberBetween(50, 3000) * 1000,
+            'currency' => 'SYP',
             'status' => 'pending',
             'notes' => null,
             'meta' => null,

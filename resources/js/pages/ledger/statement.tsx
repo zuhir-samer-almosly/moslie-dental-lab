@@ -16,6 +16,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -43,6 +44,8 @@ type Props = {
     } | null;
     dentist: { id: number; name: string } | null;
     dentists: { id: number; name: string }[];
+    /** The currency `statement` is denominated in — the dentist's own. */
+    currency: 'SYP' | 'USD';
     filters: {
         dentist_id: number | null;
         from: string | null;
@@ -50,12 +53,11 @@ type Props = {
     };
 };
 
-const nf = (value: number) => value.toLocaleString('en-US');
-
 export default function Statement({
     statement,
     dentist,
     dentists,
+    currency,
     filters,
 }: Props) {
     const go = (
@@ -197,7 +199,18 @@ export default function Statement({
                                         {dentist && ` — ${dentist.name}`}
                                     </TableCell>
                                     <TableCell className="text-left font-medium tabular-nums">
-                                        {nf(statement.opening)}
+                                        <span
+                                            dir={
+                                                currency === 'USD'
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
+                                        >
+                                            {formatMoney(
+                                                statement.opening,
+                                                currency,
+                                            )}
+                                        </span>
                                     </TableCell>
                                 </TableRow>
                                 {statement.lines.length === 0 ? (
@@ -219,15 +232,45 @@ export default function Statement({
                                                 {line.description}
                                             </TableCell>
                                             <TableCell className="text-left tabular-nums">
-                                                {line.debit > 0
-                                                    ? nf(line.debit)
-                                                    : ''}
+                                                {line.debit > 0 ? (
+                                                    <span
+                                                        dir={
+                                                            currency === 'USD'
+                                                                ? 'ltr'
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {formatMoney(
+                                                            line.debit,
+                                                            currency,
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    ''
+                                                )}
                                             </TableCell>
                                             <TableCell className="text-left tabular-nums">
-                                                {line.credit > 0
-                                                    ? nf(line.credit)
-                                                    : ''}
-                                                <ForeignOrigin money={line} />
+                                                {line.credit > 0 ? (
+                                                    <span
+                                                        dir={
+                                                            currency === 'USD'
+                                                                ? 'ltr'
+                                                                : undefined
+                                                        }
+                                                    >
+                                                        {formatMoney(
+                                                            line.credit,
+                                                            currency,
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    ''
+                                                )}
+                                                {currency !== 'USD' && (
+                                                    <ForeignOrigin
+                                                        money={line}
+                                                    />
+                                                )}
                                             </TableCell>
                                             <TableCell
                                                 className={
@@ -241,7 +284,18 @@ export default function Statement({
                                                         : 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
                                                 }
                                             >
-                                                {nf(line.balance)}
+                                                <span
+                                                    dir={
+                                                        currency === 'USD'
+                                                            ? 'ltr'
+                                                            : undefined
+                                                    }
+                                                >
+                                                    {formatMoney(
+                                                        line.balance,
+                                                        currency,
+                                                    )}
+                                                </span>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -260,7 +314,18 @@ export default function Statement({
                                                 : 'text-left text-emerald-600 tabular-nums dark:text-emerald-400'
                                         }
                                     >
-                                        {nf(statement.closing)}
+                                        <span
+                                            dir={
+                                                currency === 'USD'
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
+                                        >
+                                            {formatMoney(
+                                                statement.closing,
+                                                currency,
+                                            )}
+                                        </span>
                                     </TableCell>
                                 </TableRow>
                             </TableFooter>

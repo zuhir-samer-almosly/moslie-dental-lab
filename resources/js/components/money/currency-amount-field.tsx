@@ -24,6 +24,7 @@ export default function CurrencyAmountField({
     errors,
     todayRate,
     label = 'المبلغ',
+    native = false,
 }: {
     value: CurrencyAmount;
     onChange: (patch: Partial<CurrencyAmount>) => void;
@@ -31,7 +32,33 @@ export default function CurrencyAmountField({
     todayRate: string | null;
     /** What this money is called on its own form — "المبلغ", "السعر". */
     label?: string;
+    /**
+     * A dollar dentist: the money is dollars by definition, so there is no
+     * currency to choose, no rate to agree, and no lira result to preview.
+     */
+    native?: boolean;
 }) {
+    if (native) {
+        return (
+            <div className="grid gap-2">
+                <Label htmlFor="original_amount">{label} بالدولار</Label>
+                <Input
+                    id="original_amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    dir="ltr"
+                    value={value.original_amount}
+                    onChange={(e) =>
+                        onChange({ original_amount: e.target.value })
+                    }
+                    required
+                />
+                <InputError message={errors.original_amount} />
+            </div>
+        );
+    }
+
     const dollars = parseFloat(value.original_amount);
     const rate = parseFloat(value.rate);
     const preview =

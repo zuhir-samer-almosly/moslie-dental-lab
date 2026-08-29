@@ -22,6 +22,11 @@ use Illuminate\Support\Facades\DB;
  *    let it drift from its items the moment any price rounds, so it is
  *    recomputed from the already-divided items instead.
  *
+ * 3. Native dollar rows — a dollar dentist's orders, items and payments —
+ *    are in CENTS, not lira, and this command's divisor is a lira
+ *    redenomination. Dividing them would turn $500 into $5. They are
+ *    excluded from every column scan and from the derived recomputation.
+ *
  * Writes go through the query builder, not Eloquent, so the LedgerObserver
  * does not rewrite journal entries once per row. The ledger is rebuilt from
  * the divided tables afterwards — see the closing hint.
@@ -139,23 +144,46 @@ class RedenominateMoney extends Command
     /** @return \Illuminate\Support\Collection<int, \stdClass> */
     private function rowsNotDivisible(string $table, string $column, int $divisor)
     {
-        return DB::table($table)
-            ->select('id', $column)
-            ->whereRaw("{$column} % ? <> 0", [$divisor])
+        return $this->excludeNativeDollars(
+            DB::table($table)
+                ->select('id', $column)
+                ->whereRaw("{$column} % ? <> 0", [$divisor])
+        )
             ->orderBy('id')
             ->get();
     }
 
-    /** @return \Illuminate\Support\Collection<int, \stdClass> */
+    /**
+     * Item-less orders, excluding a native dollar order — `orders` has no
+     * `rate` column, so the exclusion is on `currency` alone.
+     *
+     * Shared by findIndivisible()'s offender scan and divideOrders()'s
+     * recomputation, so filtering here protects both at once.
+     *
+     * @return \Illuminate\Support\Collection<int, \stdClass>
+     */
     private function itemlessOrders()
     {
         return DB::table('orders')
             ->select('id', 'amount')
+            ->where('currency', '!=', 'USD')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))
                 ->from('order_items')
                 ->whereColumn('order_items.order_id', 'orders.id'))
             ->orderBy('id')
             ->get();
+    }
+
+    /**
+     * Native dollar rows hold cents, not lira, so a lira redenomination must
+     * not see them. `currency = USD AND rate IS NULL` is precisely the third
+     * money state (see App\Concerns\HasForeignCurrency).
+     */
+    private function excludeNativeDollars(\Illuminate\Database\Query\Builder $query): \Illuminate\Database\Query\Builder
+    {
+        return $query->where(function ($q) {
+            $q->where('currency', '!=', 'USD')->orWhereNotNull('rate');
+        });
     }
 
     /**
@@ -232,7 +260,7 @@ class RedenominateMoney extends Command
     {
         $integer = DB::connection()->getDriverName() === 'mysql' ? 'SIGNED' : 'INTEGER';
 
-        return DB::table($table)->update([
+        return $this->excludeNativeDollars(DB::table($table))->update([
             $column => DB::raw("CAST(ROUND({$column} / {$divisor}.0) AS {$integer})"),
         ]);
     }
@@ -241,6 +269,10 @@ class RedenominateMoney extends Command
      * Orders with items are recomputed from those (already divided) items so
      * amount == sum(quantity * price) still holds; item-less orders divide
      * their own amount.
+     *
+     * A native dollar order's items are excluded from division above, so its
+     * sum still comes out to whatever it already was — the `currency` guard
+     * here just keeps that explicit rather than relying on it by accident.
      */
     private function divideOrders(int $divisor): int
     {
@@ -254,6 +286,7 @@ class RedenominateMoney extends Command
         foreach ($sums as $orderId => $total) {
             $touched += DB::table('orders')
                 ->where('id', $orderId)
+                ->where('currency', '!=', 'USD')
                 ->update(['amount' => (int) $total]);
         }
 

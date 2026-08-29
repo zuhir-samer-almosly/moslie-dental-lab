@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasForeignCurrency;
+use App\Money\Currency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -31,5 +32,10 @@ class DentistPayment extends Model
     public function dentist()
     {
         return $this->belongsTo(Dentist::class);
+    }
+
+    protected function nativeCurrency(): Currency
+    {
+        return $this->dentist?->billingCurrency() ?? Currency::SYP;
     }
 }

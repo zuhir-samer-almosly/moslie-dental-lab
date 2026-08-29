@@ -24,7 +24,7 @@ final class DentistPaymentPosting implements Posting
 
     public function shouldPost(): bool
     {
-        return (int) $this->payment->amount !== 0;
+        return $this->payment->valueInOwnCurrency() !== 0;
     }
 
     public function date(): string
@@ -39,11 +39,12 @@ final class DentistPaymentPosting implements Posting
 
     public function lines(): array
     {
-        $amount = (int) $this->payment->amount;
+        $currency = $this->payment->dentist->billingCurrency();
+        $amount = $this->payment->valueInOwnCurrency();
 
         return [
-            Line::debit(AccountCode::CASH->value, $amount),
-            Line::credit(AccountCode::RECEIVABLE->value, $amount, $this->payment->dentist_id),
+            Line::debit(AccountCode::cashFor($currency), $amount),
+            Line::credit(AccountCode::receivableFor($currency), $amount, $this->payment->dentist_id),
         ];
     }
 }

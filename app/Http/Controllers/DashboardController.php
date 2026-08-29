@@ -39,6 +39,14 @@ class DashboardController extends Controller
                 'earned' => $reports->revenue($start, $end),
                 'outstanding' => $reports->balance(AccountCode::RECEIVABLE->value),
                 'cash_balance' => $reports->balance(AccountCode::CASH->value),
+                'income_usd' => $reports->movementBetween(
+                    AccountCode::CASH_USD->value, AccountCode::RECEIVABLE_USD->value, $start, $end,
+                ),
+                'earned_usd' => $reports->movementBetween(
+                    AccountCode::RECEIVABLE_USD->value, AccountCode::REVENUE_USD->value, $start, $end,
+                ),
+                'outstanding_usd' => $reports->balance(AccountCode::RECEIVABLE_USD->value),
+                'cash_balance_usd' => $reports->balance(AccountCode::CASH_USD->value),
                 'pending_orders' => Order::where('status', 'pending')->count(),
                 'dentists' => Dentist::count(),
                 'employees' => Employee::count(),
