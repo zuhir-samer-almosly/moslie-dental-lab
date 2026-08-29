@@ -115,3 +115,50 @@ test('an explicit null currency on update is rejected, not passed through to the
 
     expect($dentist->fresh()->isDollar())->toBeFalse();
 });
+
+use App\Models\DentistPayment;
+
+test('a dollar dentist payment is stored as cents with no rate and no lira', function () {
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'currency' => 'USD',
+        'original_amount' => 200_00,
+        'payment_date' => '2026-09-01',
+    ]);
+
+    expect($payment->original_amount)->toBe(20000)
+        ->and($payment->rate)->toBeNull()
+        // He owes and pays no lira, so the lira column is truthfully zero —
+        // which is what keeps every untouched lira SUM() correct.
+        ->and((int) $payment->amount)->toBe(0)
+        ->and($payment->valueInOwnCurrency())->toBe(20000);
+});
+
+test('a dollar dentist payment refuses to carry a rate', function () {
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    expect(fn () => DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'currency' => 'USD',
+        'original_amount' => 200_00,
+        'rate' => '13',
+        'payment_date' => '2026-09-01',
+    ]))->toThrow(InvalidArgumentException::class);
+});
+
+test('a lira dentist paying in dollars still converts, exactly as before', function () {
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $payment = DentistPayment::create([
+        'dentist_id' => $dentist->id,
+        'currency' => 'USD',
+        'original_amount' => 100_00,
+        'rate' => '13',
+        'payment_date' => '2026-09-01',
+    ]);
+
+    expect((int) $payment->amount)->toBe(1300)
+        ->and($payment->valueInOwnCurrency())->toBe(1300);
+});
