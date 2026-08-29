@@ -6,6 +6,13 @@ export interface Dentist {
      * is native dollars: cents, converted by nothing, and no rate anywhere.
      */
     currency?: 'SYP' | 'USD';
+    /**
+     * Whether anything has posted to this dentist's ledger account yet.
+     * Populated only where the currency-editing form needs it (the dentists
+     * index and edit pages) — absent elsewhere, including the plain
+     * `Dentist::all()` pickers on the order and payment pages.
+     */
+    has_ledger_lines?: boolean;
     gender: 'male' | 'female';
     phone: string | null;
     address: string | null;

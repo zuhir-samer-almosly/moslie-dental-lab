@@ -19,12 +19,9 @@ class Dentist extends Model
     /**
      * A freshly-instantiated (unsaved) model has no 'currency' key in its
      * attribute array unless one is given explicitly — mass assignment only
-     * sets what's passed. Without this default, `$this->currency` on such an
-     * instance is ambiguous to Eloquent between "missing attribute" and
-     * "relationship method named currency()" and resolves as the latter,
-     * because a same-named `currency()` method exists below. Mirrors the
-     * migration's own `default('SYP')` so both agree before the row is ever
-     * saved.
+     * sets what's passed. Mirrors the migration's own `default('SYP')` so a
+     * brand-new in-memory instance already agrees with what the row will get
+     * once saved.
      */
     protected $attributes = [
         'currency' => 'SYP',
@@ -113,15 +110,37 @@ class Dentist extends Model
         return $this->hasMany(DentistPayment::class);
     }
 
-    /** The currency this dentist is quoted, billed and paid in. */
-    public function currency(): Currency
+    /**
+     * The currency this dentist is quoted, billed and paid in.
+     *
+     * Named `billingCurrency()` rather than `currency()` on purpose: a method
+     * named exactly like the `currency` column collides with Eloquent's
+     * relationship resolution the moment a hydrated row is missing that
+     * column (e.g. a narrowed `select()`) — `newFromBuilder()` replaces
+     * `$attributes` wholesale, so the class-level default below does not
+     * cover it, and `$this->currency` then falls through to "is this a
+     * relationship method?" and throws a confusing LogicException. The
+     * rename avoids the collision outright; the guard below keeps failure
+     * loud instead of silently defaulting a dollar dentist's money to lira.
+     */
+    public function billingCurrency(): Currency
     {
+        // A partial select that omits the column leaves this unknowable. Falling
+        // back to SYP here would post a dollar dentist's money to the lira
+        // accounts — silently. For money, failing loudly is the safer answer.
+        if (! array_key_exists('currency', $this->getAttributes())) {
+            throw new \LogicException(
+                'Dentist #'.$this->id.' was loaded without its `currency` column, so its '
+                .'billing currency is unknowable. Select the column, or do not ask.'
+            );
+        }
+
         return Currency::from($this->currency ?? Currency::SYP->value);
     }
 
     public function isDollar(): bool
     {
-        return $this->currency() === Currency::USD;
+        return $this->billingCurrency() === Currency::USD;
     }
 
     /**

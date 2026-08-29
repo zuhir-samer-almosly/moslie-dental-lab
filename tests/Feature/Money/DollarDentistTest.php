@@ -87,3 +87,31 @@ test('a dentist with ledger history cannot change currency', function () {
 
     expect($dentist->fresh()->isDollar())->toBeFalse();
 });
+
+test('billingCurrency throws rather than guess when the column was not selected', function () {
+    Dentist::create(['name' => 'د. أحمد']);
+    $dentist = Dentist::select('id', 'name')->first();
+
+    expect(fn () => $dentist->billingCurrency())
+        ->toThrow(LogicException::class, 'was loaded without its `currency` column');
+});
+
+test('an explicit null currency on update is rejected, not passed through to the column', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'جسر', 'quantity' => 1, 'price' => 250,
+            'date' => '2026-09-01', 'selected_teeth' => [],
+        ]],
+    ]);
+
+    $this->put(route('dentists.update', $dentist), [
+        'name' => 'د. أحمد', 'gender' => 'male', 'currency' => null,
+    ])->assertSessionHasErrors('currency');
+
+    expect($dentist->fresh()->isDollar())->toBeFalse();
+});

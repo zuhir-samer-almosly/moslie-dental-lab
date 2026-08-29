@@ -23,7 +23,12 @@ class UpdateDentistRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'currency' => ['nullable', 'in:SYP,USD', function ($attribute, $value, $fail) {
+            // 'sometimes' + 'required' rather than 'nullable': an absent key
+            // is fine (the existing value is left untouched), but an
+            // explicit null must be rejected, not passed through to a NOT
+            // NULL column — it would also silently bypass the freeze closure
+            // below, whose guard only runs for a non-null value.
+            'currency' => ['sometimes', 'required', 'in:SYP,USD', function ($attribute, $value, $fail) {
                 $dentist = $this->route('dentist');
 
                 if ($value !== null

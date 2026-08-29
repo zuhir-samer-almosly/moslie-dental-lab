@@ -181,6 +181,7 @@ export default function DentistForm({
                             value="SYP"
                             checked={data.currency === 'SYP'}
                             onChange={() => setData('currency', 'SYP')}
+                            disabled={dentist?.has_ledger_lines === true}
                             className="accent-primary"
                         />
                         <span>ليرة</span>
@@ -192,16 +193,24 @@ export default function DentistForm({
                             value="USD"
                             checked={data.currency === 'USD'}
                             onChange={() => setData('currency', 'USD')}
+                            disabled={dentist?.has_ledger_lines === true}
                             className="accent-primary"
                         />
                         <span>دولار</span>
                     </label>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                    طبيب الدولار تُسعَّر وتُفوتر وتُسدَّد حساباته بالدولار
-                    بالكامل، دون أي تحويل إلى الليرة. لا يمكن تغيير العملة بعد
-                    تسجيل أول حركة على حسابه.
-                </p>
+                {dentist?.has_ledger_lines === true ? (
+                    <p className="text-sm text-muted-foreground">
+                        لا يمكن تغيير العملة لأن حساب هذا الطبيب عليه حركات
+                        مسجلة بالفعل.
+                    </p>
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        طبيب الدولار تُسعَّر وتُفوتر وتُسدَّد حساباته بالدولار
+                        بالكامل، دون أي تحويل إلى الليرة. لا يمكن تغيير العملة
+                        بعد تسجيل أول حركة على حسابه.
+                    </p>
+                )}
                 <InputError message={errors.currency} />
             </div>
 
