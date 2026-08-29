@@ -139,10 +139,12 @@ class Ledger
      * @param  list<Line>  $lines
      *
      * @throws UnbalancedEntryException
+     * @throws MixedCurrencyEntryException
      */
     public function post(string $date, string $description, array $lines, ?Model $source = null): JournalEntry
     {
         $this->assertBalanced($lines);
+        $this->assertSingleCurrency($lines);
 
         return DB::transaction(function () use ($date, $description, $lines, $source) {
             $entry = JournalEntry::create([
@@ -216,6 +218,31 @@ class Ledger
 
         if ($debits !== $credits) {
             throw new UnbalancedEntryException("Entry is unbalanced: debits {$debits}, credits {$credits}.");
+        }
+    }
+
+    /**
+     * Every line in an entry must belong to accounts of one currency.
+     *
+     * assertBalanced() compares bare integers, which is only meaningful while
+     * both sides count the same unit. This is what keeps that true — and with
+     * it, the guarantee that a lira report reading account 1100 can never see
+     * a figure denominated in cents.
+     *
+     * @param  list<Line>  $lines
+     */
+    private function assertSingleCurrency(array $lines): void
+    {
+        $currencies = [];
+
+        foreach ($lines as $line) {
+            $currencies[Account::currencyFor($line->accountCode)->value] = true;
+        }
+
+        if (count($currencies) > 1) {
+            throw new MixedCurrencyEntryException(
+                'An entry may not mix currencies; this one spans '.implode(' and ', array_keys($currencies)).'.'
+            );
         }
     }
 }
