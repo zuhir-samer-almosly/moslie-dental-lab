@@ -3,7 +3,7 @@
 use App\Models\Account;
 
 test('the chart of accounts is seeded by migration', function () {
-    expect(Account::count())->toBe(13);
+    expect(Account::count())->toBe(16);
     expect(Account::where('code', '1000')->value('name'))->toBe('الصندوق');
     expect(Account::where('code', '1100')->value('type'))->toBe('asset');
     expect(Account::where('code', '4000')->value('type'))->toBe('revenue');

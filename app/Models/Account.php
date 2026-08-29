@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Money\Currency;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 
 class Account extends Model
 {
-    protected $fillable = ['code', 'name', 'type', 'category_key', 'is_active', 'sort_order'];
+    protected $fillable = ['code', 'name', 'type', 'currency', 'category_key', 'is_active', 'sort_order'];
 
     protected $casts = ['is_active' => 'boolean'];
 
@@ -53,6 +54,17 @@ class Account extends Model
         }
 
         return $account->type;
+    }
+
+    public static function currencyFor(string $code): Currency
+    {
+        $account = self::chart()->get($code);
+
+        if (! $account) {
+            throw new \InvalidArgumentException("Unknown account code [{$code}].");
+        }
+
+        return Currency::from($account->currency);
     }
 
     /**
