@@ -9,29 +9,52 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'ميزان المراجعة', href: '/ledger/trial-balance' },
 ];
 
+type Currency = 'SYP' | 'USD';
+
 type AccountRow = {
     code: string;
     name: string;
     type: string;
+    currency: Currency;
     debit: number;
     credit: number;
 };
 
 type Props = {
     accounts: AccountRow[];
-    totals: { debit: number; credit: number };
-    balanced: boolean;
 };
 
-const nf = (value: number) => value.toLocaleString('en-US');
+const sum = (rows: AccountRow[], key: 'debit' | 'credit') =>
+    rows.reduce((total, row) => total + row[key], 0);
 
-export default function TrialBalance({ accounts, totals, balanced }: Props) {
+export default function TrialBalance({ accounts }: Props) {
+    // Each currency is its own closed system — a SYP row and a USD row never
+    // belong in the same sum. Two independent groups, two independent totals,
+    // two independent balance checks; nothing here ever adds one to the
+    // other. A lab with no dollar activity never produces a `usdAccounts`
+    // entry, so it sees exactly one block, same as before this split.
+    const sypAccounts = accounts.filter((a) => a.currency !== 'USD');
+    const usdAccounts = accounts.filter((a) => a.currency === 'USD');
+    const hasUsd = usdAccounts.length > 0;
+
+    const sypDebit = sum(sypAccounts, 'debit');
+    const sypCredit = sum(sypAccounts, 'credit');
+    const usdDebit = sum(usdAccounts, 'debit');
+    const usdCredit = sum(usdAccounts, 'credit');
+
+    // The books are sound only if every currency balances on its own —
+    // never derived from a combined debit/credit sum, which could mask a
+    // SYP-side gap that happens to cancel against a USD-side one.
+    const balanced =
+        sypDebit === sypCredit && (!hasUsd || usdDebit === usdCredit);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="ميزان المراجعة" />
@@ -63,65 +86,134 @@ export default function TrialBalance({ accounts, totals, balanced }: Props) {
                     </CardContent>
                 </Card>
 
-                <div className="rounded-lg border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>الرمز</TableHead>
-                                <TableHead>الحساب</TableHead>
-                                <TableHead className="text-left">
-                                    مدين
-                                </TableHead>
-                                <TableHead className="text-left">
-                                    دائن
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {accounts.length === 0 ? (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={4}
-                                        className="text-center text-muted-foreground"
-                                    >
-                                        لا توجد حسابات
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                <>
-                                    {accounts.map((account) => (
-                                        <TableRow key={account.code}>
-                                            <TableCell className="text-muted-foreground tabular-nums">
-                                                {account.code}
-                                            </TableCell>
-                                            <TableCell>
-                                                {account.name}
-                                            </TableCell>
-                                            <TableCell className="text-left tabular-nums">
-                                                {nf(account.debit)}
-                                            </TableCell>
-                                            <TableCell className="text-left tabular-nums">
-                                                {nf(account.credit)}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    <TableRow className="font-bold">
-                                        <TableCell colSpan={2}>
-                                            الإجمالي
-                                        </TableCell>
-                                        <TableCell className="text-left tabular-nums">
-                                            {nf(totals.debit)}
-                                        </TableCell>
-                                        <TableCell className="text-left tabular-nums">
-                                            {nf(totals.credit)}
-                                        </TableCell>
-                                    </TableRow>
-                                </>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
+                <CurrencyBlock
+                    title={hasUsd ? 'بالليرة' : undefined}
+                    currency="SYP"
+                    accounts={sypAccounts}
+                    debit={sypDebit}
+                    credit={sypCredit}
+                />
+
+                {hasUsd && (
+                    <CurrencyBlock
+                        title="بالدولار"
+                        currency="USD"
+                        accounts={usdAccounts}
+                        debit={usdDebit}
+                        credit={usdCredit}
+                    />
+                )}
             </div>
         </AppLayout>
+    );
+}
+
+function CurrencyBlock({
+    title,
+    currency,
+    accounts,
+    debit,
+    credit,
+}: {
+    title?: string;
+    currency: Currency;
+    accounts: AccountRow[];
+    debit: number;
+    credit: number;
+}) {
+    const isUsd = currency === 'USD';
+
+    return (
+        <div className="space-y-2">
+            {title && (
+                <h2 className="text-sm font-semibold text-muted-foreground">
+                    {title}
+                </h2>
+            )}
+            <div className="rounded-lg border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>الرمز</TableHead>
+                            <TableHead>الحساب</TableHead>
+                            <TableHead className="text-left">
+                                مدين
+                            </TableHead>
+                            <TableHead className="text-left">
+                                دائن
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {accounts.length === 0 ? (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={4}
+                                    className="text-center text-muted-foreground"
+                                >
+                                    لا توجد حسابات
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            <>
+                                {accounts.map((account) => (
+                                    <TableRow key={account.code}>
+                                        <TableCell className="text-muted-foreground tabular-nums">
+                                            {account.code}
+                                        </TableCell>
+                                        <TableCell>
+                                            {account.name}
+                                        </TableCell>
+                                        <TableCell className="text-left tabular-nums">
+                                            <span
+                                                dir={
+                                                    isUsd ? 'ltr' : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    account.debit,
+                                                    currency,
+                                                )}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-left tabular-nums">
+                                            <span
+                                                dir={
+                                                    isUsd ? 'ltr' : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    account.credit,
+                                                    currency,
+                                                )}
+                                            </span>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                <TableRow className="font-bold">
+                                    <TableCell colSpan={2}>
+                                        الإجمالي
+                                    </TableCell>
+                                    <TableCell className="text-left tabular-nums">
+                                        <span
+                                            dir={isUsd ? 'ltr' : undefined}
+                                        >
+                                            {formatMoney(debit, currency)}
+                                        </span>
+                                    </TableCell>
+                                    <TableCell className="text-left tabular-nums">
+                                        <span
+                                            dir={isUsd ? 'ltr' : undefined}
+                                        >
+                                            {formatMoney(credit, currency)}
+                                        </span>
+                                    </TableCell>
+                                </TableRow>
+                            </>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        </div>
     );
 }
