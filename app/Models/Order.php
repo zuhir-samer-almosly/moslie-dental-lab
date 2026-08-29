@@ -16,6 +16,18 @@ class Order extends Model
     /** @use HasFactory<\Database\Factories\OrderFactory> */
     use HasFactory;
 
+    /**
+     * A freshly-instantiated (unsaved) model has no 'currency' key in its
+     * attribute array unless one is given explicitly — mass assignment only
+     * sets what's passed. Mirrors the migration's own `default('SYP')` so a
+     * brand-new in-memory instance already agrees with what the row will get
+     * once saved, and so `billingCurrency()` never throws on an unsaved or
+     * factory-built order that never set `currency` explicitly.
+     */
+    protected $attributes = [
+        'currency' => 'SYP',
+    ];
+
     protected $fillable = [
         'dentist_id',
         'due_date',

@@ -165,6 +165,20 @@ test('a lira dentist paying in dollars still converts, exactly as before', funct
 
 use App\Models\Order;
 
+test('a factory-built order defaults to lira, so billingCurrency and valueInOwnCurrency never throw', function () {
+    // Order::factory() never sets currency (see OrderFactory::definition()), so
+    // this exercises the same path an unsaved/mass-assigned order takes: no
+    // `currency` key passed at all. Without Order::$attributes defaulting it
+    // to SYP, billingCurrency() throws LogicException here, and so does
+    // valueInOwnCurrency(), which calls it — the SYP branch every existing
+    // order takes, and the only branch nothing previously asserted.
+    $order = Order::factory()->create();
+
+    expect($order->currency)->toBe('SYP')
+        ->and($order->billingCurrency())->toBe(Currency::SYP)
+        ->and($order->valueInOwnCurrency())->toBe((int) $order->amount);
+});
+
 test('a dollar dentist order stores cents, no rate and zero lira', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
@@ -203,6 +217,17 @@ test('a dollar dentist order is refused if it carries a rate or a lira price', f
             'selected_teeth' => [],
         ]],
     ])->assertSessionHasErrors('items.0.rate');
+
+    // The other half of this order's own name: a lira price is refused too.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00, 'price' => 5000,
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasErrors('items.0.price');
 
     expect(Order::count())->toBe(0);
 });
@@ -256,4 +281,79 @@ test('a lira dentist USD-quoted item is not native and still converts through th
         ->and($item->currency)->toBe('USD')
         ->and($item->rate)->toBe('13.000000')
         ->and($item->price)->toBe(221); // 17 x 13
+});
+
+/**
+ * update() recomputes both totals from the items exactly as store() does,
+ * but nothing previously exercised it for a dollar dentist — the two
+ * behaviours below are new in this task and neither had coverage.
+ */
+test('editing a dollar dentist order shrinks original_amount to match the new items', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 2, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasNoErrors();
+
+    $order = Order::sole();
+    expect($order->original_amount)->toBe(50000);
+
+    $this->put(route('orders.update', $order), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-02',
+            'currency' => 'USD', 'original_amount' => 100_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $order->refresh();
+
+    expect($order->original_amount)->toBe(10000)
+        ->and($order->amount)->toBe(0)
+        ->and($order->currency)->toBe('USD')
+        ->and($order->valueInOwnCurrency())->toBe(10000);
+});
+
+test('moving an order from a dollar dentist to a lira dentist nulls out its original_amount', function () {
+    $this->actingAs(User::factory()->create());
+    $dollarDentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+    $liraDentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dollarDentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasNoErrors();
+
+    $order = Order::sole();
+    expect($order->original_amount)->toBe(25000);
+
+    $this->put(route('orders.update', $order), [
+        'dentist_id' => $liraDentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'جسر', 'quantity' => 1, 'price' => 250,
+            'date' => '2026-09-02', 'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $order->refresh();
+
+    expect($order->original_amount)->toBeNull()
+        ->and($order->currency)->toBe('SYP')
+        ->and($order->amount)->toBe(250)
+        ->and($order->valueInOwnCurrency())->toBe(250);
 });
