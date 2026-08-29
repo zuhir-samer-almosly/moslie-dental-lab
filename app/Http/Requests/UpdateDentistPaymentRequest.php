@@ -27,7 +27,7 @@ class UpdateDentistPaymentRequest extends FormRequest
         return [
             'dentist_id' => ['required', 'exists:dentists,id'],
             'payment_date' => ['required', 'date'],
-            ...$this->moneyRules(),
+            ...$this->moneyRules('amount', $this->dentistIsDollar()),
         ];
     }
 
@@ -39,6 +39,12 @@ class UpdateDentistPaymentRequest extends FormRequest
      */
     public function payload(): array
     {
-        return $this->moneyPayload($this->validated());
+        return $this->moneyPayload($this->validated(), 'amount', $this->dentistIsDollar());
+    }
+
+    /** Whether the dentist being paid is billed in dollars. */
+    private function dentistIsDollar(): bool
+    {
+        return (bool) \App\Models\Dentist::find($this->input('dentist_id'))?->isDollar();
     }
 }

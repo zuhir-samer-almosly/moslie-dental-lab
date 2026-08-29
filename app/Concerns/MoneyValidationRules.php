@@ -16,8 +16,20 @@ trait MoneyValidationRules
     /**
      * @return array<string, array<int, string>>
      */
-    protected function moneyRules(string $field = 'amount'): array
+    protected function moneyRules(string $field = 'amount', bool $native = false): array
     {
+        if ($native) {
+            // A dollar dentist's payment: dollars, and nothing else. No rate,
+            // because his money is never converted, and no lira figure,
+            // because he does not deal in lira.
+            return [
+                'currency' => ['nullable', 'in:USD'],
+                $field => ['prohibited'],
+                'original_amount' => ['required', 'numeric', 'min:0.01'],
+                'rate' => ['prohibited'],
+            ];
+        }
+
         return [
             'currency' => ['nullable', 'in:SYP,USD'],
             // Absent currency means lira, so a form that never heard of
@@ -38,8 +50,17 @@ trait MoneyValidationRules
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    protected function moneyPayload(array $data, string $field = 'amount'): array
+    protected function moneyPayload(array $data, string $field = 'amount', bool $native = false): array
     {
+        if ($native) {
+            $data['currency'] = 'USD';
+            $data['original_amount'] = (int) round(((float) $data['original_amount']) * 100);
+            $data['rate'] = null;
+            unset($data[$field]);
+
+            return $data;
+        }
+
         if (($data['currency'] ?? 'SYP') !== 'USD') {
             $data['currency'] = 'SYP';
             $data['original_amount'] = null;

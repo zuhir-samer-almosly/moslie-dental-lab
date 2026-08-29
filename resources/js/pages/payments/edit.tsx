@@ -32,7 +32,7 @@ export default function PaymentsEdit({
     dentists: Dentist[];
     todayRate: string | null;
 }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const form = useForm({
         dentist_id: payment.dentist_id.toString(),
         amount: payment.amount.toString(),
         payment_date:
@@ -47,10 +47,54 @@ export default function PaymentsEdit({
                 : (payment.original_amount / 100).toFixed(2),
         rate: payment.rate ?? '',
     });
+    const { data, setData, processing, errors } = form;
+
+    const selectedDentist = dentists.find(
+        (d) => d.id.toString() === data.dentist_id,
+    );
+    /**
+     * Whether the selected dentist bills in dollars. Decided from the
+     * dentist, exactly as the order form does — never from the form's own
+     * `currency` field, which a lira dentist may still carry from the
+     * payment's original save or a prior selection.
+     */
+    const dollarDentist = selectedDentist?.currency === 'USD';
+
+    /**
+     * Switching dentists mid-edit must not leave a stale amount typed for
+     * the previous dentist's currency sitting in state — a lira figure
+     * surviving under a dollar dentist, or vice versa. Every money field
+     * resets with the dentist.
+     */
+    const handleDentistChange = (value: string) => {
+        const dentist = dentists.find((d) => d.id.toString() === value);
+        const isDollar = dentist?.currency === 'USD';
+        setData((prev) => ({
+            ...prev,
+            dentist_id: value,
+            amount: '',
+            original_amount: '',
+            rate: '',
+            currency: isDollar ? 'USD' : 'SYP',
+        }));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        put(`/payments/${payment.id}`);
+        // A dollar dentist's payment is native dollars: `amount` and `rate`
+        // are `prohibited` server-side, not merely optional, so they must be
+        // omitted from the payload entirely rather than sent zeroed.
+        form.transform((formData) =>
+            dollarDentist
+                ? {
+                      dentist_id: formData.dentist_id,
+                      payment_date: formData.payment_date,
+                      currency: 'USD' as const,
+                      original_amount: formData.original_amount,
+                  }
+                : formData,
+        );
+        form.put(`/payments/${payment.id}`);
     };
 
     return (
@@ -88,7 +132,7 @@ export default function PaymentsEdit({
                                     id="dentist_id"
                                     value={data.dentist_id}
                                     onChange={(value) =>
-                                        setData('dentist_id', value ?? '')
+                                        handleDentistChange(value ?? '')
                                     }
                                     options={dentists.map((dentist) => ({
                                         value: dentist.id.toString(),
@@ -107,6 +151,7 @@ export default function PaymentsEdit({
                                 }
                                 errors={errors}
                                 todayRate={todayRate}
+                                native={dollarDentist}
                             />
 
                             <div className="grid gap-2">

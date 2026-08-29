@@ -41,7 +41,7 @@ class DentistPaymentController extends Controller
     {
         $payment = DentistPayment::create($request->payload());
 
-        if ($payment->isForeign()) {
+        if ($payment->isForeign() && ! $payment->isNativeUsd()) {
             Rate::remember($payment->payment_date, $payment->rate);
         }
 
@@ -70,7 +70,7 @@ class DentistPaymentController extends Controller
     {
         $dentistPayment->update($request->payload());
 
-        if ($dentistPayment->isForeign()) {
+        if ($dentistPayment->isForeign() && ! $dentistPayment->isNativeUsd()) {
             Rate::remember($dentistPayment->payment_date, $dentistPayment->rate);
         }
 

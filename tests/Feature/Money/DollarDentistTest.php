@@ -357,3 +357,60 @@ test('moving an order from a dollar dentist to a lira dentist nulls out its orig
         ->and($order->amount)->toBe(250)
         ->and($order->valueInOwnCurrency())->toBe(250);
 });
+
+use App\Ledger\LedgerReports;
+
+test('a dollar order posts to the dollar accounts and nowhere else', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 2, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasNoErrors();
+
+    $reports = app(LedgerReports::class);
+
+    expect($reports->balance('1101'))->toBe(50000)   // $500 in cents
+        ->and($reports->balance('4001'))->toBe(50000)
+        // The lira accounts never heard of him.
+        ->and($reports->balance('1100'))->toBe(0)
+        ->and($reports->balance('4000'))->toBe(0);
+});
+
+test('five hundred ordered less two hundred paid is exactly three hundred owed', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasNoErrors();
+
+    // A month later, at a rate that has moved a long way. It must not matter.
+    \App\Models\ExchangeRate::create(['rate_date' => '2026-10-01', 'rate' => '250']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-10-01',
+        'currency' => 'USD',
+        'original_amount' => '200',
+    ])->assertSessionHasNoErrors();
+
+    $reports = app(LedgerReports::class);
+
+    expect($reports->balance('1101'))->toBe(30000)   // exactly $300
+        ->and($reports->balance('1001'))->toBe(20000) // $200 in the dollar box
+        ->and($reports->balance('1000'))->toBe(0)     // and none in the lira box
+        ->and($reports->balance('1100'))->toBe(0);
+});

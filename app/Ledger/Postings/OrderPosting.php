@@ -24,9 +24,10 @@ use Illuminate\Support\Collection;
  * period's opening balance carries work that the same period then lists again
  * as its own, and the invoice bills it twice.
  *
- * Valued from `orders.amount` rather than the `total` items accessor, because
- * that is what the existing reports use — the items only decide *when* each
- * part of that amount was earned.
+ * Valued from `Order::valueInOwnCurrency()` — `orders.amount` for a lira
+ * dentist, `orders.original_amount` (cents) for a dollar one — rather than the
+ * `total` items accessor, because that is what the existing reports use; the
+ * items only decide *when* each part of that amount was earned.
  */
 final class OrderPosting implements Posting
 {
@@ -34,19 +35,21 @@ final class OrderPosting implements Posting
 
     public function shouldPost(): bool
     {
-        return $this->order->status !== 'cancelled' && (int) $this->order->amount !== 0;
+        return $this->order->status !== 'cancelled' && $this->order->valueInOwnCurrency() !== 0;
     }
 
     /** @return list<Entry> */
     public function entries(): array
     {
+        $currency = $this->order->billingCurrency();
+
         return $this->amountsByDate()
             ->map(fn (int $amount, string $date) => new Entry(
                 $date,
                 "طلب #{$this->order->id}",
                 [
-                    Line::debit(AccountCode::RECEIVABLE->value, $amount, $this->order->dentist_id),
-                    Line::credit(AccountCode::REVENUE->value, $amount),
+                    Line::debit(AccountCode::receivableFor($currency), $amount, $this->order->dentist_id),
+                    Line::credit(AccountCode::revenueFor($currency), $amount),
                 ],
             ))
             ->values()
@@ -66,7 +69,7 @@ final class OrderPosting implements Posting
     private function amountsByDate(): Collection
     {
         $dueDate = Carbon::parse($this->order->due_date)->toDateString();
-        $amount = (int) $this->order->amount;
+        $amount = $this->order->valueInOwnCurrency();
         $items = $this->order->items;
 
         if ($items->isEmpty()) {
@@ -75,14 +78,18 @@ final class OrderPosting implements Posting
 
         $byDate = $items
             ->groupBy(fn (OrderItem $item) => $item->meta['date'] ?? $dueDate)
-            ->map(fn (Collection $group) => (int) $group->sum(fn (OrderItem $item) => $item->quantity * $item->price));
+            ->map(fn (Collection $group) => (int) $group->sum(
+                fn (OrderItem $item) => $item->quantity * $item->valueInOwnCurrency()
+            ));
 
-        // `orders.amount` stays the authority for what an order is WORTH, so
-        // splitting it by date can never change a total. The two agree by
-        // construction — OrderController recomputes `amount` from the items on
-        // every write, and `money:redenominate` recomputes it too — so this is
-        // normally zero. Should a row ever drift, the difference belongs on the
-        // order's own date rather than silently vanishing from the books.
+        // The order's own `valueInOwnCurrency()` stays the authority for what
+        // it is WORTH, so splitting it by date can never change a total. The
+        // two agree by construction — OrderController recomputes `amount`
+        // (and `original_amount`, for a dollar dentist) from the items on
+        // every write, and `money:redenominate` recomputes it too — so this
+        // is normally zero. Should a row ever drift, the difference belongs
+        // on the order's own date rather than silently vanishing from the
+        // books.
         $residual = $amount - $byDate->sum();
 
         if ($residual !== 0) {
