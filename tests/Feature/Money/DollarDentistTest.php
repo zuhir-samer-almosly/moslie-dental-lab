@@ -773,3 +773,33 @@ test('an item-less native dollar order survives redenomination even though its a
 
     expect(DB::table('orders')->where('id', $orderId)->value('amount'))->toBe(500);
 });
+
+test('a converted dollar row — currency USD with a rate set — still gets redenominated, not swallowed by the native exclusion', function () {
+    // The exclusion predicate is `currency != 'USD' OR rate IS NOT NULL`,
+    // which is designed to let a converted (state-2) row through: its `rate`
+    // is set, so the second disjunct is true regardless of currency. Nothing
+    // in this diff or in RedenominateMoneyTest previously ran that path —
+    // De Morgan says it is correct, but no assertion backed that up. This
+    // pins it down: if `OR rate IS NOT NULL` is ever dropped, this fails.
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $orderId = DB::table('orders')->insertGetId([
+        'dentist_id' => $dentist->id, 'due_date' => '2026-09-01', 'status' => 'pending',
+        'amount' => 5000000, 'currency' => 'SYP', 'original_amount' => null,
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+    DB::table('order_items')->insert([
+        'order_id' => $orderId, 'type' => 'تاج', 'quantity' => 1,
+        // A USD-quoted item for a lira dentist: converted once, at write
+        // time, to a real lira figure — exactly what state 2 looks like.
+        'price' => 5000000, 'currency' => 'USD', 'original_amount' => 100000,
+        'rate' => '5000.000000',
+        'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $this->artisan('money:redenominate', ['--force' => true])->assertExitCode(0);
+
+    // Lira, so it must divide like any other lira row — 5,000,000 / 100.
+    expect(DB::table('order_items')->where('order_id', $orderId)->value('price'))->toBe(50000);
+});
