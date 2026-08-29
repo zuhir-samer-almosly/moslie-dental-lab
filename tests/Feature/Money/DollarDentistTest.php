@@ -621,6 +621,43 @@ test('the invoice for a dollar dentist is in dollars, with no lira and no rate',
     );
 });
 
+test('the mixed no-dentist-selected invoice keeps totals and totalsUsd each single-currency, even when an order row disagrees with its dentist', function () {
+    $this->actingAs(User::factory()->create());
+    $lira = Dentist::create(['name' => 'د. أحمد']);
+    $dollar = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $lira->id, 'status' => 'pending',
+        'items' => [['type' => 'جسر', 'quantity' => 1, 'date' => '2026-09-05',
+            'price' => 400, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+
+    // Directly constructed (not through the form), so the row's own
+    // `currency` column disagrees with its dentist — exactly the shape
+    // OrderPosting::dentistCurrency() refuses to trust, and the shape
+    // InvoiceController::buildReport() must resolve through the dentist too,
+    // not through Order::billingCurrency()/valueInOwnCurrency().
+    Order::factory()->for($dollar)->create([
+        'due_date' => '2026-09-10',
+        'currency' => 'SYP',
+        'amount' => 0,
+        'original_amount' => 500_00,
+    ]);
+
+    $this->get(route('invoices.index', [
+        'from' => '2026-09-01', 'to' => '2026-09-30',
+    ]))->assertInertia(fn ($page) => $page
+        ->where('currency', 'SYP')
+        // The lira dentist's order only — the dollar dentist's stale-row
+        // order must not land here, whatever its own `currency` column says.
+        ->where('totals.orders', 400)
+        // The dollar dentist's order, valued by his own currency's cents —
+        // not silently dropped (old filter) and not blended into the lira
+        // bucket (old sum).
+        ->where('totalsUsd.orders', 50000)
+    );
+});
+
 test('the statement page for a dollar dentist reads in dollars, without throwing on the narrowed select', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);

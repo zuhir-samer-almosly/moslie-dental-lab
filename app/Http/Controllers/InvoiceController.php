@@ -198,16 +198,33 @@ class InvoiceController extends Controller
             // would blend lira and cents together — filtered to one
             // currency's rows first, for exactly the reason totals below are
             // kept apart rather than added.
+            //
+            // The single authority for an order's currency is its DENTIST's,
+            // never the order row's own `currency` column — mirrors
+            // OrderPosting::dentistCurrency()/valueInDentistCurrency(), which
+            // refuses `Order::billingCurrency()`/`valueInOwnCurrency()` for
+            // exactly this reason: a row's own column can go stale (a
+            // factory default, a directly constructed test row) while the
+            // ledger and every item on the order still resolve through the
+            // dentist. `OrderItem::valueInOwnCurrency()` already does this
+            // (its `nativeCurrency()` reads `$item->order?->dentist`), so
+            // only the order-level filter and the item-less branch needed it
+            // spelled out here.
+            $orderCurrency = fn (Order $order) => $order->dentist?->billingCurrency() ?? Currency::SYP;
+            $orderOwnValue = fn (Order $order) => $orderCurrency($order) === Currency::USD
+                ? (int) $order->original_amount
+                : (int) $order->amount;
+
             $sumOrders = fn ($ordersInCurrency) => $ordersInCurrency->sum(
                 fn (Order $order) => $order->items->isEmpty()
-                    ? $order->valueInOwnCurrency()
+                    ? $orderOwnValue($order)
                     : $order->items->sum(fn ($item) => $item->valueInOwnCurrency() * $item->quantity)
             );
             $sumPayments = fn ($paymentsInCurrency) => $paymentsInCurrency->sum(
                 fn (DentistPayment $payment) => $payment->valueInOwnCurrency()
             );
 
-            $totalsFor = function (Currency $forCurrency) use ($orders, $payments, $sumOrders, $sumPayments, $asOf, $dentistId) {
+            $totalsFor = function (Currency $forCurrency) use ($orders, $payments, $sumOrders, $sumPayments, $orderCurrency, $asOf, $dentistId) {
                 $openingByDentist = $this->reports->receivablesByDentist($asOf, $forCurrency)
                     ->when($dentistId, fn ($balances) => $balances->only([$dentistId]))
                     ->reject(fn (int $balance) => $balance === 0)
@@ -215,10 +232,8 @@ class InvoiceController extends Controller
 
                 $openingTotal = array_sum($openingByDentist);
 
-                // An order's own `currency` mirrors its dentist's billing
-                // currency at the time it was saved — see Order::billingCurrency().
                 $ordersInCurrency = $orders->filter(
-                    fn (Order $order) => $order->billingCurrency() === $forCurrency
+                    fn (Order $order) => $orderCurrency($order) === $forCurrency
                 );
                 // A payment's `currency` is what it was HANDED OVER as, not
                 // what it's billed in — a lira dentist can still pay in

@@ -52,8 +52,20 @@ export const usdToSyp = (dollars: number, rate: number): number =>
  * A stored figure rendered in its own currency: whole lira grouped, or cents
  * as dollars with both decimals. The single place a currency decides how a
  * number reads.
+ *
+ * The sign is pulled out and placed before the `$`, not inside `formatUsd`'s
+ * own output — `` `$${formatUsd(-3000)}` `` would read "$-30.00", which is
+ * not how a negative dollar figure is written. This matters here: a credit
+ * balance (an overpaid dentist) is exactly where a negative dollar figure
+ * first reaches this function, on a document a dentist receives.
  */
 export const formatMoney = (
     value: number,
     currency: 'SYP' | 'USD' = 'SYP',
-): string => (currency === 'USD' ? `$${formatUsd(value)}` : formatSyp(value));
+): string => {
+    if (currency !== 'USD') {
+        return formatSyp(value);
+    }
+
+    return value < 0 ? `-$${formatUsd(-value)}` : `$${formatUsd(value)}`;
+};

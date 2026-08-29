@@ -745,7 +745,10 @@ export function InvoiceReport({
                 </div>
                 <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
                     <div className="flex items-center justify-between font-semibold">
-                        <span>إجمالي مدفوعات الفترة</span>
+                        <span>
+                            إجمالي مدفوعات الفترة
+                            {hasUsdActivity && ' (ليرة)'}
+                        </span>
                         <span
                             dir={currency === 'USD' ? 'ltr' : undefined}
                             className={cn(PAYMENT_TONE, 'tabular-nums')}
@@ -762,7 +765,10 @@ export function InvoiceReport({
                 <div className="grid gap-2">
                     {totals.opening !== 0 && (
                         <div className="flex justify-between">
-                            <span>رصيد مستحق من الفاتورة الماضية:</span>
+                            <span>
+                                رصيد مستحق من الفاتورة الماضية
+                                {hasUsdActivity && ' (ليرة)'}:
+                            </span>
                             <span
                                 dir={currency === 'USD' ? 'ltr' : undefined}
                                 className="font-semibold tabular-nums"
@@ -772,7 +778,10 @@ export function InvoiceReport({
                         </div>
                     )}
                     <div className="flex justify-between">
-                        <span>إجمالي الطلبات:</span>
+                        <span>
+                            إجمالي الطلبات
+                            {hasUsdActivity && ' (ليرة)'}:
+                        </span>
                         <span
                             dir={currency === 'USD' ? 'ltr' : undefined}
                             className="font-semibold tabular-nums"
@@ -781,7 +790,10 @@ export function InvoiceReport({
                         </span>
                     </div>
                     <div className="flex justify-between">
-                        <span>إجمالي المدفوعات:</span>
+                        <span>
+                            إجمالي المدفوعات
+                            {hasUsdActivity && ' (ليرة)'}:
+                        </span>
                         <span
                             dir={currency === 'USD' ? 'ltr' : undefined}
                             className={cn(
@@ -793,7 +805,7 @@ export function InvoiceReport({
                             −{formatMoney(totals.payments, currency)}
                         </span>
                     </div>
-                    {totalsUsd ? (
+                    {totalsUsd && hasUsdActivity ? (
                         <div className="space-y-1 border-t pt-2">
                             <div className="flex justify-between">
                                 <span className="font-bold">مجموع الليرة:</span>
@@ -811,18 +823,16 @@ export function InvoiceReport({
                                     )}
                                 </span>
                             </div>
-                            {hasUsdActivity && (
-                                <div className="flex justify-between">
-                                    <span className="font-bold">
-                                        مجموع الدولار:
-                                    </span>
-                                    <DueAmount
-                                        value={totalsUsd.balance}
-                                        currency="USD"
-                                        className="text-lg font-bold"
-                                    />
-                                </div>
-                            )}
+                            <div className="flex justify-between">
+                                <span className="font-bold">
+                                    مجموع الدولار:
+                                </span>
+                                <DueAmount
+                                    value={totalsUsd.balance}
+                                    currency="USD"
+                                    className="text-lg font-bold"
+                                />
+                            </div>
                         </div>
                     ) : (
                         <div className="flex justify-between border-t pt-2">
