@@ -4,6 +4,7 @@ namespace App\Ledger;
 
 use App\Models\Account;
 use App\Models\DentistPayment;
+use App\Money\Currency;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -32,10 +33,13 @@ class LedgerReports
         return in_array(Account::typeFor($code), self::DEBIT_NATURED, true) ? $net : -$net;
     }
 
-    /** @return Collection<int, int> dentist_id => balance */
-    public function receivablesByDentist(?string $asOf = null): Collection
+    /**
+     * @return Collection<int, int> dentist_id => balance, in the given
+     *                              currency's minor unit
+     */
+    public function receivablesByDentist(?string $asOf = null, Currency $currency = Currency::SYP): Collection
     {
-        return $this->linesForAccount(AccountCode::RECEIVABLE->value)
+        return $this->linesForAccount(AccountCode::receivableFor($currency))
             ->whereNotNull('journal_lines.dentist_id')
             ->when($asOf, fn ($q) => $q->where('journal_entries.entry_date', '<=', $asOf))
             ->groupBy('journal_lines.dentist_id')
@@ -170,7 +174,7 @@ class LedgerReports
     }
 
     /**
-     * @return Collection<int, array{code: string, name: string, type: string, debit: int, credit: int}>
+     * @return Collection<int, array{code: string, name: string, type: string, currency: string, debit: int, credit: int}>
      */
     public function trialBalance(?string $asOf = null): Collection
     {
@@ -178,14 +182,15 @@ class LedgerReports
             ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
             ->join('accounts', 'accounts.id', '=', 'journal_lines.account_id')
             ->when($asOf, fn ($q) => $q->where('journal_entries.entry_date', '<=', $asOf))
-            ->groupBy('accounts.code', 'accounts.name', 'accounts.type', 'accounts.sort_order')
+            ->groupBy('accounts.code', 'accounts.name', 'accounts.type', 'accounts.currency', 'accounts.sort_order')
             ->orderBy('accounts.sort_order')
-            ->selectRaw('accounts.code, accounts.name, accounts.type, COALESCE(SUM(journal_lines.debit),0) as debit, COALESCE(SUM(journal_lines.credit),0) as credit')
+            ->selectRaw('accounts.code, accounts.name, accounts.type, accounts.currency, COALESCE(SUM(journal_lines.debit),0) as debit, COALESCE(SUM(journal_lines.credit),0) as credit')
             ->get()
             ->map(fn ($row) => [
                 'code' => $row->code,
                 'name' => $row->name,
                 'type' => $row->type,
+                'currency' => $row->currency,
                 'debit' => (int) $row->debit,
                 'credit' => (int) $row->credit,
             ])
@@ -236,12 +241,12 @@ class LedgerReports
      *
      * @return array{opening: int, lines: Collection, closing: int}
      */
-    public function dentistStatement(int $dentistId, ?string $from = null, ?string $to = null): array
+    public function dentistStatement(int $dentistId, ?string $from = null, ?string $to = null, Currency $currency = Currency::SYP): array
     {
         $opening = 0;
 
         if ($from) {
-            $opening = (int) $this->linesForAccount(AccountCode::RECEIVABLE->value)
+            $opening = (int) $this->linesForAccount(AccountCode::receivableFor($currency))
                 ->where('journal_lines.dentist_id', $dentistId)
                 ->where('journal_entries.entry_date', '<', $from)
                 ->selectRaw('COALESCE(SUM(journal_lines.debit),0) - COALESCE(SUM(journal_lines.credit),0) as balance')
@@ -250,7 +255,7 @@ class LedgerReports
 
         $running = $opening;
 
-        $lines = $this->linesForAccount(AccountCode::RECEIVABLE->value)
+        $lines = $this->linesForAccount(AccountCode::receivableFor($currency))
             ->where('journal_lines.dentist_id', $dentistId)
             ->when($from, fn ($q) => $q->where('journal_entries.entry_date', '>=', $from))
             ->when($to, fn ($q) => $q->where('journal_entries.entry_date', '<=', $to))
@@ -275,7 +280,7 @@ class LedgerReports
                 'dentist_payments.rate',
             )
             ->get()
-            ->map(function ($row) use (&$running) {
+            ->map(function ($row) use (&$running, $currency) {
                 $running += (int) $row->debit - (int) $row->credit;
 
                 return [
@@ -285,9 +290,10 @@ class LedgerReports
                     'debit' => (int) $row->debit,
                     'credit' => (int) $row->credit,
                     'balance' => $running,
-                    // A line with no payment behind it is lira by definition:
-                    // the lira is the currency of record.
-                    'currency' => $row->currency ?? 'SYP',
+                    // A line with no payment behind it is denominated in the
+                    // account it sits in — lira for the lira receivable,
+                    // dollars for the dollar one.
+                    'currency' => $row->currency ?? $currency->value,
                     'original_amount' => $row->original_amount === null ? null : (int) $row->original_amount,
                     // Normalised by hand: a raw DECIMAL read comes back as a
                     // string on MySQL and a number on SQLite, and the suite

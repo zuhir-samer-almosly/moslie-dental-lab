@@ -514,3 +514,55 @@ test('a malformed dentist_id on a payment fails validation instead of crashing',
 
     expect(DentistPayment::count())->toBe(0);
 });
+
+test('receivables and statements can be read in dollars', function () {
+    $this->actingAs(User::factory()->create());
+    $dollar = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+    $lira = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dollar->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $lira->id, 'status' => 'pending',
+        'items' => [['type' => 'جسر', 'quantity' => 1, 'date' => '2026-09-01',
+            'price' => 400, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+
+    $reports = app(LedgerReports::class);
+
+    $inLira = $reports->receivablesByDentist(null, Currency::SYP);
+    $inDollars = $reports->receivablesByDentist(null, Currency::USD);
+
+    expect($inLira->get($lira->id))->toBe(400)
+        ->and($inLira->has($dollar->id))->toBeFalse()
+        ->and($inDollars->get($dollar->id))->toBe(50000)
+        ->and($inDollars->has($lira->id))->toBeFalse();
+
+    $statement = $reports->dentistStatement($dollar->id, '2026-09-01', '2026-09-30', Currency::USD);
+
+    expect($statement['closing'])->toBe(50000)
+        ->and($statement['lines'])->toHaveCount(1);
+});
+
+test('the trial balance balances within each currency', function () {
+    $this->actingAs(User::factory()->create());
+    $dollar = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dollar->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+
+    $rows = app(LedgerReports::class)->trialBalance()->groupBy('currency');
+
+    foreach ($rows as $currency => $group) {
+        expect($group->sum('debit'))->toBe($group->sum('credit'), "{$currency} does not balance");
+    }
+
+    expect($rows->keys()->all())->toContain('USD');
+});
