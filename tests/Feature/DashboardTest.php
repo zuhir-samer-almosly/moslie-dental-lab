@@ -95,3 +95,33 @@ test('the dashboard reports the cash box balance from the ledger, not recomputed
     expect(Order::count())->toBe(1);
     expect(DentistPayment::count())->toBe(1);
 });
+
+test('the dashboard shows a dollar dentist alongside a lira dentist in separate columns, never summed', function () {
+    $this->actingAs(User::factory()->create());
+    $today = Carbon::now()->startOfMonth()->addDays(2)->toDateString();
+
+    $lira = Dentist::create(['name' => 'د. ليرة']);
+    Order::create(['dentist_id' => $lira->id, 'due_date' => $today, 'amount' => 500000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $lira->id, 'amount' => 200000, 'payment_date' => $today]);
+
+    $dollar = Dentist::create(['name' => 'د. دولار', 'currency' => 'USD']);
+    Order::create(['dentist_id' => $dollar->id, 'due_date' => $today, 'amount' => 0, 'original_amount' => 50000, 'status' => 'pending']);
+    DentistPayment::create(['dentist_id' => $dollar->id, 'original_amount' => 20000, 'payment_date' => $today]);
+
+    // Both currencies are non-zero at once: a regression that summed the
+    // lira and dollar figures anywhere in DashboardController — income,
+    // earned, outstanding, or cash_balance — would show up here, whereas a
+    // test with only one currency populated could pass a blended sum by
+    // accident.
+    $this->get(route('dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->where('stats.income', 200000)
+            ->where('stats.income_usd', 20000)
+            ->where('stats.earned', 500000)
+            ->where('stats.earned_usd', 50000)
+            ->where('stats.outstanding', 300000)
+            ->where('stats.outstanding_usd', 30000)
+            ->where('stats.cash_balance', 200000)
+            ->where('stats.cash_balance_usd', 20000)
+        );
+});
