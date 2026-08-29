@@ -566,3 +566,32 @@ test('the trial balance balances within each currency', function () {
 
     expect($rows->keys()->all())->toContain('USD');
 });
+
+test('outstanding lists each dentist in his own currency and never sums them', function () {
+    $this->actingAs(User::factory()->create());
+    $dollar = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+    $lira = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dollar->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ]);
+    $this->post(route('orders.store'), [
+        'dentist_id' => $lira->id, 'status' => 'pending',
+        'items' => [['type' => 'جسر', 'quantity' => 1, 'date' => '2026-09-01',
+            'price' => 400, 'selected_teeth' => []]],
+    ]);
+
+    // Sorted within currency, not together: SYP sorts before USD, so
+    // dentists.0 is the lira dentist and dentists.1 is the dollar one —
+    // 50000 > 400 is a coincidence of units, not a meaningful ranking.
+    $this->get(route('outstanding.index'))
+        ->assertInertia(fn ($page) => $page
+            ->where('totalOutstanding', 400)      // lira only
+            ->where('totalOutstandingUsd', 50000) // dollars only, never added
+            ->where('dentists.1.currency', 'USD')
+            ->where('dentists.1.outstanding', 50000)
+            ->where('dentists.1.orders_total', 50000)
+        );
+});

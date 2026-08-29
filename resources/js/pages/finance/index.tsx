@@ -21,6 +21,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
@@ -43,6 +44,7 @@ type TrendRow = {
 type FinanceProps = {
     month: string;
     income: number;
+    incomeUsd: number;
     expenses: number;
     net: number;
     earned: number;
@@ -76,6 +78,7 @@ function shiftMonth(month: string, delta: number) {
 export default function FinanceIndex({
     month,
     income,
+    incomeUsd,
     expenses,
     net,
     earned,
@@ -145,6 +148,19 @@ export default function FinanceIndex({
                         title="الدخل"
                         value={nf(income)}
                         approx={<ApproxUsd syp={income} rate={closingRate} />}
+                        usdColumn={
+                            incomeUsd > 0 ? (
+                                <span
+                                    dir="ltr"
+                                    className="text-xs font-semibold text-foreground tabular-nums"
+                                >
+                                    {formatMoney(incomeUsd, 'USD')}{' '}
+                                    <span className="font-normal text-muted-foreground">
+                                        الوارد بالدولار
+                                    </span>
+                                </span>
+                            ) : undefined
+                        }
                         hint="مدفوعات الأطباء هذا الشهر"
                         icon={TrendingUp}
                         tone="emerald"
@@ -153,6 +169,13 @@ export default function FinanceIndex({
                         title="المصروفات"
                         value={nf(expenses)}
                         approx={<ApproxUsd syp={expenses} rate={closingRate} />}
+                        usdColumn={
+                            incomeUsd > 0 ? (
+                                <span className="text-xs text-muted-foreground">
+                                    بالدولار: —
+                                </span>
+                            ) : undefined
+                        }
                         hint="الرواتب وما في حكمها"
                         icon={TrendingDown}
                         tone="rose"
@@ -161,6 +184,13 @@ export default function FinanceIndex({
                         title="صافي الربح"
                         value={nf(net)}
                         approx={<ApproxUsd syp={net} rate={closingRate} />}
+                        usdColumn={
+                            incomeUsd > 0 ? (
+                                <span className="text-xs text-muted-foreground">
+                                    بالدولار: —
+                                </span>
+                            ) : undefined
+                        }
                         hint={net < 0 ? 'خسارة هذا الشهر' : 'ربح هذا الشهر'}
                         icon={Wallet}
                         tone={net < 0 ? 'rose' : 'blue'}
@@ -341,6 +371,7 @@ function StatCard({
     icon: Icon,
     tone,
     approx,
+    usdColumn,
 }: {
     title: string;
     value: string | number;
@@ -349,6 +380,13 @@ function StatCard({
     tone: StatTone;
     /** The same figure read back in dollars, when a rate is known. */
     approx?: ReactNode;
+    /**
+     * The dollar side's own line for this row — a real figure for income,
+     * a dash where there is deliberately no dollar expense or net figure.
+     * Never the same thing as `approx`, which is a lira figure converted at
+     * the day's rate.
+     */
+    usdColumn?: ReactNode;
 }) {
     return (
         <Card className="gap-0 py-0">
@@ -361,6 +399,7 @@ function StatCard({
                         {value}
                     </p>
                     {approx}
+                    {usdColumn}
                     <p className="text-xs text-muted-foreground">{hint}</p>
                 </div>
                 <div

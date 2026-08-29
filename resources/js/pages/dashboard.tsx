@@ -20,6 +20,7 @@ import ApproxUsd from '@/components/money/approx-usd';
 import { formatDate, StatusPill } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, DentistPayment, Order } from '@/types';
@@ -42,6 +43,10 @@ type DashboardStats = {
     earned: number;
     outstanding: number;
     cash_balance: number;
+    income_usd: number;
+    earned_usd: number;
+    outstanding_usd: number;
+    cash_balance_usd: number;
     pending_orders: number;
     dentists: number;
     employees: number;
@@ -79,6 +84,7 @@ function MoneyCard({
     icon: Icon,
     variant,
     rate,
+    usd,
 }: {
     title: string;
     value: number;
@@ -87,6 +93,12 @@ function MoneyCard({
     variant: 'income' | 'expense' | 'net-positive' | 'net-negative';
     /** Today's rate, for reading the figure back in dollars. */
     rate: string | null;
+    /**
+     * The same KPI's native dollar figure, from a dollar dentist — never
+     * added to `value`, which stays lira-only. Rendered only when there is
+     * something to show.
+     */
+    usd?: number;
 }) {
     return (
         <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-6">
@@ -119,6 +131,14 @@ function MoneyCard({
                 {nf(value)}
             </span>
             <ApproxUsd syp={value} rate={rate} />
+            {!!usd && (
+                <span
+                    dir="ltr"
+                    className="text-sm font-semibold text-foreground tabular-nums"
+                >
+                    {formatMoney(usd, 'USD')}
+                </span>
+            )}
             <span className="text-[13px] text-muted-foreground">{hint}</span>
         </div>
     );
@@ -131,6 +151,7 @@ function MiniStat({
     tone,
     href,
     valueClassName,
+    usd,
 }: {
     title: string;
     value: number;
@@ -138,6 +159,11 @@ function MiniStat({
     tone: keyof typeof CHIP;
     href: string;
     valueClassName?: string;
+    /**
+     * The same KPI's native dollar figure — never added to `value`, which
+     * stays lira-only. Rendered only when there is something to show.
+     */
+    usd?: number;
 }) {
     return (
         <Link
@@ -161,6 +187,14 @@ function MiniStat({
                 >
                     {nf(value)}
                 </p>
+                {!!usd && (
+                    <p
+                        dir="ltr"
+                        className="text-xs font-semibold text-foreground tabular-nums"
+                    >
+                        {formatMoney(usd, 'USD')}
+                    </p>
+                )}
                 <p className="truncate text-[13px] text-muted-foreground">
                     {title}
                 </p>
@@ -245,6 +279,7 @@ export default function Dashboard({
                         icon={TrendingUp}
                         variant="income"
                         rate={todayRate}
+                        usd={stats.income_usd}
                     />
                     <MoneyCard
                         title="الأعمال المنجزة"
@@ -253,6 +288,7 @@ export default function Dashboard({
                         icon={ClipboardCheck}
                         variant="income"
                         rate={todayRate}
+                        usd={stats.earned_usd}
                     />
                     <MoneyCard
                         title="المصروفات هذا الشهر"
@@ -283,6 +319,7 @@ export default function Dashboard({
                         // all-time balance and so is that page's, while the
                         // finance page's رصيد الصندوق is as of a month end.
                         href="/ledger/cash"
+                        usd={stats.cash_balance_usd}
                     />
                     <MiniStat
                         title="الرصيد المتبقي على الأطباء"
@@ -295,6 +332,7 @@ export default function Dashboard({
                                 ? 'text-[#BE123C]'
                                 : 'text-[#B45309]'
                         }
+                        usd={stats.outstanding_usd}
                     />
                     <MiniStat
                         title="طلبات قيد الانتظار"

@@ -32,6 +32,12 @@ class FinanceController extends Controller
         [$start, $end] = $this->range($month);
 
         $income = $this->reports->cashReceipts($start, $end);
+        // Dollar cash in from a dollar dentist. There is no dollar expense
+        // or net figure — the dollar side is cash-in only — so this stands
+        // alone rather than joining the lira income/expense/net trio.
+        $incomeUsd = $this->reports->movementBetween(
+            AccountCode::CASH_USD->value, AccountCode::RECEIVABLE_USD->value, $start, $end,
+        );
         $categories = $this->reports->expenseBreakdown($start, $end)
             ->map(fn (array $row) => [
                 'key' => $row['code'],
@@ -43,6 +49,7 @@ class FinanceController extends Controller
         return inertia('finance/index', [
             'month' => $month->format('Y-m'),
             'income' => $income,
+            'incomeUsd' => $incomeUsd,
             'expenses' => $expenses,
             'net' => $income - $expenses,
             'earned' => $this->reports->revenue($start, $end),
