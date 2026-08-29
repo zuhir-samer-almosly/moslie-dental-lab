@@ -7,7 +7,9 @@ use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Ledger\Ledger;
 use App\Ledger\LedgerReports;
+use App\Models\Dentist;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Money\Rate;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
@@ -129,17 +131,26 @@ class OrderController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
-        $items = $this->withLiraPrices($items);
-        // Calculate total from items
+        $dentist = Dentist::findOrFail($validated['dentist_id']);
+        $items = $this->withResolvedPrices($items, $dentist);
+
+        // Both totals are derived from the items, so neither can drift from
+        // them. For a dollar dentist the lira total is legitimately zero and
+        // the cents total is what he owes; for a lira dentist, the reverse.
+        $validated['currency'] = $dentist->billingCurrency()->value;
         $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
+        $validated['original_amount'] = $dentist->isDollar()
+            ? collect($items)->sum(fn ($item) => $item['quantity'] * (int) $item['original_amount'])
+            : null;
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        DB::transaction(fn () => $this->ledger->defer(function () use ($validated, $items) {
+        DB::transaction(fn () => $this->ledger->defer(function () use ($validated, $items, $dentist) {
             $order = Order::create($validated);
+            $order->setRelation('dentist', $dentist);
 
             foreach ($items as $item) {
-                $order->items()->create($this->itemAttributes($item));
+                $order->items()->save($this->itemFor($order, $item));
             }
         }));
 
@@ -171,19 +182,28 @@ class OrderController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
-        $items = $this->withLiraPrices($items);
-        // Calculate total from items
+        $dentist = Dentist::findOrFail($validated['dentist_id']);
+        $items = $this->withResolvedPrices($items, $dentist);
+
+        // Both totals are derived from the items, so neither can drift from
+        // them. For a dollar dentist the lira total is legitimately zero and
+        // the cents total is what he owes; for a lira dentist, the reverse.
+        $validated['currency'] = $dentist->billingCurrency()->value;
         $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
+        $validated['original_amount'] = $dentist->isDollar()
+            ? collect($items)->sum(fn ($item) => $item['quantity'] * (int) $item['original_amount'])
+            : null;
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        DB::transaction(fn () => $this->ledger->defer(function () use ($order, $validated, $items) {
+        DB::transaction(fn () => $this->ledger->defer(function () use ($order, $validated, $items, $dentist) {
             $order->update($validated);
+            $order->setRelation('dentist', $dentist);
 
             // Delete old items and create new ones
             $order->items()->delete();
             foreach ($items as $item) {
-                $order->items()->create($this->itemAttributes($item));
+                $order->items()->save($this->itemFor($order, $item));
             }
         }));
 
@@ -192,27 +212,27 @@ class OrderController extends Controller
     }
 
     /**
-     * Map a validated item payload to the stored OrderItem attributes,
-     * folding the per-item date, patient name and selected teeth into meta.
+     * Resolve every item's stored value before anything sums them.
      *
-     * @param  array<string, mixed>  $item
-     * @return array<string, mixed>
-     */
-    /**
-     * Resolve every item's lira price before anything sums them.
-     *
-     * An item quoted in dollars is a *quote*: it converts at the rate given
-     * with it, and the order holds lira from then on. Doing it here means the
-     * order's amount and the item rows are derived from one conversion rather
-     * than two that could drift — `App\Money\Rate` is the only thing that
-     * converts, here and in the model.
+     * A dollar dentist's line is native dollars: the cents stand, no rate is
+     * involved, and its lira price is zero. A lira dentist's dollar line is a
+     * quote that converts at the rate given with it — `App\Money\Rate` is the
+     * only thing that converts, here and in the model.
      *
      * @param  list<array<string, mixed>>  $items
      * @return list<array<string, mixed>>
      */
-    private function withLiraPrices(array $items): array
+    private function withResolvedPrices(array $items, Dentist $dentist): array
     {
-        return array_map(function (array $item) {
+        return array_map(function (array $item) use ($dentist) {
+            if ($dentist->isDollar()) {
+                $item['currency'] = 'USD';
+                $item['price'] = 0;
+                $item['rate'] = null;
+
+                return $item;
+            }
+
             if (($item['currency'] ?? 'SYP') !== 'USD') {
                 $item['currency'] = 'SYP';
                 $item['original_amount'] = null;
@@ -227,6 +247,30 @@ class OrderController extends Controller
         }, $items);
     }
 
+    /**
+     * Build an item already knowing its order — and through it, its dentist.
+     *
+     * OrderItem::nativeCurrency() asks the dentist whether this line is
+     * native dollars, and it is asked on every save. Setting the relation
+     * here answers it from memory instead of a query per item.
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function itemFor(Order $order, array $item): OrderItem
+    {
+        $model = new OrderItem($this->itemAttributes($item));
+        $model->setRelation('order', $order);
+
+        return $model;
+    }
+
+    /**
+     * Map a validated item payload to the stored OrderItem attributes,
+     * folding the per-item date, patient name and selected teeth into meta.
+     *
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
     private function itemAttributes(array $item): array
     {
         $meta = [

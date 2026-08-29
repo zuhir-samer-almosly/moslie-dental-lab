@@ -162,3 +162,98 @@ test('a lira dentist paying in dollars still converts, exactly as before', funct
     expect((int) $payment->amount)->toBe(1300)
         ->and($payment->valueInOwnCurrency())->toBe(1300);
 });
+
+use App\Models\Order;
+
+test('a dollar dentist order stores cents, no rate and zero lira', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 2, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $order = Order::with('items')->sole();
+
+    expect($order->amount)->toBe(0)
+        ->and($order->original_amount)->toBe(50000)   // 2 x $250
+        ->and($order->currency)->toBe('USD')
+        ->and($order->valueInOwnCurrency())->toBe(50000)
+        ->and($order->items->first()->price)->toBe(0)
+        ->and($order->items->first()->original_amount)->toBe(25000)
+        ->and($order->items->first()->rate)->toBeNull();
+});
+
+test('a dollar dentist order is refused if it carries a rate or a lira price', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 250_00, 'rate' => '13',
+            'selected_teeth' => [],
+        ]],
+    ])->assertSessionHasErrors('items.0.rate');
+
+    expect(Order::count())->toBe(0);
+});
+
+/**
+ * Task 4 added OrderItem::nativeCurrency() but only ever exercised it through
+ * DentistPayment — these two close that gap on the order path: a dollar
+ * dentist's item comes out native, a lira dentist's dollar-quoted item still
+ * converts through the rate.
+ */
+test('a dollar dentist order item comes out native: currency USD, no rate, price zero', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 100_00,
+            'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $item = Order::with('items')->sole()->items->first();
+
+    expect($item->isNativeUsd())->toBeTrue()
+        ->and($item->currency)->toBe('USD')
+        ->and($item->rate)->toBeNull()
+        ->and($item->price)->toBe(0)
+        ->and($item->original_amount)->toBe(10000);
+});
+
+test('a lira dentist USD-quoted item is not native and still converts through the rate', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'خزف', 'quantity' => 1, 'date' => '2026-08-05',
+            'currency' => 'USD', 'original_amount' => 17_00, 'rate' => '13',
+            'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $item = Order::with('items')->sole()->items->first();
+
+    expect($item->isNativeUsd())->toBeFalse()
+        ->and($item->currency)->toBe('USD')
+        ->and($item->rate)->toBe('13.000000')
+        ->and($item->price)->toBe(221); // 17 x 13
+});
