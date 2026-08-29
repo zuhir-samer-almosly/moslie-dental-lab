@@ -13,8 +13,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import WorkTypeCombobox from '@/components/work-type-combobox';
 import {
+    formatMoney,
     formatRate,
-    formatSyp,
     formatUsd,
     rateValue,
     usdToSyp,
@@ -75,6 +75,14 @@ export default function OrderForm({
         return dentists.find((d) => d.id.toString() === data.dentist_id);
     }, [dentists, data.dentist_id]);
 
+    const selectedDentist = getSelectedDentist();
+    /**
+     * Whether the selected dentist bills in dollars. Decided once, here, from
+     * the dentist — never by inspecting an item's own `currency`, which a
+     * lira dentist's dollar-quoted line also carries.
+     */
+    const dollarDentist = selectedDentist?.currency === 'USD';
+
     // Available work types come from the selected dentist's own price list.
     const workTypeNames = data.dentist_id
         ? Object.keys(getSelectedDentist()?.price_list ?? {})
@@ -101,6 +109,18 @@ export default function OrderForm({
                 return null;
             }
 
+            // A dollar dentist's price list is dollars, full stop — it fills
+            // straight into the dollar field with no rate and no conversion.
+            // His lira price is always zero.
+            if (dollarDentist) {
+                return {
+                    currency: 'USD',
+                    original_amount: entry.price,
+                    rate: '',
+                    price: 0,
+                };
+            }
+
             if (entry.currency === 'USD') {
                 const rate = rateValue(todayRate);
                 const parsed = parseFloat(rate);
@@ -123,16 +143,26 @@ export default function OrderForm({
                 price: Math.round(entry.price),
             };
         },
-        [getSelectedDentist, todayRate],
+        [getSelectedDentist, todayRate, dollarDentist],
     );
 
     const handleDentistChange = (value: string) => {
         setData((prev) => {
             const dentist = dentists.find((d) => d.id.toString() === value);
+            const isDollar = dentist?.currency === 'USD';
             const updatedItems = prev.items.map((item) => {
                 const entry = dentist?.price_list?.[item.type];
                 if (!entry) {
                     return item;
+                }
+                if (isDollar) {
+                    return {
+                        ...item,
+                        currency: 'USD' as const,
+                        original_amount: entry.price,
+                        rate: '',
+                        price: 0,
+                    };
                 }
                 if (entry.currency === 'USD') {
                     const rate = item.rate || rateValue(todayRate);
@@ -217,7 +247,7 @@ export default function OrderForm({
                 notes: '',
                 date: today(),
                 selected_teeth: [],
-                currency: quote?.currency ?? 'SYP',
+                currency: quote?.currency ?? (dollarDentist ? 'USD' : 'SYP'),
                 original_amount: quote?.original_amount ?? 0,
                 rate: quote?.rate ?? '',
             },
@@ -303,6 +333,25 @@ export default function OrderForm({
         setData('items', newItems);
     };
 
+    /**
+     * Edit a dollar dentist's own price, typed in dollars and held in cents.
+     * Never converted — for him the dollar amount IS the money, not a quote
+     * that becomes a lira price.
+     */
+    const updateItemNativeDollars = (index: number, dollars: string) => {
+        const newItems = [...data.items];
+        const parsed = parseFloat(dollars);
+        const cents = Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
+        newItems[index] = {
+            ...newItems[index],
+            currency: 'USD',
+            original_amount: cents,
+            rate: '',
+            price: 0,
+        };
+        setData('items', newItems);
+    };
+
     /** Re-price a dollar-quoted item when its rate is edited. */
     const updateItemRate = (index: number, rate: string) => {
         const newItems = [...data.items];
@@ -320,20 +369,40 @@ export default function OrderForm({
     const [dentistsDialogOpen, setDentistsDialogOpen] = useState(false);
 
     const total = data.items.reduce(
-        (sum, item) => sum + item.quantity * item.price,
+        (sum, item) =>
+            sum +
+            item.quantity * (dollarDentist ? item.original_amount : item.price),
         0,
     );
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        // A dollar dentist's line is native dollars: `price` and `rate` are
+        // `prohibited` server-side, not merely optional, so they must be
+        // omitted from the payload entirely rather than sent zeroed.
+        form.transform((formData) => ({
+            ...formData,
+            items: formData.items.map((item) =>
+                dollarDentist
+                    ? {
+                          type: item.type,
+                          patient_name: item.patient_name,
+                          quantity: item.quantity,
+                          notes: item.notes,
+                          date: item.date,
+                          selected_teeth: item.selected_teeth,
+                          currency: 'USD' as const,
+                          original_amount: item.original_amount,
+                      }
+                    : item,
+            ),
+        }));
         if (method === 'put') {
             form.put(action);
         } else {
             form.post(action);
         }
     };
-
-    const selectedDentist = getSelectedDentist();
 
     const labelClass = 'text-[14px] font-semibold text-[#435955]';
     const fieldClass = 'h-11 rounded-[10px]';
@@ -604,19 +673,60 @@ export default function OrderForm({
                                         <div className="grid gap-2">
                                             <div className="flex items-center justify-between gap-2">
                                                 <Label className={labelClass}>
-                                                    السعر
+                                                    {dollarDentist
+                                                        ? 'السعر بالدولار'
+                                                        : 'السعر'}
                                                 </Label>
-                                                <CurrencyToggle
-                                                    value={item.currency}
-                                                    onChange={(currency) =>
-                                                        setItemCurrency(
-                                                            index,
-                                                            currency,
-                                                        )
-                                                    }
-                                                />
+                                                {!dollarDentist && (
+                                                    <CurrencyToggle
+                                                        value={item.currency}
+                                                        onChange={(currency) =>
+                                                            setItemCurrency(
+                                                                index,
+                                                                currency,
+                                                            )
+                                                        }
+                                                    />
+                                                )}
                                             </div>
-                                            {item.currency === 'USD' ? (
+                                            {dollarDentist ? (
+                                                <>
+                                                    <Input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={
+                                                            item.original_amount
+                                                                ? item.original_amount /
+                                                                  100
+                                                                : ''
+                                                        }
+                                                        onChange={(e) =>
+                                                            updateItemNativeDollars(
+                                                                index,
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                        className={fieldClass}
+                                                    />
+                                                    <p
+                                                        dir="ltr"
+                                                        className="text-end text-xs text-muted-foreground tabular-nums"
+                                                    >
+                                                        {formatMoney(
+                                                            item.quantity *
+                                                                item.original_amount,
+                                                            'USD',
+                                                        )}
+                                                    </p>
+                                                    <InputError
+                                                        message={itemError(
+                                                            index,
+                                                            'original_amount',
+                                                        )}
+                                                    />
+                                                </>
+                                            ) : item.currency === 'USD' ? (
                                                 <>
                                                     <div className="grid grid-cols-2 gap-2">
                                                         <div className="grid gap-1">
@@ -675,7 +785,7 @@ export default function OrderForm({
                                                     >
                                                         {item.original_amount &&
                                                         item.rate
-                                                            ? `$${formatUsd(item.original_amount)} × ${formatRate(item.rate)} = ${formatSyp(item.price)} ل.س`
+                                                            ? `$${formatUsd(item.original_amount)} × ${formatRate(item.rate)} = ${formatMoney(item.price, 'SYP')} ل.س`
                                                             : 'أدخل المبلغ وسعر الصرف'}
                                                     </p>
                                                     <InputError
@@ -756,10 +866,21 @@ export default function OrderForm({
 
                                     <div className="flex justify-end text-sm text-[#435955]">
                                         المجموع الفرعي:{' '}
-                                        <span className="mr-1.5 font-bold text-foreground tabular-nums">
-                                            {(
-                                                item.quantity * item.price
-                                            ).toLocaleString('en-US')}
+                                        <span
+                                            dir={
+                                                dollarDentist
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
+                                            className="mr-1.5 font-bold text-foreground tabular-nums"
+                                        >
+                                            {formatMoney(
+                                                item.quantity *
+                                                    (dollarDentist
+                                                        ? item.original_amount
+                                                        : item.price),
+                                                dollarDentist ? 'USD' : 'SYP',
+                                            )}
                                         </span>
                                     </div>
                                 </div>
@@ -773,12 +894,20 @@ export default function OrderForm({
                 <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card px-6 py-5">
                     <span className="text-[17px] font-bold text-foreground">
                         المجموع الكلي:{' '}
-                        <span className="text-primary tabular-nums">
-                            {total.toLocaleString('en-US')}
-                        </span>{' '}
-                        <span className="text-[13px] font-medium text-muted-foreground">
-                            ليرة
+                        <span
+                            dir={dollarDentist ? 'ltr' : undefined}
+                            className="text-primary tabular-nums"
+                        >
+                            {formatMoney(total, dollarDentist ? 'USD' : 'SYP')}
                         </span>
+                        {!dollarDentist && (
+                            <>
+                                {' '}
+                                <span className="text-[13px] font-medium text-muted-foreground">
+                                    ليرة
+                                </span>
+                            </>
+                        )}
                     </span>
                     <Button
                         type="submit"

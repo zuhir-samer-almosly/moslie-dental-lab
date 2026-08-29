@@ -35,6 +35,10 @@ export interface Order {
     dentist?: Dentist;
     due_date: string;
     amount: number;
+    /** What this order is billed in. USD orders hold cents in `original_amount`. */
+    currency?: 'SYP' | 'USD';
+    /** Total in US cents, when `currency` is USD. `amount` is then 0. */
+    original_amount?: number | null;
     status: 'pending' | 'completed' | 'cancelled' | 'recieved';
     notes: string | null;
     meta: Record<string, unknown> | null;

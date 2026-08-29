@@ -21,8 +21,9 @@ import {
 } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
-import type { BreadcrumbItem, Order } from '@/types';
+import type { BreadcrumbItem, Order, OrderItem } from '@/types';
 import { ORDER_STATUSES } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -45,6 +46,20 @@ function shiftMonth(month: string, delta: number) {
 }
 
 const nf = (value: number) => value.toLocaleString('en-US');
+
+/**
+ * An order's own total, in its own currency — decided by the order (which
+ * mirrors its dentist), never by inspecting an item's own `currency`, which
+ * a lira dentist's dollar-quoted item also carries.
+ */
+const orderTotal = (order: Order): number =>
+    order.currency === 'USD' ? (order.original_amount ?? 0) : order.amount;
+
+/** One item's contribution to its order's total, in the order's currency. */
+const itemTotal = (order: Order, item: OrderItem): number =>
+    order.currency === 'USD'
+        ? item.quantity * (item.original_amount ?? 0)
+        : itemAmount(item);
 
 type StatusFilter = 'all' | Order['status'];
 
@@ -94,14 +109,17 @@ export default function OrdersIndex({
     );
     // Sum the visible ITEMS, not `order.amount`: the server sends only the
     // items dated in the selected month, so an order's full amount would
-    // count work billed to a different month.
-    const totalAmount = filtered.reduce(
-        (sum, order) =>
-            sum +
-            (order.items?.length
-                ? order.items.reduce((n, item) => n + itemAmount(item), 0)
-                : order.amount),
-        0,
+    // count work billed to a different month. Kept per currency — a lira
+    // total and a dollar total are never added together.
+    const totalsByCurrency = filtered.reduce(
+        (acc, order) => {
+            const amount = order.items?.length
+                ? order.items.reduce((n, item) => n + itemTotal(order, item), 0)
+                : orderTotal(order);
+            acc[order.currency === 'USD' ? 'USD' : 'SYP'] += amount;
+            return acc;
+        },
+        { SYP: 0, USD: 0 },
     );
 
     const segments: { key: StatusFilter; label: string }[] = [
@@ -243,6 +261,11 @@ export default function OrdersIndex({
                                                 {!!order.previous_balance && (
                                                     <span className="mb-1 block text-[11px] font-normal text-muted-foreground">
                                                         رصيد سابق مستحق:{' '}
+                                                        {/* Still lira-only:
+                                                        the receivable read
+                                                        behind this figure
+                                                        isn't currency-aware
+                                                        yet (a later task). */}
                                                         <span className="font-bold text-[#B45309] tabular-nums">
                                                             {nf(
                                                                 order.previous_balance,
@@ -328,7 +351,21 @@ export default function OrdersIndex({
                                                             groupBorder,
                                                         )}
                                                     >
-                                                        {nf(order.amount)}
+                                                        <span
+                                                            dir={
+                                                                order.currency ===
+                                                                'USD'
+                                                                    ? 'ltr'
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            {formatMoney(
+                                                                orderTotal(
+                                                                    order,
+                                                                ),
+                                                                order.currency,
+                                                            )}
+                                                        </span>
                                                     </Td>
                                                     {actionsCell}
                                                 </tr>
@@ -390,7 +427,22 @@ export default function OrdersIndex({
                                                             rowBorder,
                                                         )}
                                                     >
-                                                        {nf(itemAmount(item))}
+                                                        <span
+                                                            dir={
+                                                                order.currency ===
+                                                                'USD'
+                                                                    ? 'ltr'
+                                                                    : undefined
+                                                            }
+                                                        >
+                                                            {formatMoney(
+                                                                itemTotal(
+                                                                    order,
+                                                                    item,
+                                                                ),
+                                                                order.currency,
+                                                            )}
+                                                        </span>
                                                     </Td>
                                                     {index === 0 && actionsCell}
                                                 </tr>
@@ -411,11 +463,25 @@ export default function OrdersIndex({
                             <span className="text-sm text-[#435955]">
                                 الإجمالي:{' '}
                                 <span className="font-bold text-foreground tabular-nums">
-                                    {nf(totalAmount)}
+                                    {formatMoney(totalsByCurrency.SYP, 'SYP')}
                                 </span>{' '}
                                 <span className="text-xs text-muted-foreground">
                                     ليرة
                                 </span>
+                                {totalsByCurrency.USD > 0 && (
+                                    <>
+                                        {' + '}
+                                        <span
+                                            dir="ltr"
+                                            className="font-bold text-foreground tabular-nums"
+                                        >
+                                            {formatMoney(
+                                                totalsByCurrency.USD,
+                                                'USD',
+                                            )}
+                                        </span>
+                                    </>
+                                )}
                             </span>
                         </div>
                     )}

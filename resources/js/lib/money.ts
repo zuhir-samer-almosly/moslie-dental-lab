@@ -47,3 +47,13 @@ export const rateValue = (rate: string | null | undefined): string => {
  */
 export const usdToSyp = (dollars: number, rate: number): number =>
     Math.round(dollars * rate);
+
+/**
+ * A stored figure rendered in its own currency: whole lira grouped, or cents
+ * as dollars with both decimals. The single place a currency decides how a
+ * number reads.
+ */
+export const formatMoney = (
+    value: number,
+    currency: 'SYP' | 'USD' = 'SYP',
+): string => (currency === 'USD' ? `$${formatUsd(value)}` : formatSyp(value));
