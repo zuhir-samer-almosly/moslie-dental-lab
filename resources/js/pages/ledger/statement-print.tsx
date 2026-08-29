@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { useEffect } from 'react';
 import ForeignOrigin from '@/components/money/foreign-origin';
+import { formatMoney } from '@/lib/money';
 
 /**
  * The bare statement document, with no app chrome around it — this is the
@@ -30,6 +31,8 @@ type Props = {
         closing: number;
     } | null;
     dentist: { id: number; name: string } | null;
+    /** The currency `statement` is denominated in — the dentist's own. */
+    currency: 'SYP' | 'USD';
     filters: {
         dentist_id: number | null;
         from: string | null;
@@ -37,9 +40,12 @@ type Props = {
     };
 };
 
-const nf = (value: number) => value.toLocaleString('en-US');
-
-export default function StatementPrint({ statement, dentist, filters }: Props) {
+export default function StatementPrint({
+    statement,
+    dentist,
+    currency,
+    filters,
+}: Props) {
     // No appearance cookie is sent by the headless browser, so the page would
     // otherwise follow the renderer's system preference. Paper is always light.
     useEffect(() => {
@@ -91,7 +97,18 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                     رصيد افتتاحي
                                 </td>
                                 <td className="border border-black p-2 text-left tabular-nums">
-                                    {nf(statement.opening)}
+                                    <span
+                                        dir={
+                                            currency === 'USD'
+                                                ? 'ltr'
+                                                : undefined
+                                        }
+                                    >
+                                        {formatMoney(
+                                            statement.opening,
+                                            currency,
+                                        )}
+                                    </span>
                                 </td>
                             </tr>
                             {statement.lines.map((line) => (
@@ -103,11 +120,43 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                         {line.description}
                                     </td>
                                     <td className="border border-black p-2 text-left tabular-nums">
-                                        {line.debit > 0 ? nf(line.debit) : ''}
+                                        {line.debit > 0 ? (
+                                            <span
+                                                dir={
+                                                    currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    line.debit,
+                                                    currency,
+                                                )}
+                                            </span>
+                                        ) : (
+                                            ''
+                                        )}
                                     </td>
                                     <td className="border border-black p-2 text-left tabular-nums">
-                                        {line.credit > 0 ? nf(line.credit) : ''}
-                                        <ForeignOrigin money={line} />
+                                        {line.credit > 0 ? (
+                                            <span
+                                                dir={
+                                                    currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                            >
+                                                {formatMoney(
+                                                    line.credit,
+                                                    currency,
+                                                )}
+                                            </span>
+                                        ) : (
+                                            ''
+                                        )}
+                                        {currency !== 'USD' && (
+                                            <ForeignOrigin money={line} />
+                                        )}
                                     </td>
                                     <td
                                         className={
@@ -119,7 +168,18 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                                 : 'border border-black p-2 text-left text-emerald-600 tabular-nums'
                                         }
                                     >
-                                        {nf(line.balance)}
+                                        <span
+                                            dir={
+                                                currency === 'USD'
+                                                    ? 'ltr'
+                                                    : undefined
+                                            }
+                                        >
+                                            {formatMoney(
+                                                line.balance,
+                                                currency,
+                                            )}
+                                        </span>
                                     </td>
                                 </tr>
                             ))}
@@ -139,7 +199,18 @@ export default function StatementPrint({ statement, dentist, filters }: Props) {
                                             : 'border border-black p-2 text-left text-emerald-600 tabular-nums'
                                     }
                                 >
-                                    {nf(statement.closing)}
+                                    <span
+                                        dir={
+                                            currency === 'USD'
+                                                ? 'ltr'
+                                                : undefined
+                                        }
+                                    >
+                                        {formatMoney(
+                                            statement.closing,
+                                            currency,
+                                        )}
+                                    </span>
                                 </td>
                             </tr>
                         </tfoot>

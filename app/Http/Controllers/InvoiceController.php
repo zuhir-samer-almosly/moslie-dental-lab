@@ -6,6 +6,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Models\Order;
+use App\Money\Currency;
 use App\Money\Rate;
 use App\Support\InvoiceFilename;
 use App\Support\OrderPeriod;
@@ -131,9 +132,16 @@ class InvoiceController extends Controller
         $to = $end?->toDateString();
         $dentistId = $request->input('dentist_id');
 
+        // With one dentist selected the report is single-currency — which is
+        // how an invoice is actually printed. With none selected it spans
+        // both, and the totals below are kept apart rather than added.
+        $dentist = $dentistId ? Dentist::find($dentistId) : null;
+        $currency = $dentist?->billingCurrency() ?? Currency::SYP;
+
         $orders = null;
         $payments = null;
         $totals = null;
+        $totalsUsd = null;
         $openingByDentist = [];
 
         if ($from && $to) {
@@ -182,29 +190,70 @@ class InvoiceController extends Controller
             // and DentistPaymentPosting), so reading `asOf` here keeps it.
             $asOf = Carbon::parse($from)->subDay()->toDateString();
 
-            $openingByDentist = $this->reports->receivablesByDentist($asOf)
-                ->when($dentistId, fn ($balances) => $balances->only([$dentistId]))
-                ->reject(fn (int $balance) => $balance === 0)
-                ->all();
-
-            $openingTotal = array_sum($openingByDentist);
-
             // Not `$orders->sum('amount')`: that's the whole order's total,
             // but `$orders` here only holds the items actually in period —
             // sum those instead, so the total agrees with what's displayed.
-            $ordersTotal = $orders->sum(
+            // Both sums are keyed off `valueInOwnCurrency()`, so summing the
+            // WHOLE (unfiltered, when no dentist is selected) collection
+            // would blend lira and cents together — filtered to one
+            // currency's rows first, for exactly the reason totals below are
+            // kept apart rather than added.
+            $sumOrders = fn ($ordersInCurrency) => $ordersInCurrency->sum(
                 fn (Order $order) => $order->items->isEmpty()
-                    ? $order->amount
-                    : $order->items->sum(fn ($item) => $item->price * $item->quantity)
+                    ? $order->valueInOwnCurrency()
+                    : $order->items->sum(fn ($item) => $item->valueInOwnCurrency() * $item->quantity)
             );
-            $paymentsTotal = $payments->sum('amount');
+            $sumPayments = fn ($paymentsInCurrency) => $paymentsInCurrency->sum(
+                fn (DentistPayment $payment) => $payment->valueInOwnCurrency()
+            );
 
-            $totals = [
-                'opening' => $openingTotal,
-                'orders' => $ordersTotal,
-                'payments' => $paymentsTotal,
-                'balance' => $openingTotal + $ordersTotal - $paymentsTotal,
-            ];
+            $totalsFor = function (Currency $forCurrency) use ($orders, $payments, $sumOrders, $sumPayments, $asOf, $dentistId) {
+                $openingByDentist = $this->reports->receivablesByDentist($asOf, $forCurrency)
+                    ->when($dentistId, fn ($balances) => $balances->only([$dentistId]))
+                    ->reject(fn (int $balance) => $balance === 0)
+                    ->all();
+
+                $openingTotal = array_sum($openingByDentist);
+
+                // An order's own `currency` mirrors its dentist's billing
+                // currency at the time it was saved — see Order::billingCurrency().
+                $ordersInCurrency = $orders->filter(
+                    fn (Order $order) => $order->billingCurrency() === $forCurrency
+                );
+                // A payment's `currency` is what it was HANDED OVER as, not
+                // what it's billed in — a lira dentist can still pay in
+                // dollars (converted). Its dentist's currency is what decides
+                // which bucket it belongs to.
+                $paymentsInCurrency = $payments->filter(
+                    fn (DentistPayment $payment) => $payment->dentist?->billingCurrency() === $forCurrency
+                );
+
+                $ordersTotal = $sumOrders($ordersInCurrency);
+                $paymentsTotal = $sumPayments($paymentsInCurrency);
+
+                return [
+                    'openingByDentist' => $openingByDentist,
+                    'totals' => [
+                        'opening' => $openingTotal,
+                        'orders' => $ordersTotal,
+                        'payments' => $paymentsTotal,
+                        'balance' => $openingTotal + $ordersTotal - $paymentsTotal,
+                    ],
+                ];
+            };
+
+            $primary = $totalsFor($currency);
+            $openingByDentist = $primary['openingByDentist'];
+            $totals = $primary['totals'];
+
+            if (! $dentistId) {
+                $dollar = $totalsFor(Currency::USD);
+                $totalsUsd = $dollar['totals'];
+                // Disjoint by dentist id — a dentist bills in exactly one
+                // currency, so this union never lets a lira opening balance
+                // and a dollar one collide under the same key.
+                $openingByDentist = $openingByDentist + $dollar['openingByDentist'];
+            }
         }
 
         $dentists = Dentist::all();
@@ -213,6 +262,8 @@ class InvoiceController extends Controller
             'orders' => $orders,
             'payments' => $payments,
             'totals' => $totals,
+            'totalsUsd' => $totalsUsd,
+            'currency' => $currency->value,
             'openingByDentist' => (object) $openingByDentist,
             'dentists' => $dentists,
             // The lira totals read back in dollars are priced at the period's

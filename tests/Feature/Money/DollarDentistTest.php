@@ -595,3 +595,48 @@ test('outstanding lists each dentist in his own currency and never sums them', f
             ->where('dentists.1.orders_total', 50000)
         );
 });
+
+test('the invoice for a dollar dentist is in dollars, with no lira and no rate', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-10',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ]);
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id, 'payment_date' => '2026-09-20',
+        'currency' => 'USD', 'original_amount' => '200',
+    ]);
+
+    $this->get(route('invoices.index', [
+        'from' => '2026-09-01', 'to' => '2026-09-30', 'dentist_id' => $dentist->id,
+    ]))->assertInertia(fn ($page) => $page
+        ->where('currency', 'USD')
+        ->where('totals.orders', 50000)
+        ->where('totals.payments', 20000)
+        ->where('totals.balance', 30000)
+        ->where('totals.opening', 0)
+    );
+});
+
+test('the statement page for a dollar dentist reads in dollars, without throwing on the narrowed select', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'date' => '2026-09-10',
+            'currency' => 'USD', 'original_amount' => 500_00, 'selected_teeth' => []]],
+    ]);
+
+    $this->get(route('ledger.statement', [
+        'dentist_id' => $dentist->id, 'from' => '2026-09-01', 'to' => '2026-09-30',
+    ]))->assertOk()->assertInertia(fn ($page) => $page
+        ->where('currency', 'USD')
+        ->where('statement.opening', 0)
+        ->where('statement.closing', 50000)
+        ->where('statement.lines.0.currency', 'USD')
+    );
+});

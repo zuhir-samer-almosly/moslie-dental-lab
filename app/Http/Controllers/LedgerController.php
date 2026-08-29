@@ -8,6 +8,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Account;
 use App\Models\Dentist;
 use App\Models\JournalEntry;
+use App\Money\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
@@ -192,20 +193,24 @@ class LedgerController extends Controller
         $from = $this->parseDate($request->query('from'));
         $to = $this->parseDate($request->query('to'));
 
-        // Narrowed to the two fields the page actually renders — the full
+        // Narrowed to the three fields the page actually renders — the full
         // model carries price_list, phone and address, which have no
-        // business traveling into the signed print-view URL's payload. The
-        // full dentist roster is narrower still: it isn't rendered by the
-        // print view/PDF at all, so it lives in statement() instead of here
-        // — shared here, it would ride along on every unauthenticated
-        // signed-URL request too.
-        $dentist = $dentistId ? Dentist::find($dentistId, ['id', 'name']) : null;
+        // business traveling into the signed print-view URL's payload.
+        // `currency` has to ride along: billingCurrency() throws rather than
+        // guess when it's missing, and this statement must never be read in
+        // the wrong currency. The full dentist roster is narrower still: it
+        // isn't rendered by the print view/PDF at all, so it lives in
+        // statement() instead of here — shared here, it would ride along on
+        // every unauthenticated signed-URL request too.
+        $dentist = $dentistId ? Dentist::find($dentistId, ['id', 'name', 'currency']) : null;
+        $currency = $dentist?->billingCurrency() ?? Currency::SYP;
 
         return [
             'statement' => $dentist
-                ? $this->reports->dentistStatement($dentist->id, $from, $to)
+                ? $this->reports->dentistStatement($dentist->id, $from, $to, $currency)
                 : null,
             'dentist' => $dentist,
+            'currency' => $currency->value,
             'filters' => ['dentist_id' => $dentistId, 'from' => $from, 'to' => $to],
         ];
     }
