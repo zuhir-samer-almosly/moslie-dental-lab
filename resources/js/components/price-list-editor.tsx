@@ -45,9 +45,15 @@ export function findDuplicateNames(rows: PriceRow[]): string[] {
 export default function PriceListEditor({
     value,
     onChange,
+    dentistCurrency = 'SYP',
 }: {
     value: PriceRow[];
     onChange: (rows: PriceRow[]) => void;
+    /**
+     * A dollar dentist is quoted only in dollars, so the per-row currency
+     * toggle is meaningless for him and is hidden rather than shown disabled.
+     */
+    dentistCurrency?: 'SYP' | 'USD';
 }) {
     const updateRow = (
         index: number,
@@ -108,7 +114,12 @@ export default function PriceListEditor({
                             <Input
                                 type="number"
                                 min="0"
-                                step={row.currency === 'USD' ? '0.01' : '1'}
+                                step={
+                                    dentistCurrency === 'USD' ||
+                                    row.currency === 'USD'
+                                        ? '0.01'
+                                        : '1'
+                                }
                                 value={row.price || ''}
                                 onChange={(e) =>
                                     updateRow(index, 'price', e.target.value)
@@ -116,12 +127,21 @@ export default function PriceListEditor({
                                 placeholder="السعر"
                                 className="w-28"
                             />
-                            <CurrencyToggle
-                                value={row.currency}
-                                onChange={(currency) =>
-                                    setCurrency(index, currency)
-                                }
-                            />
+                            {dentistCurrency === 'USD' ? (
+                                <span
+                                    dir="ltr"
+                                    className="w-16 text-center text-sm text-muted-foreground"
+                                >
+                                    $
+                                </span>
+                            ) : (
+                                <CurrencyToggle
+                                    value={row.currency}
+                                    onChange={(currency) =>
+                                        setCurrency(index, currency)
+                                    }
+                                />
+                            )}
                             <Button
                                 type="button"
                                 variant="ghost"

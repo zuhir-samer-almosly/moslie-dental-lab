@@ -23,6 +23,7 @@ class StoreDentistRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'currency' => ['nullable', 'in:SYP,USD'],
             'gender' => ['required', 'in:male,female'],
             'phone' => ['nullable', 'string', 'unique:dentists,phone'],
             'address' => ['nullable', 'string'],

@@ -48,3 +48,42 @@ test('a single-currency dollar entry posts fine', function () {
 
     expect($entry->lines()->count())->toBe(2);
 });
+
+use App\Models\Dentist;
+use App\Models\User;
+
+test('a dentist is lira unless created as a dollar dentist', function () {
+    expect(Dentist::create(['name' => 'د. أحمد'])->isDollar())->toBeFalse()
+        ->and(Dentist::create(['name' => 'د. سامي', 'currency' => 'USD'])->isDollar())->toBeTrue();
+});
+
+test('a dentist with no ledger history can still change currency', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->put(route('dentists.update', $dentist), [
+        'name' => 'د. أحمد', 'gender' => 'male', 'currency' => 'USD',
+    ])->assertSessionHasNoErrors();
+
+    expect($dentist->fresh()->isDollar())->toBeTrue();
+});
+
+test('a dentist with ledger history cannot change currency', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'جسر', 'quantity' => 1, 'price' => 250,
+            'date' => '2026-09-01', 'selected_teeth' => [],
+        ]],
+    ]);
+
+    $this->put(route('dentists.update', $dentist), [
+        'name' => 'د. أحمد', 'gender' => 'male', 'currency' => 'USD',
+    ])->assertSessionHasErrors('currency');
+
+    expect($dentist->fresh()->isDollar())->toBeFalse();
+});

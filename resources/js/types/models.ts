@@ -1,6 +1,11 @@
 export interface Dentist {
     id: number;
     name: string;
+    /**
+     * What this dentist is quoted, billed and paid in. A USD dentist's money
+     * is native dollars: cents, converted by nothing, and no rate anywhere.
+     */
+    currency?: 'SYP' | 'USD';
     gender: 'male' | 'female';
     phone: string | null;
     address: string | null;

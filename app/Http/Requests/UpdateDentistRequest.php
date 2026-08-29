@@ -23,6 +23,15 @@ class UpdateDentistRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'currency' => ['nullable', 'in:SYP,USD', function ($attribute, $value, $fail) {
+                $dentist = $this->route('dentist');
+
+                if ($value !== null
+                    && $value !== ($dentist->currency ?? 'SYP')
+                    && $dentist->hasLedgerLines()) {
+                    $fail('لا يمكن تغيير عملة الطبيب بعد تسجيل حركات على حسابه.');
+                }
+            }],
             'gender' => ['required', 'in:male,female'],
             'phone' => ['nullable', 'string', \Illuminate\Validation\Rule::unique('dentists')->ignore($this->dentist)],
             'address' => ['nullable', 'string'],
