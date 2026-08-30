@@ -90,6 +90,7 @@ export default function PaymentsIndex({
                                         <TableHead>اسم الطبيب</TableHead>
                                         <TableHead>المبلغ</TableHead>
                                         <TableHead>التاريخ</TableHead>
+                                        <TableHead>ملاحظات</TableHead>
                                         <TableHead className="text-end">
                                             الإجراءات
                                         </TableHead>
@@ -128,6 +129,9 @@ export default function PaymentsIndex({
                                                     payment.payment_date ||
                                                         payment.created_at,
                                                 )}
+                                            </TableCell>
+                                            <TableCell className="max-w-xs truncate text-muted-foreground">
+                                                {payment.notes || '-'}
                                             </TableCell>
                                             <TableCell className="text-end">
                                                 <div className="flex justify-end gap-2">

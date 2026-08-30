@@ -22,6 +22,7 @@ class DentistPayment extends Model
         'currency',
         'original_amount',
         'rate',
+        'notes',
     ];
 
     protected $casts = [

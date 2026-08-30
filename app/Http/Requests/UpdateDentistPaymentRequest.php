@@ -27,6 +27,7 @@ class UpdateDentistPaymentRequest extends FormRequest
         return [
             'dentist_id' => ['required', 'exists:dentists,id'],
             'payment_date' => ['required', 'date'],
+            'notes' => ['nullable', 'string'],
             ...$this->moneyRules('amount', $this->dentistIsDollar()),
         ];
     }

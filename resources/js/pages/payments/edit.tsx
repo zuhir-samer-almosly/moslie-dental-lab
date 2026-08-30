@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist, DentistPayment } from '@/types';
 
@@ -46,6 +47,7 @@ export default function PaymentsEdit({
                 ? ''
                 : (payment.original_amount / 100).toFixed(2),
         rate: payment.rate ?? '',
+        notes: payment.notes ?? '',
     });
     const { data, setData, processing, errors } = form;
 
@@ -94,6 +96,10 @@ export default function PaymentsEdit({
         // A dollar dentist's payment is native dollars: `amount` and `rate`
         // are `prohibited` server-side, not merely optional, so they must be
         // omitted from the payload entirely rather than sent zeroed.
+        //
+        // This is a whitelist, so every non-money field has to be listed here
+        // too — anything left out is silently dropped for dollar dentists
+        // only, which no server-side test can see.
         form.transform((formData) =>
             dollarDentist
                 ? {
@@ -101,6 +107,7 @@ export default function PaymentsEdit({
                       payment_date: formData.payment_date,
                       currency: 'USD' as const,
                       original_amount: formData.original_amount,
+                      notes: formData.notes,
                   }
                 : formData,
         );
@@ -175,6 +182,19 @@ export default function PaymentsEdit({
                                     required
                                 />
                                 <InputError message={errors.payment_date} />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="notes">ملاحظات</Label>
+                                <Textarea
+                                    id="notes"
+                                    value={data.notes}
+                                    onChange={(e) =>
+                                        setData('notes', e.target.value)
+                                    }
+                                    placeholder="تفاصيل الدفعة — من سلّمها، نقداً أم حوالة، عن أي طلبات"
+                                />
+                                <InputError message={errors.notes} />
                             </div>
 
                             <Button type="submit" disabled={processing}>

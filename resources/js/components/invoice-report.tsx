@@ -377,6 +377,11 @@ export function InvoiceReport({
             payment.currency === 'USD' &&
             (payment.dentist?.currency ?? 'SYP') !== 'USD',
     );
+    // The same التفاصيل column carries the note the payment was recorded
+    // with, so an all-lira invoice still gets the column as soon as one
+    // payment has something written on it.
+    const showPaymentDetails =
+        hasForeignPayment || payments.some((payment) => payment.notes);
     // A dollar dentist's own currency never has a rate — no lira figure was
     // ever converted to reach it, so there's nothing for ApproxUsd to prove.
     const showApproxUsd = currency !== 'USD';
@@ -671,7 +676,7 @@ export function InvoiceReport({
                             <TableRow>
                                 <TableHead>التاريخ</TableHead>
                                 <TableHead>المبلغ</TableHead>
-                                {hasForeignPayment && (
+                                {showPaymentDetails && (
                                     <TableHead>التفاصيل</TableHead>
                                 )}
                             </TableRow>
@@ -680,7 +685,7 @@ export function InvoiceReport({
                             {payments.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={hasForeignPayment ? 3 : 2}
+                                        colSpan={showPaymentDetails ? 3 : 2}
                                         className="text-center"
                                     >
                                         لا توجد مدفوعات
@@ -726,13 +731,18 @@ export function InvoiceReport({
                                                     )}
                                                 </span>
                                             </TableCell>
-                                            {hasForeignPayment && (
+                                            {showPaymentDetails && (
                                                 <TableCell className="text-muted-foreground">
                                                     {paymentCurrency !==
                                                         'USD' && (
                                                         <PaymentOrigin
                                                             payment={payment}
                                                         />
+                                                    )}
+                                                    {payment.notes && (
+                                                        <div className="whitespace-pre-line">
+                                                            {payment.notes}
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                             )}
