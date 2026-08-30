@@ -79,6 +79,27 @@ test('storing a dentist from the order page redirects back and saves the price l
     ]);
 });
 
+test('a dollar dentist keeps the cents in his price list', function () {
+    $this->actingAs(User::factory()->create());
+
+    // $11.50 reaches the server as 1150 cents, so the integer rule holds and
+    // nothing rounds the half dollar away.
+    $this->post(route('dentists.store'), [
+        'name' => 'د. سامر',
+        'gender' => 'male',
+        'currency' => 'USD',
+        'price_list' => [
+            'خزف' => ['price' => 1150, 'currency' => 'USD'],
+            'زيركون' => ['price' => 1005, 'currency' => 'USD'],
+        ],
+    ])->assertSessionHas('success');
+
+    expect(Dentist::firstWhere('name', 'د. سامر')->price_list)->toBe([
+        'خزف' => ['price' => 1150, 'currency' => 'USD'],
+        'زيركون' => ['price' => 1005, 'currency' => 'USD'],
+    ]);
+});
+
 test('storing a dentist from the standalone page redirects to the index', function () {
     $this->actingAs(User::factory()->create());
 

@@ -5,6 +5,7 @@ import DentalChart from '@/components/dental-chart';
 import DentistsManagerDialog from '@/components/dentists/dentists-manager-dialog';
 import InputError from '@/components/input-error';
 import CurrencyToggle from '@/components/money/currency-toggle';
+import DollarInput from '@/components/money/decimal-input';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
@@ -320,10 +321,8 @@ export default function OrderForm({
     };
 
     /** Edit a dollar line's amount, typed in dollars and held in cents. */
-    const updateItemDollars = (index: number, dollars: string) => {
+    const updateItemDollars = (index: number, cents: number) => {
         const newItems = [...data.items];
-        const parsed = parseFloat(dollars);
-        const cents = Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
         const rate = parseFloat(newItems[index].rate);
         newItems[index] = {
             ...newItems[index],
@@ -338,10 +337,8 @@ export default function OrderForm({
      * Never converted — for him the dollar amount IS the money, not a quote
      * that becomes a lira price.
      */
-    const updateItemNativeDollars = (index: number, dollars: string) => {
+    const updateItemNativeDollars = (index: number, cents: number) => {
         const newItems = [...data.items];
-        const parsed = parseFloat(dollars);
-        const cents = Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
         newItems[index] = {
             ...newItems[index],
             currency: 'USD',
@@ -691,20 +688,14 @@ export default function OrderForm({
                                             </div>
                                             {dollarDentist ? (
                                                 <>
-                                                    <Input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={
+                                                    <DollarInput
+                                                        cents={
                                                             item.original_amount
-                                                                ? item.original_amount /
-                                                                  100
-                                                                : ''
                                                         }
-                                                        onChange={(e) =>
+                                                        onChange={(cents) =>
                                                             updateItemNativeDollars(
                                                                 index,
-                                                                e.target.value,
+                                                                cents,
                                                             )
                                                         }
                                                         className={fieldClass}
@@ -733,21 +724,16 @@ export default function OrderForm({
                                                             <span className="text-[11px] text-muted-foreground">
                                                                 بالدولار
                                                             </span>
-                                                            <Input
-                                                                type="number"
-                                                                min="0"
-                                                                step="0.01"
-                                                                value={
+                                                            <DollarInput
+                                                                cents={
                                                                     item.original_amount
-                                                                        ? item.original_amount /
-                                                                          100
-                                                                        : ''
                                                                 }
-                                                                onChange={(e) =>
+                                                                onChange={(
+                                                                    cents,
+                                                                ) =>
                                                                     updateItemDollars(
                                                                         index,
-                                                                        e.target
-                                                                            .value,
+                                                                        cents,
                                                                     )
                                                                 }
                                                                 className={
@@ -759,10 +745,14 @@ export default function OrderForm({
                                                             <span className="text-[11px] text-muted-foreground">
                                                                 سعر الصرف
                                                             </span>
+                                                            {/* Not a number input: it reports a
+                                                                half-typed "13." as empty, which
+                                                                blanks the conversion preview
+                                                                mid-typing. */}
                                                             <Input
-                                                                type="number"
-                                                                min="0.000001"
-                                                                step="0.000001"
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                dir="ltr"
                                                                 value={
                                                                     item.rate
                                                                 }

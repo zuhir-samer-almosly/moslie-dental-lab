@@ -16,8 +16,9 @@ const toRows = (dentist?: Dentist | null): PriceRow[] =>
     dentist
         ? Object.entries(dentist.price_list ?? {}).map(([name, entry]) => ({
               name,
-              // Dollar prices are stored in cents; the row edits whole dollars.
-              price: entry.currency === 'USD' ? entry.price / 100 : entry.price,
+              // A row carries the stored unit untouched — whole lira, or cents
+              // for a dollar price. Only the input widget speaks dollars.
+              price: entry.price,
               currency: entry.currency,
           }))
         : DEFAULT_WORK_TYPES.map((name) => ({
@@ -80,10 +81,10 @@ export default function DentistForm({
                 .map((row) => [
                     row.name.trim(),
                     {
-                        price:
-                            payload.currency === 'USD' || row.currency === 'USD'
-                                ? Math.round(row.price * 100)
-                                : Math.round(row.price),
+                        // Already in the stored unit. Rounded only to defend
+                        // against a decimal in a price list written before
+                        // currencies existed.
+                        price: Math.round(row.price),
                         currency:
                             payload.currency === 'USD' ? 'USD' : row.currency,
                     },
@@ -93,6 +94,30 @@ export default function DentistForm({
         // dialogs must stay on whatever page they opened over.
         ...(redirectToIndex ? { to_index: true } : {}),
     }));
+
+    /**
+     * A price means a different thing in each currency, so switching the
+     * dentist's own currency clears the numbers instead of re-reading 250 lira
+     * as $250 on submit. The work-type names are kept — only the prices go.
+     * This is the same rule the per-row currency toggle already applies, and
+     * it can only fire on a dentist with no ledger lines: the radios below are
+     * disabled once his account has moved.
+     */
+    const pickCurrency = (currency: 'SYP' | 'USD') => {
+        if (currency === data.currency) {
+            return;
+        }
+
+        setData((previous) => ({
+            ...previous,
+            currency,
+            price_list: previous.price_list.map((row) => ({
+                ...row,
+                currency,
+                price: 0,
+            })),
+        }));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -180,7 +205,7 @@ export default function DentistForm({
                             name="dentist_currency"
                             value="SYP"
                             checked={data.currency === 'SYP'}
-                            onChange={() => setData('currency', 'SYP')}
+                            onChange={() => pickCurrency('SYP')}
                             disabled={dentist?.has_ledger_lines === true}
                             className="accent-primary"
                         />
@@ -192,7 +217,7 @@ export default function DentistForm({
                             name="dentist_currency"
                             value="USD"
                             checked={data.currency === 'USD'}
-                            onChange={() => setData('currency', 'USD')}
+                            onChange={() => pickCurrency('USD')}
                             disabled={dentist?.has_ledger_lines === true}
                             className="accent-primary"
                         />
