@@ -1,14 +1,16 @@
 import { Plus, Trash2 } from 'lucide-react';
 import CurrencyToggle from '@/components/money/currency-toggle';
+import DollarInput from '@/components/money/decimal-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export type PriceRow = {
     name: string;
     /**
-     * In the natural unit of its currency: whole lira, or dollars with
-     * decimals. The form converts a dollar price to cents on submit, which is
-     * what the column holds.
+     * In the unit its currency is stored in: whole lira, or US cents for a
+     * dollar price. The same convention as the `price_list` column itself and
+     * as an order item's `original_amount`, so the row is submitted as-is —
+     * only the input widget deals in dollars.
      */
     price: number;
     currency: 'SYP' | 'USD';
@@ -55,36 +57,14 @@ export default function PriceListEditor({
      */
     dentistCurrency?: 'SYP' | 'USD';
 }) {
-    const updateRow = (
-        index: number,
-        field: keyof PriceRow,
-        fieldValue: string,
-    ) => {
+    const updateRow = (index: number, patch: Partial<PriceRow>) => {
         const next = [...value];
-        const row = next[index];
-        next[index] = {
-            ...row,
-            [field]:
-                field === 'price'
-                    ? // A dollar price keeps its cents; a lira one never has any.
-                      (row.currency === 'USD'
-                          ? parseFloat(fieldValue)
-                          : Math.round(parseFloat(fieldValue))) || 0
-                    : fieldValue,
-        };
-        onChange(next);
-    };
-
-    const setCurrency = (index: number, currency: PriceRow['currency']) => {
-        const next = [...value];
-        // Switching currency changes what the number means, so it is cleared
-        // rather than silently reinterpreted as the other currency.
-        next[index] = { ...next[index], currency, price: 0 };
+        next[index] = { ...next[index], ...patch };
         onChange(next);
     };
 
     const addRow = () =>
-        onChange([...value, { name: '', price: 0, currency: 'SYP' }]);
+        onChange([...value, { name: '', price: 0, currency: dentistCurrency }]);
     const removeRow = (index: number) =>
         onChange(value.filter((_, i) => i !== index));
 
@@ -96,63 +76,96 @@ export default function PriceListEditor({
                         لا توجد أنواع عمل. أضف نوعاً وسعره.
                     </p>
                 ) : (
-                    value.map((row, index) => (
-                        <div
-                            key={index}
-                            className={`flex items-center gap-3 px-3 py-2.5 ${
-                                index < value.length - 1 ? 'border-b' : ''
-                            }`}
-                        >
-                            <Input
-                                value={row.name}
-                                onChange={(e) =>
-                                    updateRow(index, 'name', e.target.value)
-                                }
-                                placeholder="اسم نوع العمل..."
-                                className="flex-1"
-                            />
-                            <Input
-                                type="number"
-                                min="0"
-                                step={
-                                    dentistCurrency === 'USD' ||
-                                    row.currency === 'USD'
-                                        ? '0.01'
-                                        : '1'
-                                }
-                                value={row.price || ''}
-                                onChange={(e) =>
-                                    updateRow(index, 'price', e.target.value)
-                                }
-                                placeholder="السعر"
-                                className="w-28"
-                            />
-                            {dentistCurrency === 'USD' ? (
-                                <span
-                                    dir="ltr"
-                                    className="w-16 text-center text-sm text-muted-foreground"
-                                >
-                                    $
-                                </span>
-                            ) : (
-                                <CurrencyToggle
-                                    value={row.currency}
-                                    onChange={(currency) =>
-                                        setCurrency(index, currency)
-                                    }
-                                />
-                            )}
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeRow(index)}
-                                title="حذف"
+                    value.map((row, index) => {
+                        // One decision for both the widget and the unit. When
+                        // these two disagreed, a dollar dentist's rows — which
+                        // carry no currency of their own, his toggle being
+                        // hidden — were parsed as lira and rounded to whole
+                        // dollars on every keystroke.
+                        const dollars =
+                            dentistCurrency === 'USD' || row.currency === 'USD';
+
+                        return (
+                            <div
+                                key={index}
+                                className={`flex items-center gap-3 px-3 py-2.5 ${
+                                    index < value.length - 1 ? 'border-b' : ''
+                                }`}
                             >
-                                <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                        </div>
-                    ))
+                                <Input
+                                    value={row.name}
+                                    onChange={(e) =>
+                                        updateRow(index, {
+                                            name: e.target.value,
+                                        })
+                                    }
+                                    placeholder="اسم نوع العمل..."
+                                    className="flex-1"
+                                />
+                                {dollars ? (
+                                    <DollarInput
+                                        cents={row.price}
+                                        onChange={(cents) =>
+                                            updateRow(index, { price: cents })
+                                        }
+                                        placeholder="السعر"
+                                        className="w-28"
+                                    />
+                                ) : (
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={row.price || ''}
+                                        onChange={(e) =>
+                                            updateRow(index, {
+                                                // A lira price never has cents.
+                                                price:
+                                                    Math.round(
+                                                        parseFloat(
+                                                            e.target.value,
+                                                        ),
+                                                    ) || 0,
+                                            })
+                                        }
+                                        placeholder="السعر"
+                                        className="w-28"
+                                    />
+                                )}
+                                {dentistCurrency === 'USD' ? (
+                                    <span
+                                        dir="ltr"
+                                        className="w-16 text-center text-sm text-muted-foreground"
+                                    >
+                                        $
+                                    </span>
+                                ) : (
+                                    <CurrencyToggle
+                                        value={row.currency}
+                                        onChange={(currency) =>
+                                            // Switching currency changes what
+                                            // the number means, so it is
+                                            // cleared rather than silently
+                                            // reinterpreted as the other one.
+                                            updateRow(index, {
+                                                currency,
+                                                price: 0,
+                                            })
+                                        }
+                                    />
+                                )}
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeRow(index)}
+                                    title="حذف"
+                                >
+                                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </div>
+                        );
+                    })
                 )}
             </div>
 
