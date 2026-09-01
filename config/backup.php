@@ -224,8 +224,9 @@ return [
         'mail' => [
             // `?:` (not env's default arg) so a present-but-blank env value
             // still falls back — otherwise Spatie rejects the empty address
-            // and crashes every artisan command at boot.
-            'to' => env('BACKUP_NOTIFICATION_EMAIL') ?: 'zohermoslie1@gmail.com',
+            // and crashes every artisan command at boot. Set a real address in
+            // BACKUP_NOTIFICATION_EMAIL; this placeholder only keeps boot alive.
+            'to' => env('BACKUP_NOTIFICATION_EMAIL') ?: 'backups@example.com',
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
