@@ -11,9 +11,6 @@
 /resources/js/wayfinder
 /vendor
 .DS_Store
-.env
-.env.backup
-.env.production
 .phpactor.json
 .phpunit.result.cache
 Homestead.json
@@ -28,4 +25,27 @@ yarn-error.log
 /.zed
 /backups
 /.mcp.json
-.env.docker
+
+# Environment files — every variant. The two committed templates are the
+# only exceptions; a real .env must never be committed or pushed.
+.env
+.env.*
+!.env.example
+!.env.docker.example
+
+# Database dumps and restores (see db-backup.sh; /backups is ignored above)
+*.sql
+*.sql.gz
+*.dump
+*.sqlite
+*.sqlite-journal
+
+# Credentials and keys
+*.pem
+*.p12
+*.pfx
+/storage/oauth-*.key
+
+# Per-machine agent/tool state
+/.superpowers
+.claude/settings.local.json
