@@ -49,3 +49,7 @@ yarn-error.log
 # Per-machine agent/tool state
 /.superpowers
 .claude/settings.local.json
+
+# Host-local Caddy site blocks (other apps on the same box)
+/docker/caddy/conf.d/*
+!/docker/caddy/conf.d/README.md
