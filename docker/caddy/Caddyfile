@@ -1,33 +1,34 @@
 {
-    # Email for Let's Encrypt notifications
-    email zohermoslie0@gmail.com
+	# Let's Encrypt contact address. Set ACME_EMAIL in the production env;
+	# the default is a placeholder that only keeps this config valid.
+	email {$ACME_EMAIL:admin@example.com}
 }
 
 # Production configuration with automatic HTTPS
 dental-lab.zoher-moslie.me {
-    reverse_proxy app:80
+	reverse_proxy app:80
 
-    encode gzip zstd
+	encode gzip zstd
 
-    # Automatic HTTPS with Let's Encrypt
-    tls {
-        protocols tls1.2 tls1.3
-    }
+	# Automatic HTTPS with Let's Encrypt
+	tls {
+		protocols tls1.2 tls1.3
+	}
 
-    # Security headers
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Frame-Options "SAMEORIGIN"
-        X-Content-Type-Options "nosniff"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
 
-    # Logging
-    log {
-        output stdout
-        format console
-        level INFO
-    }
+	# Logging
+	log {
+		output stdout
+		format console
+		level INFO
+	}
 }

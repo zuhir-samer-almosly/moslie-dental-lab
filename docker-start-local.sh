@@ -41,12 +41,12 @@ docker compose -f docker-compose.local.yml exec -T app php <<'PHP'
 require '/opt/dental-lab/moslie-dental-lab/vendor/autoload.php';
 $app = require_once '/opt/dental-lab/moslie-dental-lab/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-$user = App\Models\User::firstOrNew(['email' => 'zohermoslie0@gmail.com']);
-$user->name = 'Zoher Moslie';
+$user = App\Models\User::firstOrNew(['email' => getenv('ADMIN_EMAIL') ?: 'admin@dental.test']);
+$user->name = getenv('ADMIN_NAME') ?: 'Admin';
 $user->password = password_hash('password', PASSWORD_BCRYPT);
 $user->email_verified_at = now();
 $user->save();
-echo "✅ Admin user ready: zohermoslie0@gmail.com / password\n";
+echo '✅ Admin user ready: ' . (getenv('ADMIN_EMAIL') ?: 'admin@dental.test') . " / password\n";
 PHP
 
 # Optimize
