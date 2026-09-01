@@ -32,3 +32,9 @@ dental-lab.zoher-moslie.me {
 		level INFO
 	}
 }
+
+# Second app on this host, proxied by the same Caddy. Its container must share
+# the moslie-network defined in docker-compose.yml for `financeapp` to resolve.
+tracking-app.zoher-moslie.me {
+	reverse_proxy financeapp:3000
+}
