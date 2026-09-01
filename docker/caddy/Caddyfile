@@ -33,8 +33,7 @@ dental-lab.zoher-moslie.me {
 	}
 }
 
-# Second app on this host, proxied by the same Caddy. Its container must share
-# the moslie-network defined in docker-compose.yml for `financeapp` to resolve.
-tracking-app.zoher-moslie.me {
-	reverse_proxy financeapp:3000
-}
+# Host-local site blocks live in conf.d/ and are NOT tracked in git — see
+# docker/caddy/conf.d/README.md. An empty glob is a warning, not an error, so a
+# fresh clone with no extra sites still loads.
+import /etc/caddy/conf.d/*.caddy

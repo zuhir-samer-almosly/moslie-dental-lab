@@ -11,6 +11,8 @@ services:
       - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
     volumes:
       - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile
+      # Untracked, host-local site blocks (other apps on this box)
+      - ./docker/caddy/conf.d:/etc/caddy/conf.d:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
