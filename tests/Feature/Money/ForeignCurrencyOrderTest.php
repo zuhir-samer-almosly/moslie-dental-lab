@@ -181,3 +181,30 @@ test('a price of zero on a lira item is still allowed', function () {
 
     expect(Order::sole()->amount)->toBe(0);
 });
+
+test('a zero-dollar quoted item is accepted', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => (string) $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'هدية',
+            'quantity' => 1,
+            'date' => '2026-08-26',
+            'selected_teeth' => [],
+            'currency' => 'USD',
+            'original_amount' => 0,
+            'rate' => '13',
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $item = Order::with('items')->sole()->items->first();
+
+    expect($item)
+        ->price->toBe(0)
+        ->original_amount->toBe(0)
+        ->currency->toBe('USD')
+        ->and(Order::sole()->amount)->toBe(0);
+});

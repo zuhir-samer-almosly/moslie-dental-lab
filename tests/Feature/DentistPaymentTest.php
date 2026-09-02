@@ -20,16 +20,29 @@ test('a dentist payment can be recorded', function () {
     expect($payment->payment_date)->toBe('2026-06-15');
 });
 
-test('a payment requires a dentist, a positive amount and a date', function () {
+test('a payment requires a dentist, a non-negative amount and a date', function () {
     $this->actingAs(User::factory()->create());
 
     $this->post(route('payments.store'), [
         'dentist_id' => null,
-        'amount' => 0,
+        'amount' => -1,
         'payment_date' => 'not-a-date',
     ])->assertSessionHasErrors(['dentist_id', 'amount', 'payment_date']);
 
     expect(DentistPayment::count())->toBe(0);
+});
+
+test('a payment amount can be zero', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. مجاناً']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id,
+        'amount' => 0,
+        'payment_date' => '2026-06-15',
+    ])->assertRedirect(route('payments.index'))->assertSessionHasNoErrors();
+
+    expect(DentistPayment::sole()->amount)->toBe(0);
 });
 
 test('a dentist payment can be updated', function () {

@@ -46,7 +46,7 @@ export default function CurrencyAmountField({
                     id="original_amount"
                     type="number"
                     step="0.01"
-                    min="0.01"
+                    min="0"
                     dir="ltr"
                     value={value.original_amount}
                     onChange={(e) =>
@@ -118,7 +118,7 @@ export default function CurrencyAmountField({
                     <Input
                         id="amount"
                         type="number"
-                        min="1"
+                        min="0"
                         value={value.amount}
                         onChange={(e) => onChange({ amount: e.target.value })}
                         required
@@ -136,7 +136,7 @@ export default function CurrencyAmountField({
                                 id="original_amount"
                                 type="number"
                                 step="0.01"
-                                min="0.01"
+                                min="0"
                                 value={value.original_amount}
                                 onChange={(e) =>
                                     onChange({

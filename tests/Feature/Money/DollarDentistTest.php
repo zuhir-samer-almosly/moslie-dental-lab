@@ -139,6 +139,23 @@ test('a dollar dentist payment is stored as cents with no rate and no lira', fun
         ->and($payment->valueInOwnCurrency())->toBe(20000);
 });
 
+test('a dollar dentist payment can be zero dollars', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-09-01',
+        'currency' => 'USD',
+        'original_amount' => '0',
+    ])->assertSessionHasNoErrors();
+
+    expect(DentistPayment::sole())
+        ->original_amount->toBe(0)
+        ->amount->toBe(0)
+        ->rate->toBeNull();
+});
+
 test('a dollar dentist payment refuses to carry a rate', function () {
     $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
 
@@ -205,6 +222,28 @@ test('a dollar dentist order stores cents, no rate and zero lira', function () {
         ->and($order->items->first()->price)->toBe(0)
         ->and($order->items->first()->original_amount)->toBe(25000)
         ->and($order->items->first()->rate)->toBeNull();
+});
+
+test('a dollar dentist order item can be priced at zero dollars', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [[
+            'type' => 'هدية', 'quantity' => 1, 'date' => '2026-09-01',
+            'currency' => 'USD', 'original_amount' => 0,
+            'selected_teeth' => [],
+        ]],
+    ])->assertRedirect(route('orders.index'))->assertSessionHasNoErrors();
+
+    $order = Order::with('items')->sole();
+
+    expect($order->amount)->toBe(0)
+        ->and($order->original_amount)->toBe(0)
+        ->and($order->items->first()->price)->toBe(0)
+        ->and($order->items->first()->original_amount)->toBe(0);
 });
 
 test('a dollar dentist order is refused if it carries a rate or a lira price', function () {
