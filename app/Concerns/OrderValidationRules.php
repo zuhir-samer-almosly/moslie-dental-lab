@@ -46,8 +46,8 @@ trait OrderValidationRules
             // meant for a dollar line — a zero placeholder must not fail min:1
             // and take the whole order down with it.
             'items.*.original_amount' => $dollarDentist
-                ? ['required', 'integer', 'min:1']
-                : ['exclude_unless:items.*.currency,USD', 'required', 'integer', 'min:1'],
+                ? ['required', 'integer', 'min:0']
+                : ['exclude_unless:items.*.currency,USD', 'required', 'integer', 'min:0'],
             'items.*.rate' => $dollarDentist
                 ? ['prohibited']
                 : ['exclude_unless:items.*.currency,USD', 'required', 'numeric', 'min:0.000001'],

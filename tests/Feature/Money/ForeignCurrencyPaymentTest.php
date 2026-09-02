@@ -64,6 +64,24 @@ test('a dollar payment submitted through the form is stored in lira', function (
         ->currency->toBe('USD');
 });
 
+test('a zero-dollar payment is accepted for a lira dentist', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id,
+        'payment_date' => '2026-08-02',
+        'currency' => 'USD',
+        'original_amount' => '0',
+        'rate' => '13',
+    ])->assertRedirect(route('payments.index'))->assertSessionHasNoErrors();
+
+    expect(DentistPayment::sole())
+        ->amount->toBe(0)
+        ->original_amount->toBe(0)
+        ->currency->toBe('USD');
+});
+
 test('a lira payment still needs no currency field at all', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create(['name' => 'د. أحمد']);
