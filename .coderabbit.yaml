@@ -1,0 +1,12 @@
+reviews:
+  enabled: true
+  
+review_comment_lgtm: true
+
+path_filters:
+  exclude:
+    - "node_modules/**"
+    - "vendor/**"
+    - ".git/**"
+    - "dist/**"
+    - "build/**"
