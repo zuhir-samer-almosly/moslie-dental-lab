@@ -33,6 +33,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->parameters(['material-purchases' => 'materialPurchase']);
     Route::resource('expenses', App\Http\Controllers\ExpenseController::class)
         ->except('show');
+    // Today's lira-per-dollar rate, set by hand from the sidebar.
+    Route::post('exchange-rate', [App\Http\Controllers\ExchangeRateController::class, 'store'])
+        ->name('exchange-rate.store');
+
     Route::get('finance', [App\Http\Controllers\FinanceController::class, 'index'])->name('finance.index');
     Route::get('report', [App\Http\Controllers\ReportController::class, 'index'])->name('report.index');
 

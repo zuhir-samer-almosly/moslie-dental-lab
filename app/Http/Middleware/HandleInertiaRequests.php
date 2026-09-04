@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Account;
+use App\Money\Rate;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -47,6 +48,16 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            // The sidebar's rate control renders on every page, so the day's
+            // rate is shared rather than passed per page. Deliberately not
+            // named `todayRate`: the forms' own `todayRate` page prop would
+            // shadow it on exactly the pages that also read this one.
+            'dailyRate' => fn () => [
+                'rate' => Rate::on(now()->toDateString()),
+                // False means today inherited its rate from an earlier day —
+                // the control says so rather than passing it off as today's.
+                'recorded_today' => Rate::isRecordedOn(now()->toDateString()),
+            ],
             // Expense categories live in the accounts table so the chart of
             // accounts is their single definition. Shared globally because
             // four unrelated pages render them.

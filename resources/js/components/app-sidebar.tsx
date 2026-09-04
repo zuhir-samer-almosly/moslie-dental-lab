@@ -16,6 +16,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
+import { NavRate } from '@/components/nav-rate';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
@@ -123,6 +124,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
+                <NavRate />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
