@@ -30,7 +30,12 @@ services:
     volumes:
       # .env is excluded from the image via .dockerignore, so mount it in.
       # Laravel reads APP_KEY/APP_URL/etc. from here at runtime. Must exist on
-      # the host before `up` (cp .env.docker .env) or Docker creates a dir.
+      # the host before `up` (cp .env.docker.example .env) or Docker creates a
+      # dir. It must also be READABLE BY www-data (uid 82) inside the
+      # container -- mode 644, not 600. php-fpm, the queue worker and the
+      # scheduler all run as www-data, and dotenv fails *silently* on an
+      # unreadable file: Laravel then falls back to config defaults (database
+      # cache store, no APP_KEY) instead of erroring.
       - ./.env:/opt/dental-lab/moslie-dental-lab/.env
       - ./storage:/opt/dental-lab/moslie-dental-lab/storage
       - ./bootstrap/cache:/opt/dental-lab/moslie-dental-lab/bootstrap/cache
