@@ -10,6 +10,15 @@ declare module '@inertiajs/core' {
                 error?: string | null;
             };
             sidebarOpen: boolean;
+            /**
+             * Today's lira-per-dollar rate for the sidebar control. `rate` is
+             * the rate in effect (which may be carried over from an earlier
+             * day); `recorded_today` is false when it was.
+             */
+            dailyRate: {
+                rate: string | null;
+                recorded_today: boolean;
+            };
             /** is_active-filtered: what expense forms OFFER. */
             expenseCategories: Record<string, string>;
             /** Unfiltered: what already-recorded expenses are LABELED with. */

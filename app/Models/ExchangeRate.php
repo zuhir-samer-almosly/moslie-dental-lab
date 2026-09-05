@@ -17,11 +17,12 @@ class ExchangeRate extends Model
     /** @use HasFactory<\Database\Factories\ExchangeRateFactory> */
     use HasFactory;
 
-    protected $fillable = ['rate_date', 'rate'];
+    protected $fillable = ['rate_date', 'rate', 'is_manual'];
 
     protected $casts = [
         'rate_date' => 'date',
         'rate' => 'decimal:6',
+        'is_manual' => 'boolean',
     ];
 
     /**
