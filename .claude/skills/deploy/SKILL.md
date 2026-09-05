@@ -5,22 +5,22 @@ description: Prepare a change for release to production (dental-lab.zoher-moslie
 
 # Releasing moslie-dental-lab
 
-Production is a DigitalOcean VPS running the `docker-compose.yml` stack
-(`caddy` → `app` → `db` + `redis`) behind Caddy-managed Let's Encrypt certs.
-Reference: `DEPLOYMENT.md`. Related memory: `deployed-on-do-vps`.
+Production is a Contabo VPS (8 GB, host user `deploy`) running the
+`docker-compose.yml` stack (`caddy` → `app` → `db` + `redis`) behind
+Caddy-managed Let's Encrypt certs, at `/var/www/moslie-dental-lab`. Reference:
+`DEPLOYMENT.md`, rewritten against this server 2026-09-05 and now accurate.
+Related memory: `production-vps`.
 
 **The user owns the VPS and runs every server-side command themselves.** Don't
-attempt to SSH, and don't guess at server paths or state — `DEPLOYMENT.md` is
-inconsistent about the clone location, so quote commands relative to the repo
-directory and let the user supply the rest. Your job is everything up to the
-handoff: make sure what's being shipped is green, pushed, and complete, and tell
-the user precisely what the deploy will do to production.
+attempt to SSH. Your job is everything up to the handoff: make sure what's being
+shipped is green, pushed, and complete, and tell the user precisely what the
+deploy will do to production.
 
 ## Pre-flight (local — this is the part you actually do)
 
 1. **Run the quality gate** via the `run-checks` skill (Pest + Pint + `npm run types`).
    A broken build is expensive to discover on the server: it costs a full rebuild
-   cycle on a 1 vCPU droplet.
+   cycle.
 2. **Commit and push.** The VPS deploys by `git pull`, so anything uncommitted or
    unpushed will not ship. Verify with `git status` and `git log origin/main..HEAD`.
 3. **Say what's in the diff.** Before handing off, tell the user explicitly:
@@ -44,8 +44,7 @@ docker compose up -d
 docker compose ps
 ```
 
-`DEPLOYMENT.md` was written against the v1 `docker-compose` binary; the `backups`
-skill assumes v2 (`docker compose`, space) on this box.
+Everything on this box is v2 (`docker compose`, with a space).
 
 ## Facts worth knowing (these explain most production surprises)
 
@@ -57,11 +56,11 @@ at `Dockerfile:68`, source copied at `Dockerfile:62`. Production mounts only
 single most common "why isn't my fix live?" cause.
 
 **Migrations run themselves on container start.** `docker/entrypoint.sh` runs
-`php artisan migrate --force` unless `RUN_MIGRATIONS=false`, so the manual migrate
-step still listed in `DEPLOYMENT.md` predates the entrypoint. The catch: it waits
-~3 minutes for MySQL and, if the DB is still unreachable, **logs a warning and
-boots the app with migrations skipped**. When a release carries a migration, it's
-worth confirming rather than assuming:
+`php artisan migrate --force` unless `RUN_MIGRATIONS=false`, so don't hand the
+user a manual `migrate` right after `up -d` — it races the entrypoint's own wait
+loop. The catch: that loop waits ~5 minutes for MySQL and, if the DB is still
+unreachable, **logs a warning and boots the app with migrations skipped**. When a
+release carries a migration, it's worth confirming rather than assuming:
 
 ```bash
 docker compose logs app | grep -i "migrat"   # want "Running migrations...", not "skipping migrations"
@@ -81,7 +80,7 @@ that's "not defined" despite being installed. So when the diff touches
 docker compose exec app php artisan package:discover
 ```
 
-This bit the `spatie/laravel-backup` rollout; see the `deployed-on-do-vps` memory.
+This bit the `spatie/laravel-backup` rollout; see the `production-vps` memory.
 
 **Rolling back code does not roll back schema.** Redeploying an older commit
 leaves any applied migration in place. If the migration is destructive and the
