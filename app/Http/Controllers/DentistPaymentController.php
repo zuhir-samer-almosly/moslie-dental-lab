@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDentistPaymentRequest;
+use App\Http\Requests\StoreDentistPaymentsRequest;
 use App\Http\Requests\UpdateDentistPaymentRequest;
 use App\Models\DentistPayment;
 use App\Money\Rate;
+use Illuminate\Support\Facades\DB;
 
 class DentistPaymentController extends Controller
 {
@@ -47,6 +49,27 @@ class DentistPaymentController extends Controller
 
         return redirect()->route('payments.index')
             ->with('success', 'تم إضافة الدفعة بنجاح');
+    }
+
+    /**
+     * Store several payments from one dentist at once — the create page.
+     * All or nothing: a row that fails to save takes the others with it, so
+     * a batch is never left half-recorded.
+     */
+    public function storeMany(StoreDentistPaymentsRequest $request)
+    {
+        DB::transaction(function () use ($request) {
+            foreach ($request->payloads() as $payload) {
+                $payment = DentistPayment::create($payload);
+
+                if ($payment->isForeign() && ! $payment->isNativeUsd()) {
+                    Rate::remember($payment->payment_date, $payment->rate);
+                }
+            }
+        });
+
+        return redirect()->route('payments.index')
+            ->with('success', 'تم إضافة الدفعات بنجاح');
     }
 
     /**

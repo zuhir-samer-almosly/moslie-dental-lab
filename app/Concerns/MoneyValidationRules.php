@@ -14,35 +14,42 @@ namespace App\Concerns;
 trait MoneyValidationRules
 {
     /**
+     * `$prefix` scopes the rules to rows of an array (`payments.*.`), so a
+     * form submitting several payments at once is held to the same rules as
+     * one submitting a single payment.
+     *
      * @return array<string, array<int, string>>
      */
-    protected function moneyRules(string $field = 'amount', bool $native = false): array
+    protected function moneyRules(string $field = 'amount', bool $native = false, string $prefix = ''): array
     {
+        $field = $prefix.$field;
+        $currency = $prefix.'currency';
+
         if ($native) {
             // A dollar dentist's payment: dollars, and nothing else. No rate,
             // because his money is never converted, and no lira figure,
             // because he does not deal in lira.
             return [
-                'currency' => ['nullable', 'in:USD'],
+                $currency => ['nullable', 'in:USD'],
                 $field => ['prohibited'],
-                'original_amount' => ['required', 'numeric', 'min:0'],
-                'rate' => ['prohibited'],
+                $prefix.'original_amount' => ['required', 'numeric', 'min:0'],
+                $prefix.'rate' => ['prohibited'],
             ];
         }
 
         return [
-            'currency' => ['nullable', 'in:SYP,USD'],
+            $currency => ['nullable', 'in:SYP,USD'],
             // Absent currency means lira, so a form that never heard of
             // currency keeps submitting a bare amount and still validates.
-            $field => ['required_unless:currency,USD', 'nullable', 'integer', 'min:0'],
+            $field => ['required_unless:'.$currency.',USD', 'nullable', 'integer', 'min:0'],
             // `exclude_unless` rather than `required_if`: a lira row may still
             // carry these keys — the order form sends them zeroed, the rest
             // send them empty — and on such a row they describe nothing. They
             // are dropped from the data outright rather than held to rules
             // meant for a foreign row, so a placeholder cannot fail a minimum
             // and take the whole save down with it.
-            'original_amount' => ['exclude_unless:currency,USD', 'required', 'numeric', 'min:0'],
-            'rate' => ['exclude_unless:currency,USD', 'required', 'numeric', 'min:0.000001'],
+            $prefix.'original_amount' => ['exclude_unless:'.$currency.',USD', 'required', 'numeric', 'min:0'],
+            $prefix.'rate' => ['exclude_unless:'.$currency.',USD', 'required', 'numeric', 'min:0.000001'],
         ];
     }
 
