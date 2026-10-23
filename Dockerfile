@@ -67,10 +67,12 @@ RUN composer dump-autoload --optimize
 # Build frontend assets (Wayfinder will generate routes here)
 RUN npm run build
 
-# Set permissions
-RUN chown -R www-data:www-data /opt/dental-lab/moslie-dental-lab \
-    && chmod -R 755 /opt/dental-lab/moslie-dental-lab/storage \
-    && chmod -R 755 /opt/dental-lab/moslie-dental-lab/bootstrap/cache
+# Set permissions. Only storage/ and bootstrap/cache are written at runtime;
+# the rest of the tree just needs to be readable, which it already is. Do NOT
+# chown the whole app dir: that rewrites every file in node_modules and vendor
+# into a new layer and cost ~5 minutes per build on the VPS.
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 755 storage bootstrap/cache
 
 # Copy nginx configuration
 COPY docker/nginx/default.conf /etc/nginx/http.d/default.conf
