@@ -85,5 +85,22 @@ class FortifyServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by($throttleKey);
         });
+
+        // Applied to every Fortify route via config('fortify.middleware').
+        //
+        // Fortify throttles login and the two-factor challenge, but registers
+        // the password-reset POSTs behind `guest` alone — unauthenticated and
+        // unlimited. That is a free mail/log flood (MAIL_MAILER=log in
+        // production, so each request appends a reset URL to laravel.log until
+        // the disk fills) and an unlimited guessing window against a reset
+        // token. Cap them; leave everything else alone.
+        RateLimiter::for('fortify', function (Request $request) {
+            $sensitive = $request->isMethod('POST')
+                && $request->routeIs('password.email', 'password.update');
+
+            return $sensitive
+                ? Limit::perMinute(5)->by($request->ip())
+                : Limit::none();
+        });
     }
 }
