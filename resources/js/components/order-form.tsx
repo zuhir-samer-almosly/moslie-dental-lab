@@ -246,7 +246,9 @@ export default function OrderForm({
                 quantity: 1,
                 price: quote?.price ?? 0,
                 notes: '',
-                date: today(),
+                // Continue from the previous item's date: items are usually
+                // entered in a batch for the same day.
+                date: data.items.at(-1)?.date || today(),
                 selected_teeth: [],
                 currency: quote?.currency ?? (dollarDentist ? 'USD' : 'SYP'),
                 original_amount: quote?.original_amount ?? 0,
