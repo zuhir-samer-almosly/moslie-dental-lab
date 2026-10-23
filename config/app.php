@@ -56,6 +56,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Content Security Policy
+    |--------------------------------------------------------------------------
+    |
+    | Escape hatch for App\Http\Middleware\ContentSecurityPolicy: set
+    | CSP_ENABLED=false if a policy change breaks production before a fix can
+    | ship. Read here, not via env() in the middleware, so it still works once
+    | `artisan optimize` has cached the config.
+    |
+    */
+
+    'csp_enabled' => (bool) filter_var(env('CSP_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

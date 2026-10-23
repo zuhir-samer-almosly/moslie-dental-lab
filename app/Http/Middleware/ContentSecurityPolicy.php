@@ -90,12 +90,13 @@ class ContentSecurityPolicy
      * APP_ENV=production, so the environment check is the real gate and the
      * hot file only relaxes it locally.
      *
-     * CSP_ENABLED=false is the escape hatch if a policy change ever breaks
-     * production before a fix can ship.
+     * CSP_ENABLED=false (read through config('app.csp_enabled')) is the
+     * escape hatch if a policy change ever breaks production before a fix can
+     * ship.
      */
     private function shouldApply(Request $request): bool
     {
-        if (! filter_var(env('CSP_ENABLED', true), FILTER_VALIDATE_BOOLEAN)) {
+        if (! config('app.csp_enabled')) {
             return false;
         }
 

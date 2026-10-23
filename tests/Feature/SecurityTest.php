@@ -141,3 +141,24 @@ test('public registration is not reachable', function () {
 
     expect(User::where('email', 'intruder@example.com')->exists())->toBeFalse();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Content-Security-Policy escape hatch
+|--------------------------------------------------------------------------
+|
+| CSP_ENABLED=false must switch the policy off in production, where
+| `artisan optimize` caches the config. Under a cached config env() returns
+| null outside config files, so the switch has to be read through config().
+|
+*/
+
+test('the content security policy is sent by default', function () {
+    $this->get('/login')->assertHeader('Content-Security-Policy');
+});
+
+test('the content security policy can be switched off through config', function () {
+    config(['app.csp_enabled' => false]);
+
+    $this->get('/login')->assertHeaderMissing('Content-Security-Policy');
+});
