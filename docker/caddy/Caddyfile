@@ -15,14 +15,25 @@ dental-lab.zoher-moslie.me {
 		protocols tls1.2 tls1.3
 	}
 
-	# Security headers
+	# Security headers.
+	#
+	# Content-Security-Policy and Permissions-Policy are NOT set here: the CSP
+	# carries a per-response nonce, so it has to come from the app (see
+	# App\Http\Middleware\ContentSecurityPolicy).
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		X-Frame-Options "SAMEORIGIN"
+		X-Frame-Options "DENY"
 		X-Content-Type-Options "nosniff"
-		X-XSS-Protection "1; mode=block"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
+		# PHP advertises its exact patch level here, which hands a scanner the
+		# list of CVEs to try. The app strips it too; this is the backstop for
+		# responses that never reach that middleware (static files, errors).
+		-X-Powered-By
+		# X-XSS-Protection is deliberately gone. The legacy auditor it enabled
+		# was removed from Chrome and Edge years ago, and on the browsers that
+		# still honour it the filter has itself been a source of information
+		# leaks. CSP above is the real control.
 	}
 
 	# Logging

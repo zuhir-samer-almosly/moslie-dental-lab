@@ -27,6 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Prepended, not appended: it has to mint the Vite CSP nonce before
+        // anything renders a view, and it strips X-Powered-By on the way back
+        // out. See the class for why 'self' alone is not enough here.
+        $middleware->web(prepend: [
+            \App\Http\Middleware\ContentSecurityPolicy::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

@@ -101,7 +101,12 @@ return [
     |
     */
 
-    'middleware' => ['web'],
+    // `throttle:fortify` covers the endpoints Fortify registers with no
+    // limiter of its own — chiefly the unauthenticated password-reset POSTs,
+    // which are otherwise unlimited. The limiter itself (FortifyServiceProvider)
+    // returns Limit::none() for every route that isn't one of those, so this
+    // adds no ceiling to normal use.
+    'middleware' => ['web', 'throttle:fortify'],
 
     /*
     |--------------------------------------------------------------------------

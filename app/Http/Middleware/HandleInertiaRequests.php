@@ -52,12 +52,22 @@ class HandleInertiaRequests extends Middleware
             // rate is shared rather than passed per page. Deliberately not
             // named `todayRate`: the forms' own `todayRate` page prop would
             // shadow it on exactly the pages that also read this one.
-            'dailyRate' => fn () => [
-                'rate' => Rate::on(now()->toDateString()),
-                // False means today inherited its rate from an earlier day —
-                // the control says so rather than passing it off as today's.
-                'recorded_today' => Rate::isRecordedOn(now()->toDateString()),
-            ],
+            //
+            // Guests get the empty shape, not the real rate. These props land
+            // in the `data-page` JSON of EVERY Inertia response, the login
+            // page included — anyone who opened /login and read the HTML
+            // could see the day's lira-per-dollar rate without logging in.
+            // The shape is kept identical rather than dropping the keys, so
+            // the consuming components (all of them behind auth) keep their
+            // types and their existing null handling.
+            'dailyRate' => fn () => $request->user() === null
+                ? ['rate' => null, 'recorded_today' => false]
+                : [
+                    'rate' => Rate::on(now()->toDateString()),
+                    // False means today inherited its rate from an earlier day —
+                    // the control says so rather than passing it off as today's.
+                    'recorded_today' => Rate::isRecordedOn(now()->toDateString()),
+                ],
             // Expense categories live in the accounts table so the chart of
             // accounts is their single definition. Shared globally because
             // four unrelated pages render them.
@@ -67,10 +77,16 @@ class HandleInertiaRequests extends Middleware
             // (unfiltered) is what the UI LABELS already-recorded data with.
             // A deactivated category must disappear from pickers but keep
             // showing its Arabic name wherever it was already used.
-            'expenseCategories' => fn () => Account::expenseCategories()
-                ->pluck('name', 'category_key'),
-            'expenseCategoryLabels' => fn () => Account::allExpenseCategories()
-                ->pluck('name', 'category_key'),
+            //
+            // Guest-gated for the same reason as `dailyRate` above: the chart
+            // of accounts is internal business configuration and has no
+            // business being readable from the login page.
+            'expenseCategories' => fn () => $request->user() === null
+                ? []
+                : Account::expenseCategories()->pluck('name', 'category_key'),
+            'expenseCategoryLabels' => fn () => $request->user() === null
+                ? []
+                : Account::allExpenseCategories()->pluck('name', 'category_key'),
         ];
     }
 }
