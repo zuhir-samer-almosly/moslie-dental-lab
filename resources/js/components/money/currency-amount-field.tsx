@@ -25,6 +25,7 @@ export default function CurrencyAmountField({
     todayRate,
     label = 'المبلغ',
     native = false,
+    idPrefix = '',
 }: {
     value: CurrencyAmount;
     onChange: (patch: Partial<CurrencyAmount>) => void;
@@ -37,13 +38,21 @@ export default function CurrencyAmountField({
      * currency to choose, no rate to agree, and no lira result to preview.
      */
     native?: boolean;
+    /**
+     * Prepended to every id and to the radio group's name, so several of
+     * these can sit on one page — one per payment row — without their
+     * currency radios joining a single group.
+     */
+    idPrefix?: string;
 }) {
     if (native) {
         return (
             <div className="grid gap-2">
-                <Label htmlFor="original_amount">{label} بالدولار</Label>
+                <Label htmlFor={`${idPrefix}original_amount`}>
+                    {label} بالدولار
+                </Label>
                 <Input
-                    id="original_amount"
+                    id={`${idPrefix}original_amount`}
                     type="number"
                     step="0.01"
                     min="0"
@@ -90,7 +99,7 @@ export default function CurrencyAmountField({
                     <label className="flex cursor-pointer items-center gap-2">
                         <input
                             type="radio"
-                            name="currency"
+                            name={`${idPrefix}currency`}
                             value="SYP"
                             checked={value.currency === 'SYP'}
                             onChange={() => pickCurrency('SYP')}
@@ -101,7 +110,7 @@ export default function CurrencyAmountField({
                     <label className="flex cursor-pointer items-center gap-2">
                         <input
                             type="radio"
-                            name="currency"
+                            name={`${idPrefix}currency`}
                             value="USD"
                             checked={value.currency === 'USD'}
                             onChange={() => pickCurrency('USD')}
@@ -114,9 +123,9 @@ export default function CurrencyAmountField({
 
             {value.currency === 'SYP' ? (
                 <div className="grid gap-2">
-                    <Label htmlFor="amount">{label} بالليرة</Label>
+                    <Label htmlFor={`${idPrefix}amount`}>{label} بالليرة</Label>
                     <Input
-                        id="amount"
+                        id={`${idPrefix}amount`}
                         type="number"
                         min="0"
                         value={value.amount}
@@ -129,11 +138,11 @@ export default function CurrencyAmountField({
                 <div className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
-                            <Label htmlFor="original_amount">
+                            <Label htmlFor={`${idPrefix}original_amount`}>
                                 {label} بالدولار
                             </Label>
                             <Input
-                                id="original_amount"
+                                id={`${idPrefix}original_amount`}
                                 type="number"
                                 step="0.01"
                                 min="0"
@@ -149,9 +158,9 @@ export default function CurrencyAmountField({
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="rate">سعر الصرف</Label>
+                            <Label htmlFor={`${idPrefix}rate`}>سعر الصرف</Label>
                             <Input
-                                id="rate"
+                                id={`${idPrefix}rate`}
                                 type="number"
                                 step="0.000001"
                                 min="0.000001"

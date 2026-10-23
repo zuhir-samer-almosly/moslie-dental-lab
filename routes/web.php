@@ -16,6 +16,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->except('show');
     Route::resource('orders', App\Http\Controllers\OrderController::class)
         ->except('show');
+    Route::post('payments/batch', [App\Http\Controllers\DentistPaymentController::class, 'storeMany'])
+        ->name('payments.store-many');
     Route::resource('payments', App\Http\Controllers\DentistPaymentController::class)
         ->except('show')
         ->parameters(['payments' => 'dentistPayment']);
