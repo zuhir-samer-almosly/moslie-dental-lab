@@ -20,7 +20,7 @@ import {
     rateValue,
     usdToSyp,
 } from '@/lib/money';
-import { cn } from '@/lib/utils';
+import { cn, today } from '@/lib/utils';
 import type { Dentist, Order } from '@/types';
 import { ORDER_STATUSES } from '@/types';
 
@@ -46,7 +46,7 @@ export type OrderFormValues = {
     items: OrderItemForm[];
 };
 
-export const today = () => new Date().toISOString().slice(0, 10);
+export { today };
 
 /**
  * Shared create/edit form for an order and its line items. The parent decides
@@ -154,7 +154,24 @@ export default function OrderForm({
             const updatedItems = prev.items.map((item) => {
                 const entry = dentist?.price_list?.[item.type];
                 if (!entry) {
-                    return item;
+                    // No price to fill in. Between two dentists of the same
+                    // currency the typed price still means what it said; across
+                    // currencies it doesn't (a lira price would be submitted as
+                    // $0, a dollar line would arrive with no rate), so clear it
+                    // to the new currency's empty amount — as the payments
+                    // form does.
+                    if (isDollar === dollarDentist) {
+                        return item;
+                    }
+                    return {
+                        ...item,
+                        currency: isDollar
+                            ? ('USD' as const)
+                            : ('SYP' as const),
+                        original_amount: 0,
+                        rate: '',
+                        price: 0,
+                    };
                 }
                 if (isDollar) {
                     return {

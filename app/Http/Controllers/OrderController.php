@@ -10,6 +10,7 @@ use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Money\Currency;
 use App\Money\Rate;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
@@ -73,14 +74,21 @@ class OrderController extends Controller
      * come back once, already ordered, and a two-pointer sweep walks them
      * alongside the orders (O(n log n)).
      *
+     * Read from the receivable account of the dentist's own currency, so a
+     * dollar dentist's balance is in cents, like the rest of his money.
+     *
      * @param  Collection<int, Order>  $orders
      */
     private function assignPreviousBalances(Collection $orders): void
     {
-        $movements = $this->reports->receivableMovementsByDentist();
+        $movements = [
+            Currency::SYP->value => $this->reports->receivableMovementsByDentist(Currency::SYP),
+            Currency::USD->value => $this->reports->receivableMovementsByDentist(Currency::USD),
+        ];
 
         foreach ($orders->groupBy('dentist_id') as $dentistId => $dentistOrders) {
-            $byDate = ($movements[$dentistId] ?? collect())->all();
+            $currency = $dentistOrders->first()->dentist?->billingCurrency() ?? Currency::SYP;
+            $byDate = ($movements[$currency->value][$dentistId] ?? collect())->all();
             $dates = array_keys($byDate);
             $amounts = array_values($byDate);
 

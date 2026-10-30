@@ -127,3 +127,40 @@ test('report totals come from the ledger', function () {
     expect(DentistPayment::count())->toBe(1);
     expect(Expense::count())->toBe(1);
 });
+
+test('an order spanning two months is reported item by item, not whole on its earliest date', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. ممتد']);
+
+    // due_date becomes 2026-07-28 (the earliest item), but the 300 was
+    // worked in August.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [
+            ['type' => 'تموز', 'quantity' => 1, 'price' => 700, 'date' => '2026-07-28', 'selected_teeth' => []],
+            ['type' => 'آب', 'quantity' => 1, 'price' => 300, 'date' => '2026-08-05', 'selected_teeth' => []],
+        ],
+    ])->assertRedirect(route('orders.index'));
+
+    $this->get(route('report.index', ['from' => '2026-07-01', 'to' => '2026-07-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 1)
+            ->where('orders.0.items.0.type', 'تموز')
+            ->where('totals.orders_value', 700)
+            ->where('totals.earned', 700)
+        );
+
+    // August holds the other item — previously the order vanished entirely.
+    $this->get(route('report.index', ['from' => '2026-08-01', 'to' => '2026-08-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 1)
+            ->has('orders.0.items', 1)
+            ->where('orders.0.items.0.type', 'آب')
+            ->where('totals.orders_value', 300)
+            ->where('totals.earned', 300)
+        );
+});

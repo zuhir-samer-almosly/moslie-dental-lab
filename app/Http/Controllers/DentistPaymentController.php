@@ -2,24 +2,47 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ParsesDate;
 use App\Http\Requests\StoreDentistPaymentRequest;
 use App\Http\Requests\StoreDentistPaymentsRequest;
 use App\Http\Requests\UpdateDentistPaymentRequest;
+use App\Models\Dentist;
 use App\Models\DentistPayment;
 use App\Money\Rate;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DentistPaymentController extends Controller
 {
+    use ParsesDate;
+
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource — paginated and filterable by dentist
+     * and date range, so the page never loads every payment ever recorded.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $payments = DentistPayment::with('dentist')->latest()->get();
+        $dentistId = $request->integer('dentist') ?: null;
+        $from = $this->parseDate($request->query('from'));
+        $to = $this->parseDate($request->query('to'));
+
+        $payments = DentistPayment::query()
+            ->with('dentist:id,name')
+            ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
+            ->when($from, fn ($q) => $q->where('payment_date', '>=', $from))
+            ->when($to, fn ($q) => $q->where('payment_date', '<=', $to))
+            // Sorted by the date the list shows and filters on, not by when
+            // the row was typed in, so a back-dated payment sits among its
+            // own day's payments instead of at the top.
+            ->orderByDesc('payment_date')
+            ->orderByDesc('id')
+            ->paginate(50)
+            ->withQueryString();
 
         return inertia('payments/index', [
             'payments' => $payments,
+            'dentists' => Dentist::orderBy('name')->get(['id', 'name']),
+            'filters' => ['dentist' => $dentistId, 'from' => $from, 'to' => $to],
         ]);
     }
 

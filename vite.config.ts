@@ -23,6 +23,15 @@ export default defineConfig({
               watch: {
                   usePolling: true,
                   interval: 300,
+                  // Polling stats every watched file each interval; without this
+                  // it walks ~46k files in vendor/ and storage/ and pins the CPU.
+                  ignored: [
+                      '**/vendor/**',
+                      '**/storage/**',
+                      '**/bootstrap/cache/**',
+                      '**/public/build/**',
+                      '**/tests/**',
+                  ],
               },
           }
         : undefined,

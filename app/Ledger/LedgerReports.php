@@ -57,11 +57,12 @@ class LedgerReports
      * balance that stood before it — would otherwise run a query per row;
      * this returns the movements once, for the caller to accumulate.
      *
-     * @return Collection<int, Collection<string, int>> dentist_id => [`Y-m-d` => net change]
+     * @return Collection<int, Collection<string, int>> dentist_id => [`Y-m-d` => net change],
+     *                                                  in the given currency's minor unit
      */
-    public function receivableMovementsByDentist(): Collection
+    public function receivableMovementsByDentist(Currency $currency = Currency::SYP): Collection
     {
-        return $this->linesForAccount(AccountCode::RECEIVABLE->value)
+        return $this->linesForAccount(AccountCode::receivableFor($currency))
             ->whereNotNull('journal_lines.dentist_id')
             ->groupBy('journal_lines.dentist_id', 'journal_entries.entry_date')
             ->orderBy('journal_entries.entry_date')

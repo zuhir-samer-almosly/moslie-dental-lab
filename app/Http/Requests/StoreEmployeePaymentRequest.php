@@ -25,7 +25,7 @@ class StoreEmployeePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'employee_id' => ['required', 'exists:employees,id'],
+            'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'payment_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
             ...$this->moneyRules(),

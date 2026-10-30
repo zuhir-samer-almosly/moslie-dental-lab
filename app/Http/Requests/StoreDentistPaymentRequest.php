@@ -25,7 +25,7 @@ class StoreDentistPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'dentist_id' => ['required', 'exists:dentists,id'],
+            'dentist_id' => ['required', 'integer', 'exists:dentists,id'],
             'payment_date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
             ...$this->moneyRules('amount', $this->dentistIsDollar()),

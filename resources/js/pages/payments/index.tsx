@@ -1,9 +1,20 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { CreditCard, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+    ChevronLeft,
+    ChevronRight,
+    CreditCard,
+    Pencil,
+    Plus,
+    Trash2,
+    X,
+} from 'lucide-react';
 import ForeignOrigin from '@/components/money/foreign-origin';
 import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Combobox } from '@/components/ui/combobox';
+import { DateInput } from '@/components/ui/date-input';
+import { Label } from '@/components/ui/label';
 import {
     Table,
     TableBody,
@@ -33,11 +44,50 @@ const paymentAmount = (payment: DentistPayment): number =>
         ? (payment.original_amount ?? 0)
         : payment.amount;
 
-export default function PaymentsIndex({
-    payments,
-}: {
-    payments: DentistPayment[];
-}) {
+type Filters = {
+    dentist: number | null;
+    from: string | null;
+    to: string | null;
+};
+
+type Props = {
+    payments: {
+        data: DentistPayment[];
+        current_page: number;
+        last_page: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
+        total: number;
+    };
+    dentists: { id: number; name: string }[];
+    filters: Filters;
+};
+
+export default function PaymentsIndex({ payments, dentists, filters }: Props) {
+    const hasFilters = Boolean(filters.dentist || filters.from || filters.to);
+
+    const go = (overrides: Partial<Record<keyof Filters, string>>) => {
+        const next = {
+            dentist: filters.dentist ? String(filters.dentist) : '',
+            from: filters.from ?? '',
+            to: filters.to ?? '',
+            ...overrides,
+        };
+
+        router.get(
+            '/payments',
+            Object.fromEntries(
+                Object.entries(next).filter(([, value]) => value !== ''),
+            ),
+            { preserveState: true, preserveScroll: true },
+        );
+    };
+
+    const goToPage = (url: string | null) => {
+        if (!url) return;
+        router.get(url, {}, { preserveState: true, preserveScroll: true });
+    };
+
     const handleDelete = (id: number) => {
         if (confirm('هل أنت متأكد من حذف هذه الدفعة؟')) {
             router.delete(`/payments/${id}`);
@@ -56,7 +106,8 @@ export default function PaymentsIndex({
                             المدفوعات
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {payments.length} دفعة مسجّلة
+                            {payments.total} دفعة
+                            {hasFilters ? ' مطابقة' : ' مسجّلة'}
                         </p>
                     </div>
                     <Button asChild size="lg" className="gap-2 sm:w-auto">
@@ -66,6 +117,69 @@ export default function PaymentsIndex({
                         </Link>
                     </Button>
                 </div>
+
+                {/* Filters */}
+                <Card className="py-0">
+                    <CardContent className="flex flex-wrap items-end gap-3 p-4">
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">
+                                الطبيب
+                            </Label>
+                            <div className="w-56">
+                                <Combobox
+                                    value={filters.dentist}
+                                    onChange={(value) =>
+                                        go({
+                                            dentist: value ? String(value) : '',
+                                        })
+                                    }
+                                    options={dentists.map((dentist) => ({
+                                        value: dentist.id,
+                                        label: dentist.name,
+                                    }))}
+                                    placeholder="ابحث عن طبيب..."
+                                    clearable
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">
+                                من
+                            </Label>
+                            <DateInput
+                                value={filters.from ?? ''}
+                                onChange={(v) => go({ from: v })}
+                                className="w-40"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">
+                                إلى
+                            </Label>
+                            <DateInput
+                                value={filters.to ?? ''}
+                                onChange={(v) => go({ to: v })}
+                                className="w-40"
+                            />
+                        </div>
+                        {hasFilters && (
+                            <Button
+                                variant="ghost"
+                                className="gap-1"
+                                onClick={() =>
+                                    router.get(
+                                        '/payments',
+                                        {},
+                                        { preserveScroll: true },
+                                    )
+                                }
+                            >
+                                <X className="size-4" />
+                                مسح الفلاتر
+                            </Button>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Table */}
                 <Card className="gap-0 overflow-hidden py-0">
@@ -78,10 +192,14 @@ export default function PaymentsIndex({
                         </div>
                     </div>
                     <CardContent className="p-0">
-                        {payments.length === 0 ? (
+                        {payments.data.length === 0 ? (
                             <EmptyState
                                 icon={CreditCard}
-                                text="لا توجد مدفوعات بعد"
+                                text={
+                                    hasFilters
+                                        ? 'لا توجد مدفوعات مطابقة'
+                                        : 'لا توجد مدفوعات بعد'
+                                }
                             />
                         ) : (
                             <Table>
@@ -97,7 +215,7 @@ export default function PaymentsIndex({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {payments.map((payment) => (
+                                    {payments.data.map((payment) => (
                                         <TableRow key={payment.id}>
                                             <TableCell className="font-medium">
                                                 {payment.dentist?.name}
@@ -113,9 +231,7 @@ export default function PaymentsIndex({
                                                 >
                                                     +
                                                     {formatMoney(
-                                                        paymentAmount(
-                                                            payment,
-                                                        ),
+                                                        paymentAmount(payment),
                                                         payment.currency,
                                                     )}
                                                 </span>
@@ -166,6 +282,34 @@ export default function PaymentsIndex({
                         )}
                     </CardContent>
                 </Card>
+
+                {payments.last_page > 1 && (
+                    <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">
+                            صفحة {payments.current_page} من {payments.last_page}
+                        </span>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!payments.prev_page_url}
+                                onClick={() => goToPage(payments.prev_page_url)}
+                            >
+                                <ChevronRight className="size-4" />
+                                السابق
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!payments.next_page_url}
+                                onClick={() => goToPage(payments.next_page_url)}
+                            >
+                                التالي
+                                <ChevronLeft className="size-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

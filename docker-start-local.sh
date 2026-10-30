@@ -2,10 +2,25 @@
 
 echo "🐳 Starting Zoher Dental Lab with Docker (Local/WSL)..."
 
-# Check if .env exists
+# Check if .env exists. `.env.docker` is a local, untracked copy some
+# checkouts have; a fresh clone only has the tracked example, which is
+# production-shaped, so local overrides are applied on top of it.
 if [ ! -f .env ]; then
-    echo "📝 Creating .env file from .env.docker..."
-    cp .env.docker .env
+    if [ -f .env.docker ]; then
+        echo "📝 Creating .env file from .env.docker..."
+        cp .env.docker .env
+    elif [ -f .env.docker.example ]; then
+        echo "📝 Creating .env file from .env.docker.example (local overrides applied)..."
+        sed -e 's/^APP_ENV=.*/APP_ENV=local/' \
+            -e 's/^APP_DEBUG=.*/APP_DEBUG=true/' \
+            -e 's#^APP_URL=.*#APP_URL=http://dental.test#' \
+            -e 's/^DB_PASSWORD=.*/DB_PASSWORD=secret/' \
+            -e 's/^BACKUP_DISK=.*/BACKUP_DISK=local/' \
+            .env.docker.example > .env
+    else
+        echo "❌ No .env, .env.docker or .env.docker.example found — cannot continue." >&2
+        exit 1
+    fi
 fi
 
 # Check if APP_KEY is set
@@ -28,7 +43,12 @@ sleep 10
 
 # Run migrations
 echo "📊 Running database migrations..."
-docker compose -f docker-compose.local.yml exec app php artisan migrate --force
+# The only migration path locally (the compose file disables the entrypoint's),
+# so a failure here must stop the script rather than report success.
+if ! docker compose -f docker-compose.local.yml exec app php artisan migrate --force; then
+    echo "❌ Migrations failed — see the output above." >&2
+    exit 1
+fi
 
 # Ensure local admin user exists with known password
 echo "👤 Ensuring local admin user..."

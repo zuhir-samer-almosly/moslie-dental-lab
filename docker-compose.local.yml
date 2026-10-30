@@ -35,6 +35,11 @@ services:
       - REDIS_PASSWORD=null
       - REDIS_PORT=6379
       - APP_URL=http://dental.test
+      # docker-start-local.sh runs `migrate` itself. Letting the entrypoint
+      # migrate too races it on a fresh database (both create the same
+      # table; the loser exits the container mid-migration and leaves a
+      # half-migrated schema). Run migrations by hand after a plain `up`.
+      - RUN_MIGRATIONS=false
     ports:
       # Serve on http://dental.test (add "127.0.0.1 dental.test" to your hosts file)
       - "127.0.0.1:${APP_PORT:-80}:80"

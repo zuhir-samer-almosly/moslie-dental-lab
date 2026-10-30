@@ -336,3 +336,15 @@ test('the print view rejects an expired signature', function () {
 
     $this->get($path)->assertForbidden();
 });
+
+test('an overflow date is rejected rather than rolled into the next month', function () {
+    $this->actingAs(User::factory()->create());
+
+    // 2026-02-30 used to parse as 2 March, silently invoicing the wrong days.
+    $this->get(route('invoices.index', ['from' => '2026-02-30', 'to' => '2026-03-31']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.from', null)
+            ->where('orders', null)
+        );
+});

@@ -79,7 +79,12 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // The lab's business day — "today", "this month", the default date on
+    // every form — is Damascus time (UTC+3, no DST). Under UTC the dashboard
+    // and every `now()` stayed on yesterday until 03:00. Read from the env so
+    // a deployment opts in explicitly: rows written before the switch hold
+    // UTC wall-clock timestamps and will read three hours early.
+    'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
     |--------------------------------------------------------------------------

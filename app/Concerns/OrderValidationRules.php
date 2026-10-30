@@ -25,7 +25,7 @@ trait OrderValidationRules
         $dollarDentist = $this->dentistIsDollar();
 
         return [
-            'dentist_id' => ['required', 'exists:dentists,id'],
+            'dentist_id' => ['required', 'integer', 'exists:dentists,id'],
             'status' => ['required', 'in:pending,completed,cancelled,recieved'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
@@ -63,11 +63,19 @@ trait OrderValidationRules
      * Whether the dentist this order is for is billed in dollars. Read from
      * the request rather than the route, because both storing and updating
      * submit `dentist_id`.
+     *
+     * Guarded with `is_numeric` as the payment requests are: this runs before
+     * validation, and an array id (`dentist_id[]=1`) makes `find()` return a
+     * Collection, which would throw here instead of failing `exists`.
      */
     protected function dentistIsDollar(): bool
     {
-        $dentist = \App\Models\Dentist::find($this->input('dentist_id'));
+        $dentistId = $this->input('dentist_id');
 
-        return (bool) $dentist?->isDollar();
+        if (! is_numeric($dentistId)) {
+            return false;
+        }
+
+        return (bool) \App\Models\Dentist::find($dentistId)?->isDollar();
     }
 }

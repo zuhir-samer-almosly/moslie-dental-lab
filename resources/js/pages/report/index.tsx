@@ -246,7 +246,15 @@ export default function ReportIndex({
                             {orders.map((order) => (
                                 <TableRow key={order.id}>
                                     <TableCell className="whitespace-nowrap text-muted-foreground">
-                                        {formatDate(order.due_date)}
+                                        {/* The server scopes items to the range
+                                        and sorts them by date, so the first
+                                        one is when this row's work began —
+                                        due_date may precede the range. */}
+                                        {formatDate(
+                                            (order.items?.[0]?.meta?.date as
+                                                | string
+                                                | undefined) ?? order.due_date,
+                                        )}
                                     </TableCell>
                                     <TableCell className="font-medium">
                                         {order.dentist?.name ?? '—'}

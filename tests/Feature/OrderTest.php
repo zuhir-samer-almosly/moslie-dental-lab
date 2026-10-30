@@ -253,3 +253,28 @@ test('deleting an order removes it', function () {
 test('guests cannot access the orders page', function () {
     $this->get(route('orders.index'))->assertRedirect(route('login'));
 });
+
+test('a dollar dentist\'s previous balance is read from the dollar receivable, in cents', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $order = fn (string $type, int $cents, string $date) => $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [['type' => $type, 'quantity' => 1, 'date' => $date,
+            'currency' => 'USD', 'original_amount' => $cents, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+
+    $order('أول', 500_00, '2026-09-01');
+    $order('ثاني', 200_00, '2026-09-10');
+
+    $this->get(route('orders.index', ['month' => '2026-09']))
+        ->assertOk()
+        ->assertInertia(function ($page) {
+            $orders = collect($page->toArray()['props']['orders']);
+
+            // Used to be 0: only the lira receivable was read.
+            expect($orders->firstWhere('items.0.type', 'ثاني')['previous_balance'])->toBe(500_00);
+            expect($orders->firstWhere('items.0.type', 'أول')['previous_balance'])->toBe(0);
+        });
+});

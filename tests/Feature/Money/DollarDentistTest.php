@@ -545,6 +545,9 @@ test('a malformed dentist_id on a payment fails validation instead of crashing',
     // reject it with a 422/302 — the same bug class closed for Dentist's own
     // currency field in 16fba87.
     $this->actingAs(User::factory()->create());
+    // A real dentist #1, so `exists` alone would accept the array — it
+    // checks every element, and every element exists.
+    Dentist::create(['name' => 'د. أحمد']);
 
     $this->post(route('payments.store'), [
         'dentist_id' => ['1'],
@@ -553,6 +556,21 @@ test('a malformed dentist_id on a payment fails validation instead of crashing',
     ])->assertSessionHasErrors('dentist_id');
 
     expect(DentistPayment::count())->toBe(0);
+});
+
+test('a malformed dentist_id on an order fails validation instead of crashing', function () {
+    // Same bug class as the payment test above, on the order form's own
+    // dentistIsDollar(), which builds the price rules before validation runs.
+    $this->actingAs(User::factory()->create());
+    Dentist::create(['name' => 'د. أحمد']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => ['1'],
+        'status' => 'pending',
+        'items' => [['type' => 'جسر', 'quantity' => 1, 'price' => 400, 'date' => '2026-09-01']],
+    ])->assertSessionHasErrors('dentist_id');
+
+    expect(\App\Models\Order::count())->toBe(0);
 });
 
 test('receivables and statements can be read in dollars', function () {
