@@ -240,3 +240,45 @@ test('batch errors name the field in Arabic, not by its array key', function () 
         ->toContain('التاريخ')
         ->not->toContain('payments.0');
 });
+
+test('the payments list can be filtered by dentist and date range', function () {
+    $this->actingAs(User::factory()->create());
+    $samer = Dentist::create(['name' => 'د. سامر']);
+    $nour = Dentist::create(['name' => 'د. نور']);
+
+    DentistPayment::create(['dentist_id' => $samer->id, 'amount' => 100, 'payment_date' => '2026-05-01']);
+    DentistPayment::create(['dentist_id' => $samer->id, 'amount' => 200, 'payment_date' => '2026-06-15']);
+    DentistPayment::create(['dentist_id' => $nour->id, 'amount' => 300, 'payment_date' => '2026-06-20']);
+
+    $this->get(route('payments.index', ['dentist' => $samer->id]))
+        ->assertInertia(fn ($page) => $page
+            ->component('payments/index')
+            ->where('payments.total', 2)
+            ->where('filters.dentist', $samer->id)
+        );
+
+    $this->get(route('payments.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
+        ->assertInertia(fn ($page) => $page->where('payments.total', 2));
+
+    $this->get(route('payments.index', ['dentist' => $samer->id, 'from' => '2026-06-01']))
+        ->assertInertia(fn ($page) => $page
+            ->where('payments.total', 1)
+            ->where('payments.data.0.amount', 200)
+        );
+});
+
+test('the payments list is paginated', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+
+    foreach (range(1, 55) as $i) {
+        DentistPayment::create(['dentist_id' => $dentist->id, 'amount' => $i, 'payment_date' => '2026-06-01']);
+    }
+
+    $this->get(route('payments.index'))
+        ->assertInertia(fn ($page) => $page
+            ->has('payments.data', 50)
+            ->where('payments.total', 55)
+            ->where('payments.last_page', 2)
+        );
+});
