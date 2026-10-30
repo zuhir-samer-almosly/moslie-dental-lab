@@ -282,3 +282,19 @@ test('the payments list is paginated', function () {
             ->where('payments.last_page', 2)
         );
 });
+
+test('the payments list is ordered by payment date, not by entry time', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. ترتيب']);
+
+    DentistPayment::create(['dentist_id' => $dentist->id, 'amount' => 100, 'payment_date' => '2026-09-20']);
+    // Entered last, but back-dated: it belongs below the 20th, not on top.
+    DentistPayment::create(['dentist_id' => $dentist->id, 'amount' => 200, 'payment_date' => '2026-09-05']);
+
+    $this->get(route('payments.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('payments.data.0.payment_date', '2026-09-20')
+            ->where('payments.data.1.payment_date', '2026-09-05')
+        );
+});

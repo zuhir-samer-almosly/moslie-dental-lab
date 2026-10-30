@@ -30,7 +30,7 @@ class StoreDentistPaymentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'dentist_id' => ['required', 'exists:dentists,id'],
+            'dentist_id' => ['required', 'integer', 'exists:dentists,id'],
             'payments' => ['required', 'array', 'min:1'],
             'payments.*.payment_date' => ['required', 'date'],
             'payments.*.notes' => ['nullable', 'string'],

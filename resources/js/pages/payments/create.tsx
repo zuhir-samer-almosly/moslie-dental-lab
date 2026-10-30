@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoney, usdToSyp } from '@/lib/money';
+import { today } from '@/lib/utils';
 import type { BreadcrumbItem, Dentist } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -29,8 +30,6 @@ type PaymentRow = CurrencyAmount & {
     payment_date: string;
     notes: string;
 };
-
-const today = () => new Date().toISOString().split('T')[0];
 
 const emptyRow = (currency: CurrencyAmount['currency']): PaymentRow => ({
     amount: '',

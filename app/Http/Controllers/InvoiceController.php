@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\ParsesDate;
 use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
@@ -17,6 +18,8 @@ use Spatie\Browsershot\Browsershot;
 
 class InvoiceController extends Controller
 {
+    use ParsesDate;
+
     public function __construct(private readonly LedgerReports $reports) {}
 
     public function index(Request $request)
@@ -121,8 +124,8 @@ class InvoiceController extends Controller
         // straight into the queries and produce a silently wrong report. Only
         // build the invoice when BOTH bounds parse; an inverted range is
         // swapped so the query stays valid.
-        $start = $this->parseDate($request->input('from'));
-        $end = $this->parseDate($request->input('to'));
+        $start = ($from = $this->parseDate($request->input('from'))) ? Carbon::parse($from) : null;
+        $end = ($to = $this->parseDate($request->input('to'))) ? Carbon::parse($to) : null;
 
         if ($start && $end && $start->greaterThan($end)) {
             [$start, $end] = [$end, $start];
@@ -290,22 +293,5 @@ class InvoiceController extends Controller
                 'dentist_id' => $dentistId,
             ],
         ];
-    }
-
-    /**
-     * Parse a Y-m-d bound, returning null for anything missing or malformed
-     * so a bad value collapses to "no report" instead of a broken query.
-     */
-    private function parseDate(?string $value): ?Carbon
-    {
-        if (! $value) {
-            return null;
-        }
-
-        try {
-            return Carbon::createFromFormat('!Y-m-d', $value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

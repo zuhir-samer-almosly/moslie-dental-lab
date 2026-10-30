@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
+import { today } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 import { useExpenseCategories } from '@/types';
 
@@ -39,7 +40,7 @@ export default function ExpensesCreate({
         currency: 'SYP' as CurrencyAmount['currency'],
         original_amount: '',
         rate: '',
-        expense_date: new Date().toISOString().split('T')[0],
+        expense_date: today(),
         notes: '',
     });
 

@@ -31,7 +31,10 @@ class DentistPaymentController extends Controller
             ->when($dentistId, fn ($q) => $q->where('dentist_id', $dentistId))
             ->when($from, fn ($q) => $q->where('payment_date', '>=', $from))
             ->when($to, fn ($q) => $q->where('payment_date', '<=', $to))
-            ->latest()
+            // Sorted by the date the list shows and filters on, not by when
+            // the row was typed in, so a back-dated payment sits among its
+            // own day's payments instead of at the top.
+            ->orderByDesc('payment_date')
             ->orderByDesc('id')
             ->paginate(50)
             ->withQueryString();

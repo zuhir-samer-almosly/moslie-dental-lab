@@ -9,6 +9,7 @@ use App\Models\EmployeePayment;
 use App\Models\Expense;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
+use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
@@ -34,11 +35,18 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->resolveRange($request->query('from'), $request->query('to'));
 
+        // due_date is only an order's EARLIEST item date, so it can prefilter
+        // the upper bound but not decide membership: each item belongs to the
+        // period its own date falls in, as the invoice and orders list (and
+        // the ledger behind `earned`) already bucket it.
         $orders = Order::with(['dentist', 'items'])
             ->billable()
-            ->whereBetween('due_date', [$from, $to])
+            ->where('due_date', '<=', $to)
             ->orderBy('due_date')
-            ->get();
+            ->get()
+            ->map(fn (Order $order) => OrderPeriod::scope($order, $from, $to))
+            ->filter()
+            ->values();
 
         $payments = DentistPayment::with('dentist')
             ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
@@ -75,7 +83,11 @@ class ReportController extends Controller
                 'expenses' => $outgoing,
                 'net' => $income - $outgoing,
                 'earned' => $reports->revenue($from, $to),
-                'orders_value' => (int) $orders->sum('amount'),
+                // Summed from the in-period items, not `amount`, which is the
+                // whole order's total including items dated outside the range.
+                'orders_value' => (int) $orders->sum(fn (Order $order) => $order->items->isEmpty()
+                    ? $order->amount
+                    : $order->items->sum(fn ($item) => $item->price * $item->quantity)),
                 'orders_count' => $orders->count(),
                 'salaries' => $split['salaries'],
                 'materials' => $split['materials'],

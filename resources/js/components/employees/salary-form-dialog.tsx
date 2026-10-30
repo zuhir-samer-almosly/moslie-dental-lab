@@ -17,9 +17,8 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { today } from '@/lib/utils';
 import type { Employee, EmployeePayment } from '@/types';
-
-const today = () => new Date().toISOString().split('T')[0];
 
 export function SalaryFormDialog({
     open,

@@ -45,8 +45,6 @@ function shiftMonth(month: string, delta: number) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-const nf = (value: number) => value.toLocaleString('en-US');
-
 /**
  * An order's own total, in its own currency — decided by the order (which
  * mirrors its dentist), never by inspecting an item's own `currency`, which
@@ -111,8 +109,15 @@ export default function OrdersIndex({
     // items dated in the selected month, so an order's full amount would
     // count work billed to a different month. Kept per currency — a lira
     // total and a dollar total are never added together.
+    //
+    // Cancelled orders are not money owed (Order::billable() drops them from
+    // every server-side total), so they stay out of this one too — unless the
+    // user has filtered to cancelled orders, where their value is the point.
     const totalsByCurrency = filtered.reduce(
         (acc, order) => {
+            if (order.status === 'cancelled' && statusFilter !== 'cancelled') {
+                return acc;
+            }
             const amount = order.items?.length
                 ? order.items.reduce((n, item) => n + itemTotal(order, item), 0)
                 : orderTotal(order);
@@ -261,14 +266,21 @@ export default function OrdersIndex({
                                                 {!!order.previous_balance && (
                                                     <span className="mb-1 block text-[11px] font-normal text-muted-foreground">
                                                         رصيد سابق مستحق:{' '}
-                                                        {/* Still lira-only:
-                                                        the receivable read
-                                                        behind this figure
-                                                        isn't currency-aware
-                                                        yet (a later task). */}
-                                                        <span className="font-bold text-[#B45309] tabular-nums">
-                                                            {nf(
+                                                        {/* In the dentist's own
+                                                        currency: cents for a
+                                                        dollar dentist. */}
+                                                        <span
+                                                            dir={
+                                                                order.currency ===
+                                                                'USD'
+                                                                    ? 'ltr'
+                                                                    : undefined
+                                                            }
+                                                            className="font-bold text-[#B45309] tabular-nums"
+                                                        >
+                                                            {formatMoney(
                                                                 order.previous_balance,
+                                                                order.currency,
                                                             )}
                                                         </span>
                                                     </span>
