@@ -38,8 +38,10 @@
         <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600" rel="stylesheet" />
+        {{-- Self-hosted, and root-relative on purpose: it must resolve against the
+             page's own origin so the PDF renderer can always load it. See the
+             comment at the top of that stylesheet. --}}
+        <link href="/fonts/ibm-plex-sans-arabic.css?v=1" rel="stylesheet" />
 
         @viteReactRefresh
         @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
