@@ -425,7 +425,7 @@ export function InvoiceReport({
                                         {title} : {group.name} {respect}
                                     </h4>
                                 </div>
-                                <div className="rounded-lg border">
+                                <div className="rounded-lg border print:border-0">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -596,7 +596,7 @@ export function InvoiceReport({
                                         </TableBody>
                                     </Table>
                                 </div>
-                                <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                                <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm print:break-inside-avoid">
                                     {group.opening !== 0 && (
                                         <div className="flex items-center justify-between">
                                             <span>
@@ -670,7 +670,7 @@ export function InvoiceReport({
             {/* Payments Table */}
             <div className="space-y-2">
                 <h3 className="text-lg font-semibold">المدفوعات</h3>
-                <div className="rounded-lg border">
+                <div className="rounded-lg border print:border-0">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -753,7 +753,7 @@ export function InvoiceReport({
                         </TableBody>
                     </Table>
                 </div>
-                <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm">
+                <div className="space-y-1 rounded-md bg-muted px-3 py-2 text-sm print:break-inside-avoid">
                     <div className="flex items-center justify-between font-semibold">
                         <span>
                             إجمالي مدفوعات الفترة

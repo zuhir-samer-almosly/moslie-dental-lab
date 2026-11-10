@@ -77,12 +77,16 @@ class InvoiceController extends Controller
             ->emulateMedia('print')
             ->format('A4')
             ->landscape()
-            // Zero here on purpose: the page margin is the `main` padding that
-            // those same print rules already set. Adding margins on top would
-            // double it.
-            ->margins(0, 0, 0, 0)
+            // Kept equal to the `@page pdf-invoice` margin in app.css, which
+            // is the one that actually takes effect: a CSS @page margin
+            // overrides whatever is passed here. Change both together.
+            ->margins(12, 12, 12, 12)
             ->showBackground()
             ->waitUntilNetworkIdle(strict: false)
+            // Network-idle is not font-loaded: web fonts are only requested
+            // once layout needs them. The print page raises this flag when
+            // they are in (see resources/js/hooks/use-print-ready.ts).
+            ->waitForFunction('document.documentElement.dataset.printReady === "true"')
             ->timeout(120);
 
         if ($chromePath = config('pdf.chrome_path')) {

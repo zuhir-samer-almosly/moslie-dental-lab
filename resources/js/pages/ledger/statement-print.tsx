@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
-import { useEffect } from 'react';
 import ForeignOrigin from '@/components/money/foreign-origin';
+import { usePrintReady } from '@/hooks/use-print-ready';
 import { formatMoney } from '@/lib/money';
 
 /**
@@ -48,14 +48,12 @@ export default function StatementPrint({
 }: Props) {
     // No appearance cookie is sent by the headless browser, so the page would
     // otherwise follow the renderer's system preference. Paper is always light.
-    useEffect(() => {
-        document.documentElement.classList.remove('dark');
-    }, []);
+    usePrintReady();
 
     return (
         <>
             <Head title="كشف حساب" />
-            <div dir="rtl" className="p-6">
+            <div dir="rtl" className="pdf-statement p-6">
                 <h1 className="mb-1 text-xl font-bold">
                     كشف حساب{dentist && ` — ${dentist.name}`}
                 </h1>

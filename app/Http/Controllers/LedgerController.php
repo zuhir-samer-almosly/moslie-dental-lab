@@ -154,14 +154,14 @@ class LedgerController extends Controller
             ->addChromiumArguments(['disable-dev-shm-usage'])
             ->emulateMedia('print')
             ->format('A4')
-            // The print page has no `<main>` padding to fall back on (it's a
-            // bare div, not the invoice's layout), and puppeteer's actual
-            // default margin isn't something we can verify in this
-            // environment — so set it explicitly rather than trust a
-            // default. 15mm ~= the invoice's 1.5cm.
+            // Kept equal to the `@page pdf-statement` margin in app.css,
+            // which is the one that actually takes effect: a CSS @page margin
+            // overrides whatever is passed here. Change both together.
             ->margins(15, 15, 15, 15)
             ->showBackground()
             ->waitUntilNetworkIdle(strict: false)
+            // Wait for the web fonts too — see use-print-ready.ts.
+            ->waitForFunction('document.documentElement.dataset.printReady === "true"')
             ->timeout(120);
 
         if ($chromePath = config('pdf.chrome_path')) {

@@ -183,6 +183,35 @@
     page: invoice-landscape;
 }
 
+/* The two PDF print pages (invoices/print, ledger/statement-print), rendered
+   by headless Chromium and never by a person's print dialog. With no dialog
+   there is no browser header/footer to suppress, so these can carry a REAL
+   margin — one that repeats on every sheet, where the padding trick above
+   only pads the start and end of the document and leaves each page break in
+   between running edge to edge.
+
+   The margin has to be declared here: a CSS `@page` margin wins over the one
+   passed to Puppeteer's page.pdf(), so with only the zero-margin default
+   above in force, Browsershot's ->margins() call did nothing at all.
+   Verified by rendering both ways and measuring the output. */
+@page pdf-invoice {
+    size: A4 landscape;
+    margin: 12mm;
+}
+
+@page pdf-statement {
+    size: A4;
+    margin: 15mm;
+}
+
+.pdf-invoice {
+    page: pdf-invoice;
+}
+
+.pdf-statement {
+    page: pdf-statement;
+}
+
 @media print {
     .sidebar,
     .app-header,
@@ -196,6 +225,32 @@
         width: 100% !important;
         margin: 0 !important;
         padding: 1.5cm !important;
+    }
+
+    /* The PDF print pages get a real, per-sheet margin from their named
+       @page rule above instead, so the faked one comes off. */
+    .pdf-invoice,
+    .pdf-statement {
+        padding: 0 !important;
+    }
+
+    /* Paper is white. The app's off-white canvas would otherwise print as a
+       tinted panel sitting inside the white page margin. */
+    html,
+    body {
+        background: #fff !important;
+    }
+
+    /* Never slice a row, a totals box or a heading across two sheets, and
+       never strand a dentist's heading at the foot of a page with its table
+       on the next. */
+    tr {
+        break-inside: avoid;
+    }
+
+    h3,
+    h4 {
+        break-after: avoid;
     }
 
     /* Scroll containers render their scrollbar track on the printed page.

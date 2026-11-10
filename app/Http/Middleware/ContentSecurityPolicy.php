@@ -48,8 +48,8 @@ class ContentSecurityPolicy
         $policy = [
             "default-src 'self' {$app}",
             "script-src 'self' {$app} 'nonce-".Vite::cspNonce()."'",
-            "style-src 'self' {$app} 'unsafe-inline' https://fonts.bunny.net",
-            "font-src 'self' {$app} https://fonts.bunny.net data:",
+            "style-src 'self' {$app} 'unsafe-inline'",
+            "font-src 'self' {$app} data:",
             "img-src 'self' {$app} data: blob:",
             "connect-src 'self' {$app}",
             // Nothing in the app embeds or is embedded. `frame-ancestors`
