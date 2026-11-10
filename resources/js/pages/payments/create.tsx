@@ -207,7 +207,7 @@ export default function PaymentsCreate({
 
             {/* No overflow-* here: it would make this a scroll container and
                 break the sticky payments bar. */}
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex h-full w-full max-w-[968px] flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex max-w-[920px] items-center gap-3.5">
                     <Link

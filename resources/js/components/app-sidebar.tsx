@@ -11,11 +11,14 @@ import {
     PiggyBank,
     Receipt,
     Scale,
+    Tags,
     UserCog,
     Users,
     Wallet,
 } from 'lucide-react';
+import { GlobalSearch } from '@/components/global-search';
 import { NavMain } from '@/components/nav-main';
+import type { NavGroup } from '@/components/nav-main';
 import { NavRate } from '@/components/nav-rate';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -28,79 +31,49 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
 
-const mainNavItems: NavItem[] = [
+const navGroups: NavGroup[] = [
     {
-        title: 'لوحة التحكم',
-        href: dashboard(),
-        icon: LayoutGrid,
+        items: [{ title: 'لوحة التحكم', href: dashboard(), icon: LayoutGrid }],
     },
     {
-        title: 'أطباء الأسنان',
-        href: '/dentists',
-        icon: Users,
+        label: 'الأطباء والطلبات',
+        items: [
+            { title: 'أطباء الأسنان', href: '/dentists', icon: Users },
+            { title: 'الطلبات', href: '/orders', icon: ClipboardList },
+            { title: 'أنواع العمل', href: '/work-types', icon: Tags },
+            { title: 'المدفوعات', href: '/payments', icon: CreditCard },
+            { title: 'الفواتير', href: '/invoices', icon: FileText },
+            { title: 'الأرصدة المستحقة', href: '/outstanding', icon: Wallet },
+        ],
     },
     {
-        title: 'الطلبات',
-        href: '/orders',
-        icon: ClipboardList,
+        label: 'المصاريف',
+        items: [
+            { title: 'الموظفون', href: '/employees', icon: UserCog },
+            { title: 'النفقات', href: '/material-purchases', icon: Package },
+        ],
     },
     {
-        title: 'المدفوعات',
-        href: '/payments',
-        icon: CreditCard,
+        label: 'التقارير',
+        items: [
+            { title: 'المالية', href: '/finance', icon: PiggyBank },
+            { title: 'التقرير', href: '/report', icon: CalendarRange },
+        ],
     },
     {
-        title: 'الفواتير',
-        href: '/invoices',
-        icon: FileText,
-    },
-    {
-        title: 'الأرصدة المستحقة',
-        href: '/outstanding',
-        icon: Wallet,
-    },
-    {
-        title: 'الموظفون',
-        href: '/employees',
-        icon: UserCog,
-    },
-    {
-        title: 'النفقات',
-        href: '/material-purchases',
-        icon: Package,
-    },
-    {
-        title: 'المالية',
-        href: '/finance',
-        icon: PiggyBank,
-    },
-    {
-        title: 'التقرير',
-        href: '/report',
-        icon: CalendarRange,
-    },
-    {
-        title: 'الصندوق',
-        href: '/ledger/cash',
-        icon: Banknote,
-    },
-    {
-        title: 'ميزان المراجعة',
-        href: '/ledger/trial-balance',
-        icon: Scale,
-    },
-    {
-        title: 'قيود اليومية',
-        href: '/ledger/journal',
-        icon: BookOpen,
-    },
-    {
-        title: 'كشف حساب',
-        href: '/ledger/statement',
-        icon: Receipt,
+        label: 'الدفاتر المحاسبية',
+        items: [
+            { title: 'الصندوق', href: '/ledger/cash', icon: Banknote },
+            {
+                title: 'ميزان المراجعة',
+                href: '/ledger/trial-balance',
+                icon: Scale,
+            },
+            { title: 'قيود اليومية', href: '/ledger/journal', icon: BookOpen },
+            { title: 'كشف حساب', href: '/ledger/statement', icon: Receipt },
+        ],
     },
 ];
 
@@ -117,10 +90,11 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
+                <GlobalSearch />
             </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
+            <SidebarContent className="[scrollbar-width:thin]">
+                <NavMain groups={navGroups} />
             </SidebarContent>
 
             <SidebarFooter>

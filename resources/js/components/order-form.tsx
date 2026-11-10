@@ -1,11 +1,12 @@
-import { useForm } from '@inertiajs/react';
-import { Check, Info, Plus, Trash2, Users } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { router, useForm } from '@inertiajs/react';
+import { BookmarkPlus, Check, Info, Plus, Trash2, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import DentalChart from '@/components/dental-chart';
 import DentistsManagerDialog from '@/components/dentists/dentists-manager-dialog';
 import InputError from '@/components/input-error';
 import CurrencyToggle from '@/components/money/currency-toggle';
 import DollarInput from '@/components/money/decimal-input';
+import TeethInput from '@/components/teeth-input';
 import { Button } from '@/components/ui/button';
 import { Combobox } from '@/components/ui/combobox';
 import { DateInput } from '@/components/ui/date-input';
@@ -13,6 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import WorkTypeCombobox from '@/components/work-type-combobox';
+import type { WorkTypeOption } from '@/components/work-type-combobox';
+import { normalizeArabic } from '@/lib/arabic';
 import {
     formatMoney,
     formatRate,
@@ -39,6 +42,17 @@ export type OrderItemForm = {
     rate: string;
 };
 
+/** Names already in use, so the form can offer them instead of new spellings. */
+export type WorkTypesProp = {
+    /** Every name on any order line or price list, most-used first. */
+    catalog: string[];
+    /** Per dentist id: his own types, most-used first. */
+    usage: Record<string, string[]>;
+};
+
+/** How many of the dentist's types get a one-tap button. */
+const QUICK_TYPES = 6;
+
 export type OrderFormValues = {
     dentist_id: string;
     status: Order['status'];
@@ -61,6 +75,7 @@ export default function OrderForm({
     action,
     submitLabel,
     todayRate,
+    workTypes,
 }: {
     dentists: Dentist[];
     initialValues: OrderFormValues;
@@ -68,6 +83,7 @@ export default function OrderForm({
     action: string;
     submitLabel: string;
     todayRate: string | null;
+    workTypes: WorkTypesProp;
 }) {
     const form = useForm<OrderFormValues>(initialValues);
     const { data, setData, processing, errors } = form;
@@ -84,10 +100,68 @@ export default function OrderForm({
      */
     const dollarDentist = selectedDentist?.currency === 'USD';
 
-    // Available work types come from the selected dentist's own price list.
-    const workTypeNames = data.dentist_id
-        ? Object.keys(getSelectedDentist()?.price_list ?? {})
-        : [];
+    // The dentist's own priced types, the ones he orders most first — so the
+    // quick buttons and the top of the dropdown are what is actually typed
+    // all day, not whatever order the price list was written in.
+    const workTypeNames = useMemo(() => {
+        const names = Object.keys(selectedDentist?.price_list ?? {});
+        const usage = workTypes.usage[data.dentist_id] ?? [];
+        const rank = (name: string) => {
+            const index = usage.indexOf(name);
+
+            return index === -1 ? usage.length : index;
+        };
+
+        // Stable sort: unused types keep their price-list order.
+        return [...names].sort((a, b) => rank(a) - rank(b));
+    }, [selectedDentist, workTypes.usage, data.dentist_id]);
+
+    /**
+     * The price-list entry a typed name refers to. Spelling variants of one
+     * name (إعادة / اعادة) find the same entry, so the line is priced as it is
+     * typed; the server then files it under the price list's own spelling.
+     */
+    const priceListKey = useCallback(
+        (type: string): string | null => {
+            const list = selectedDentist?.price_list ?? {};
+            if (type in list) {
+                return type;
+            }
+
+            const wanted = normalizeArabic(type);
+            if (wanted === '') {
+                return null;
+            }
+
+            return (
+                Object.keys(list).find(
+                    (name) => normalizeArabic(name) === wanted,
+                ) ?? null
+            );
+        },
+        [selectedDentist],
+    );
+
+    // Dropdown: his priced types (with the price shown), then every other
+    // name in use — so a type he has no price for is still picked from the
+    // list rather than typed afresh in a new spelling.
+    const typeOptions = useMemo<WorkTypeOption[]>(() => {
+        const list = selectedDentist?.price_list ?? {};
+        const priced = new Set(workTypeNames.map(normalizeArabic));
+
+        return [
+            ...workTypeNames.map((name) => ({
+                name,
+                price: formatMoney(
+                    list[name].price,
+                    dollarDentist ? 'USD' : list[name].currency,
+                ),
+            })),
+            ...workTypes.catalog
+                .filter((name) => !priced.has(normalizeArabic(name)))
+                .map((name) => ({ name })),
+        ];
+    }, [selectedDentist, workTypeNames, workTypes.catalog, dollarDentist]);
 
     /**
      * The price fields a work type implies, from the dentist's own list.
@@ -105,7 +179,10 @@ export default function OrderForm({
             OrderItemForm,
             'price' | 'currency' | 'original_amount' | 'rate'
         > | null => {
-            const entry = getSelectedDentist()?.price_list?.[type];
+            const key = priceListKey(type);
+            const entry = key
+                ? getSelectedDentist()?.price_list?.[key]
+                : undefined;
             if (!entry) {
                 return null;
             }
@@ -144,7 +221,7 @@ export default function OrderForm({
                 price: Math.round(entry.price),
             };
         },
-        [getSelectedDentist, todayRate, dollarDentist],
+        [getSelectedDentist, todayRate, dollarDentist, priceListKey],
     );
 
     const handleDentistChange = (value: string) => {
@@ -217,18 +294,30 @@ export default function OrderForm({
     // The add button is sticky, so it can be clicked from anywhere in a long
     // list — but the new item is always appended at the end. Scroll to it so
     // the click never looks like it did nothing.
+    //
+    // The new line also takes the keyboard, so a sheet can be typed without
+    // reaching for the mouse between lines: on its type field normally, or —
+    // when a quick button already chose the type — on its teeth field.
     const itemsContainerRef = useRef<HTMLDivElement>(null);
-    const scrollToLastItem = useRef(false);
+    const focusNewItem = useRef<'type' | 'teeth' | null>(null);
 
     useEffect(() => {
-        if (!scrollToLastItem.current) {
+        const field = focusNewItem.current;
+        if (!field) {
             return;
         }
-        scrollToLastItem.current = false;
-        itemsContainerRef.current?.lastElementChild?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-        });
+        focusNewItem.current = null;
+
+        const card = itemsContainerRef.current?.lastElementChild;
+        card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        const input = card?.querySelector<HTMLInputElement>(
+            field === 'teeth' ? '[data-teeth-input]' : 'input',
+        );
+        input?.focus({ preventScroll: true });
+        // Selected, so typing replaces the pre-filled type instead of
+        // appending to it.
+        input?.select();
     }, [data.items.length]);
 
     // An item's price is frozen once the item is added. Editing the dentist's
@@ -251,10 +340,15 @@ export default function OrderForm({
         }
     }, [dentists, data.dentist_id, setData]);
 
-    const addItem = () => {
-        const defaultType = workTypeNames[0] || '';
+    /**
+     * Append a line. With no type given it starts on the dentist's most-used
+     * one and the cursor lands in the type field; a quick button passes its
+     * type and the cursor goes straight to the teeth.
+     */
+    const addItem = (type?: string) => {
+        const defaultType = type ?? workTypeNames[0] ?? '';
         const quote = quoteFields(defaultType);
-        scrollToLastItem.current = true;
+        focusNewItem.current = type === undefined ? 'type' : 'teeth';
         setData('items', [
             ...data.items,
             {
@@ -382,6 +476,86 @@ export default function OrderForm({
         setData('items', newItems);
     };
 
+    const setItemTeeth = (index: number, teeth: number[]) => {
+        const newItems = [...data.items];
+        newItems[index] = {
+            ...newItems[index],
+            selected_teeth: teeth,
+            quantity:
+                teeth.length > 0 ? teeth.length : newItems[index].quantity,
+        };
+        setData('items', newItems);
+    };
+
+    /**
+     * What a line would add to the dentist's price list: its amount in the
+     * unit the list holds (cents for a dollar price, whole lira otherwise).
+     * Null when the type is already priced, or there is nothing to save yet.
+     */
+    const savablePrice = (item: OrderItemForm) => {
+        if (
+            !selectedDentist ||
+            item.type.trim() === '' ||
+            priceListKey(item.type) !== null
+        ) {
+            return null;
+        }
+
+        const dollars = dollarDentist || item.currency === 'USD';
+        const price = dollars ? item.original_amount : item.price;
+
+        return price > 0
+            ? { price, currency: dollars ? ('USD' as const) : ('SYP' as const) }
+            : null;
+    };
+
+    /**
+     * Keep a hand-typed price for next time. The page's props are refreshed
+     * but its state is preserved, so the half-typed order is untouched.
+     */
+    const savePrice = (item: OrderItemForm) => {
+        const entry = savablePrice(item);
+        if (!entry || !selectedDentist) {
+            return;
+        }
+
+        router.post(
+            `/dentists/${selectedDentist.id}/price-list`,
+            { name: item.type.trim(), ...entry },
+            { preserveState: true, preserveScroll: true },
+        );
+    };
+
+    const formRef = useRef<HTMLFormElement>(null);
+
+    /**
+     * Enter inside a line starts the next line instead of submitting the
+     * whole sheet — a stray Enter on line 40 must not save a half-typed
+     * order. Ctrl+Enter saves. An Enter the type dropdown used to pick an
+     * option never reaches here (Headless UI stops it).
+     */
+    const handleItemsKeyDown = (e: React.KeyboardEvent) => {
+        if (
+            e.key !== 'Enter' ||
+            e.ctrlKey ||
+            e.metaKey ||
+            e.nativeEvent.isComposing ||
+            (e.target as HTMLElement).tagName !== 'INPUT'
+        ) {
+            return;
+        }
+
+        e.preventDefault();
+        addItem();
+    };
+
+    const handleFormKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            formRef.current?.requestSubmit();
+        }
+    };
+
     const [dentistsDialogOpen, setDentistsDialogOpen] = useState(false);
 
     const total = data.items.reduce(
@@ -425,7 +599,12 @@ export default function OrderForm({
 
     return (
         <>
-            <form onSubmit={handleSubmit} className="max-w-[920px] space-y-6">
+            <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                onKeyDown={handleFormKeyDown}
+                className="max-w-[920px] space-y-6"
+            >
                 {/* Order info */}
                 <section className="flex flex-col gap-[18px] rounded-2xl border bg-card p-6">
                     <h2 className="text-base font-bold text-foreground">
@@ -526,24 +705,50 @@ export default function OrderForm({
                 <section className="space-y-4">
                     {/* Sticky so the add button stays reachable without scrolling
                     back to the top of a long item list. */}
-                    <div className="sticky top-0 z-20 flex items-center justify-between bg-background py-3">
-                        <h2 className="text-base font-bold text-foreground">
-                            العناصر
-                            {data.items.length > 0 && (
-                                <span className="mr-1.5 text-sm font-medium text-muted-foreground tabular-nums">
-                                    ({data.items.length})
+                    <div className="sticky top-0 z-20 space-y-2.5 bg-background py-3">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-base font-bold text-foreground">
+                                العناصر
+                                {data.items.length > 0 && (
+                                    <span className="mr-1.5 text-sm font-medium text-muted-foreground tabular-nums">
+                                        ({data.items.length})
+                                    </span>
+                                )}
+                            </h2>
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    type="button"
+                                    onClick={() => addItem()}
+                                    variant="outline"
+                                    className="gap-2 rounded-[10px] border-primary text-primary hover:bg-secondary hover:text-primary"
+                                >
+                                    <Plus className="size-4" />
+                                    إضافة عنصر
+                                </Button>
+                            </div>
+                        </div>
+                        {/* One tap adds a line of the dentist's usual work,
+                          already priced, with the cursor on its teeth. */}
+                        {workTypeNames.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs text-muted-foreground">
+                                    إضافة سريعة:
                                 </span>
-                            )}
-                        </h2>
-                        <Button
-                            type="button"
-                            onClick={addItem}
-                            variant="outline"
-                            className="gap-2 rounded-[10px] border-primary text-primary hover:bg-secondary hover:text-primary"
-                        >
-                            <Plus className="size-4" />
-                            إضافة عنصر
-                        </Button>
+                                {workTypeNames
+                                    .slice(0, QUICK_TYPES)
+                                    .map((name) => (
+                                        <button
+                                            key={name}
+                                            type="button"
+                                            onClick={() => addItem(name)}
+                                            className="flex h-8 items-center gap-1 rounded-full border border-primary/30 bg-secondary px-3 text-[13px] font-medium text-primary transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                                        >
+                                            <Plus className="size-3.5" />
+                                            {name}
+                                        </button>
+                                    ))}
+                            </div>
+                        )}
                     </div>
 
                     {data.items.length === 0 ? (
@@ -551,13 +756,17 @@ export default function OrderForm({
                             لا توجد عناصر. قم بإضافة عنصر واحد على الأقل.
                         </p>
                     ) : (
-                        <div ref={itemsContainerRef} className="space-y-4">
+                        <div
+                            ref={itemsContainerRef}
+                            onKeyDown={handleItemsKeyDown}
+                            className="space-y-4"
+                        >
                             {data.items.map((item, index) => (
                                 <div
                                     key={index}
                                     // scroll-mt clears the sticky bar when a newly
                                     // added item is scrolled into view.
-                                    className="flex scroll-mt-16 flex-col gap-[18px] rounded-2xl border bg-card p-6"
+                                    className="flex scroll-mt-28 flex-col gap-[18px] rounded-2xl border bg-card p-6"
                                 >
                                     <div className="flex items-center justify-between">
                                         <h3 className="text-[15px] font-bold text-primary">
@@ -583,7 +792,7 @@ export default function OrderForm({
                                                 onChange={(v) =>
                                                     updateItem(index, 'type', v)
                                                 }
-                                                options={workTypeNames}
+                                                options={typeOptions}
                                                 placeholder="اختر النوع أو اكتب..."
                                             />
                                             <InputError
@@ -596,25 +805,17 @@ export default function OrderForm({
 
                                         <div className="grid gap-2">
                                             <Label className={labelClass}>
-                                                اسم المريض
+                                                أرقام الأسنان{' '}
+                                                <span className="text-xs font-normal text-muted-foreground">
+                                                    (أو اخترها من الرسم)
+                                                </span>
                                             </Label>
-                                            <Input
-                                                value={item.patient_name}
-                                                onChange={(e) =>
-                                                    updateItem(
-                                                        index,
-                                                        'patient_name',
-                                                        e.target.value,
-                                                    )
+                                            <TeethInput
+                                                teeth={item.selected_teeth}
+                                                onChange={(teeth) =>
+                                                    setItemTeeth(index, teeth)
                                                 }
-                                                placeholder="أدخل اسم المريض..."
                                                 className={fieldClass}
-                                            />
-                                            <InputError
-                                                message={itemError(
-                                                    index,
-                                                    'patient_name',
-                                                )}
                                             />
                                         </div>
 
@@ -836,6 +1037,43 @@ export default function OrderForm({
                                                     />
                                                 </>
                                             )}
+                                            {savablePrice(item) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        savePrice(item)
+                                                    }
+                                                    className="flex items-center gap-1.5 justify-self-start text-xs font-medium text-primary hover:underline"
+                                                >
+                                                    <BookmarkPlus className="size-3.5" />
+                                                    حفظ هذا السعر في قائمة أسعار
+                                                    الطبيب
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label className={labelClass}>
+                                                اسم المريض
+                                            </Label>
+                                            <Input
+                                                value={item.patient_name}
+                                                onChange={(e) =>
+                                                    updateItem(
+                                                        index,
+                                                        'patient_name',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="أدخل اسم المريض..."
+                                                className={fieldClass}
+                                            />
+                                            <InputError
+                                                message={itemError(
+                                                    index,
+                                                    'patient_name',
+                                                )}
+                                            />
                                         </div>
 
                                         <div className="grid gap-2">
@@ -858,19 +1096,9 @@ export default function OrderForm({
 
                                     <DentalChart
                                         selectedTeeth={item.selected_teeth}
-                                        onSelectionChange={(teeth) => {
-                                            const newItems = [...data.items];
-                                            newItems[index] = {
-                                                ...newItems[index],
-                                                selected_teeth: teeth,
-                                                quantity:
-                                                    teeth.length > 0
-                                                        ? teeth.length
-                                                        : newItems[index]
-                                                              .quantity,
-                                            };
-                                            setData('items', newItems);
-                                        }}
+                                        onSelectionChange={(teeth) =>
+                                            setItemTeeth(index, teeth)
+                                        }
                                     />
 
                                     <div className="flex justify-end text-sm text-[#435955]">

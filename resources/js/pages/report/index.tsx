@@ -256,7 +256,7 @@ export default function ReportIndex({
                                                 | undefined) ?? order.due_date,
                                         )}
                                     </TableCell>
-                                    <TableCell className="font-medium">
+                                    <TableCell className="font-medium whitespace-nowrap">
                                         {order.dentist?.name ?? '—'}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">
@@ -266,7 +266,7 @@ export default function ReportIndex({
                                                   .join('، ')
                                             : '—'}
                                     </TableCell>
-                                    <TableCell>
+                                    <TableCell className="whitespace-nowrap">
                                         <span className="text-xs text-muted-foreground">
                                             {ORDER_STATUSES[order.status]}
                                         </span>
