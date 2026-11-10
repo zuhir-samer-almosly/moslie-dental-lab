@@ -11,11 +11,17 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+    // The header search box; answers with JSON from any page.
+    Route::get('search', App\Http\Controllers\SearchController::class)->name('search');
 
     Route::resource('dentists', App\Http\Controllers\DentistController::class)
         ->except('show');
     Route::resource('orders', App\Http\Controllers\OrderController::class)
         ->except('show');
+    Route::get('work-types', [App\Http\Controllers\WorkTypeController::class, 'index'])->name('work-types.index');
+    Route::post('work-types/merge', [App\Http\Controllers\WorkTypeController::class, 'merge'])->name('work-types.merge');
+    Route::post('dentists/{dentist}/price-list', [App\Http\Controllers\WorkTypeController::class, 'storePrice'])
+        ->name('dentists.price-list.store');
     Route::post('payments/batch', [App\Http\Controllers\DentistPaymentController::class, 'storeMany'])
         ->name('payments.store-many');
     Route::resource('payments', App\Http\Controllers\DentistPaymentController::class)

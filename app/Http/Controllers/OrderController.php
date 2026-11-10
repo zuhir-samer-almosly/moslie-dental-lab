@@ -13,6 +13,7 @@ use App\Models\OrderItem;
 use App\Money\Currency;
 use App\Money\Rate;
 use App\Support\OrderPeriod;
+use App\Support\WorkTypes;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -127,6 +128,7 @@ class OrderController extends Controller
         return inertia('orders/create', [
             'dentists' => $dentists,
             'todayRate' => Rate::on(now()->toDateString()),
+            'workTypes' => $this->workTypes(),
         ]);
     }
 
@@ -140,7 +142,7 @@ class OrderController extends Controller
         unset($validated['items']);
 
         $dentist = Dentist::findOrFail($validated['dentist_id']);
-        $items = $this->withResolvedPrices($items, $dentist);
+        $items = $this->withCanonicalTypes($this->withResolvedPrices($items, $dentist), $dentist);
 
         // Both totals are derived from the items, so neither can drift from
         // them. For a dollar dentist the lira total is legitimately zero and
@@ -178,6 +180,7 @@ class OrderController extends Controller
             'order' => $order,
             'dentists' => $dentists,
             'todayRate' => Rate::on(now()->toDateString()),
+            'workTypes' => $this->workTypes(),
         ]);
     }
 
@@ -191,7 +194,7 @@ class OrderController extends Controller
         unset($validated['items']);
 
         $dentist = Dentist::findOrFail($validated['dentist_id']);
-        $items = $this->withResolvedPrices($items, $dentist);
+        $items = $this->withCanonicalTypes($this->withResolvedPrices($items, $dentist), $dentist);
 
         // Both totals are derived from the items, so neither can drift from
         // them. For a dollar dentist the lira total is legitimately zero and
@@ -217,6 +220,34 @@ class OrderController extends Controller
 
         return redirect()->route('orders.index')
             ->with('success', 'تم تحديث الطلب بنجاح');
+    }
+
+    /**
+     * What the order form needs to offer types quickly: every name in use,
+     * and each dentist's own, most-used first.
+     *
+     * @return array{catalog: list<string>, usage: array<int, list<string>>}
+     */
+    private function workTypes(): array
+    {
+        return [
+            'catalog' => WorkTypes::summary()->pluck('name')->all(),
+            'usage' => WorkTypes::usageByDentist(),
+        ];
+    }
+
+    /**
+     * File each line under the spelling already in use, so a type typed with
+     * a different hamza or a stray space does not become a second product.
+     *
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array<string, mixed>>
+     */
+    private function withCanonicalTypes(array $items, Dentist $dentist): array
+    {
+        $canonical = WorkTypes::canonicaliser($dentist);
+
+        return array_map(fn (array $item) => [...$item, 'type' => $canonical((string) $item['type'])], $items);
     }
 
     /**

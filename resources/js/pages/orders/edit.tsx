@@ -1,6 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
-import OrderForm, { today, type OrderItemForm } from '@/components/order-form';
+import OrderForm, {
+    today,
+    type OrderItemForm,
+    type WorkTypesProp,
+} from '@/components/order-form';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist, Order } from '@/types';
 
@@ -19,10 +23,12 @@ export default function OrdersEdit({
     order,
     dentists,
     todayRate,
+    workTypes,
 }: {
     order: Order;
     dentists: Dentist[];
     todayRate: string | null;
+    workTypes: WorkTypesProp;
 }) {
     const items: OrderItemForm[] = (order.items || []).map((item) => {
         const meta = item.meta as Record<string, unknown> | null;
@@ -46,7 +52,7 @@ export default function OrdersEdit({
 
             {/* No overflow-* here: it would make this a scroll container and
                 break the sticky items bar inside OrderForm. */}
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex h-full w-full max-w-[968px] flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex max-w-[920px] items-center gap-3.5">
                     <Link
@@ -69,6 +75,7 @@ export default function OrdersEdit({
                 <OrderForm
                     dentists={dentists}
                     todayRate={todayRate}
+                    workTypes={workTypes}
                     method="put"
                     action={`/orders/${order.id}`}
                     submitLabel="تحديث"

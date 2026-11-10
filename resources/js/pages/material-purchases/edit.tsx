@@ -58,7 +58,7 @@ export default function MaterialPurchasesEdit({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="تعديل مادة" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex h-full w-full max-w-[720px] flex-1 flex-col gap-6 p-4 md:p-6">
                 <div className="flex flex-col gap-3">
                     <Button
                         variant="ghost"

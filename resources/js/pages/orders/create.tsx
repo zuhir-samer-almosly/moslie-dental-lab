@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowRight } from 'lucide-react';
 import OrderForm from '@/components/order-form';
+import type { WorkTypesProp } from '@/components/order-form';
 import AppLayout from '@/layouts/app-layout';
 import type { BreadcrumbItem, Dentist } from '@/types';
 
@@ -18,9 +19,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function OrdersCreate({
     dentists,
     todayRate,
+    workTypes,
 }: {
     dentists: Dentist[];
     todayRate: string | null;
+    workTypes: WorkTypesProp;
 }) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -28,7 +31,7 @@ export default function OrdersCreate({
 
             {/* No overflow-* here: it would make this a scroll container and
                 break the sticky items bar inside OrderForm. */}
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <div className="mx-auto flex h-full w-full max-w-[968px] flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex max-w-[920px] items-center gap-3.5">
                     <Link
@@ -51,6 +54,7 @@ export default function OrdersCreate({
                 <OrderForm
                     dentists={dentists}
                     todayRate={todayRate}
+                    workTypes={workTypes}
                     method="post"
                     action="/orders"
                     submitLabel="حفظ"

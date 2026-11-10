@@ -8,11 +8,14 @@ import {
 import { ChevronDownIcon, XIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import { normalizeArabic } from '@/lib/arabic';
 import { cn } from '@/lib/utils';
 
 export type ComboboxOptionItem<T> = {
     value: T;
     label: string;
+    /** Muted text at the far end of the row, e.g. a price. Not searched. */
+    hint?: string;
 };
 
 type ComboboxProps<T> = {
@@ -32,24 +35,6 @@ type ComboboxProps<T> = {
     className?: string;
     'aria-invalid'?: boolean;
 };
-
-const TASHKEEL = /[ً-ْـ]/g;
-
-/**
- * Folds the Arabic spellings that differ only by hamza/alef form so typing
- * "احمد" still finds a dentist stored as "أحمد". Latin text is lowercased so
- * the same helper covers account codes and mixed-script names.
- */
-function normalizeArabic(text: string): string {
-    return text
-        .replace(TASHKEEL, '')
-        .replace(/[أإآٱ]/g, 'ا')
-        .replace(/ى/g, 'ي')
-        .replace(/ؤ/g, 'و')
-        .replace(/ئ/g, 'ي')
-        .replace(/ة/g, 'ه')
-        .toLowerCase();
-}
 
 /**
  * The app's only dropdown. Searchable, RTL-aware and keyboard navigable —
@@ -177,6 +162,14 @@ export function Combobox<T extends string | number>({
                         )}
                     >
                         {option.label}
+                        {option.hint && (
+                            <span
+                                dir="ltr"
+                                className="ms-auto ps-3 text-xs text-muted-foreground tabular-nums"
+                            >
+                                {option.hint}
+                            </span>
+                        )}
                     </ComboboxOption>
                 ))}
                 {filtered.length === 0 && (

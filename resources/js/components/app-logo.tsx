@@ -1,11 +1,12 @@
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md">
+            {/* Collapsed to icons the button is only 32px square, so the
+                badge shrinks to fit instead of being cropped by it. */}
+            <div className="flex aspect-square size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-md group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-[10px] group-data-[collapsible=icon]:shadow-none">
                 {/* Tooth glyph (lucide has no tooth icon). */}
                 <svg
-                    width="28"
-                    height="28"
+                    className="size-7 group-data-[collapsible=icon]:size-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
