@@ -549,12 +549,26 @@ export default function OrderForm({
         addItem();
     };
 
-    const handleFormKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            formRef.current?.requestSubmit();
-        }
-    };
+    // Ctrl+Enter saves from anywhere on the page, not only while the cursor
+    // is inside the form — after clicking a button or blank space the focus
+    // is on <body>, and a form-level handler would never hear the key. Held
+    // back while a dialog is open: there, Ctrl+Enter is not about the order.
+    useEffect(() => {
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (
+                e.key === 'Enter' &&
+                (e.ctrlKey || e.metaKey) &&
+                !document.querySelector('[role="dialog"]')
+            ) {
+                e.preventDefault();
+                formRef.current?.requestSubmit();
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
 
     const [dentistsDialogOpen, setDentistsDialogOpen] = useState(false);
 
@@ -602,7 +616,6 @@ export default function OrderForm({
             <form
                 ref={formRef}
                 onSubmit={handleSubmit}
-                onKeyDown={handleFormKeyDown}
                 className="max-w-[920px] space-y-6"
             >
                 {/* Order info */}

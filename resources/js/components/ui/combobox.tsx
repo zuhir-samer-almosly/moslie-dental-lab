@@ -147,8 +147,13 @@ export function Combobox<T extends string | number>({
                     <ChevronDownIcon className="size-4 text-muted-foreground opacity-50" />
                 </ComboboxButton>
             </div>
+            {/* modal={false}: by default Headless UI makes the rest of the
+                page inert while the list is open, so the first click on
+                another field only closed the list and a second was needed to
+                land in the field. */}
             <ComboboxOptions
                 anchor="bottom"
+                modal={false}
                 className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md [--anchor-gap:4px] empty:invisible"
             >
                 {filtered.map((option) => (
