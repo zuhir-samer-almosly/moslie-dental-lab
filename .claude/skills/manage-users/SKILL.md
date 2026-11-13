@@ -7,8 +7,13 @@ description: Create or reset login accounts for moslie-dental-lab. Use when aske
 
 This app is **single-tenant with shared data** and **public registration is
 disabled** (`canRegister` is off; there is no `/register` flow). Every account is
-created by hand with the `app:create-user` artisan command. There is no roles/permissions
-layer — any account can see and edit everything (related memory: `single-tenant-shared-data`).
+created by hand with the `app:create-user` artisan command. Data is not scoped per
+user (related memory: `single-tenant-shared-data`), but there are two roles:
+
+- `admin` (the default) — sees and edits everything.
+- `entry` — the lab tablet: the daybook (`/daybook`) and the dentist notebooks
+  (`/notebook`) only; every other page answers 403. Pass `--role=entry` to create one.
+  To change an existing account's role, set `role` on the user in tinker.
 
 ## Create an account
 

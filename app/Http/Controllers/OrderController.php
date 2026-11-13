@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RedirectsToDaybook;
 use App\Concerns\ResolvesMonth;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    use ResolvesMonth;
+    use RedirectsToDaybook, ResolvesMonth;
 
     public function __construct(
         private readonly LedgerReports $reports,
@@ -128,7 +129,7 @@ class OrderController extends Controller
         return inertia('orders/create', [
             'dentists' => $dentists,
             'todayRate' => Rate::on(now()->toDateString()),
-            'workTypes' => $this->workTypes(),
+            'workTypes' => WorkTypes::forOrderForm(),
         ]);
     }
 
@@ -164,7 +165,7 @@ class OrderController extends Controller
             }
         }));
 
-        return redirect()->route('orders.index')
+        return $this->redirectAfterSave('orders.index')
             ->with('success', 'تم إضافة الطلب بنجاح');
     }
 
@@ -180,7 +181,7 @@ class OrderController extends Controller
             'order' => $order,
             'dentists' => $dentists,
             'todayRate' => Rate::on(now()->toDateString()),
-            'workTypes' => $this->workTypes(),
+            'workTypes' => WorkTypes::forOrderForm(),
         ]);
     }
 
@@ -218,22 +219,8 @@ class OrderController extends Controller
             }
         }));
 
-        return redirect()->route('orders.index')
+        return $this->redirectAfterSave('orders.index')
             ->with('success', 'تم تحديث الطلب بنجاح');
-    }
-
-    /**
-     * What the order form needs to offer types quickly: every name in use,
-     * and each dentist's own, most-used first.
-     *
-     * @return array{catalog: list<string>, usage: array<int, list<string>>}
-     */
-    private function workTypes(): array
-    {
-        return [
-            'catalog' => WorkTypes::summary()->pluck('name')->all(),
-            'usage' => WorkTypes::usageByDentist(),
-        ];
     }
 
     /**
@@ -331,7 +318,7 @@ class OrderController extends Controller
     {
         $order->delete();
 
-        return redirect()->route('orders.index')
+        return $this->redirectAfterSave('orders.index')
             ->with('success', 'تم حذف الطلب بنجاح');
     }
 }

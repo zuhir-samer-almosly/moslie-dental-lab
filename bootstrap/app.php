@@ -31,6 +31,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // Prepended, not appended: it has to mint the Vite CSP nonce before
         // anything renders a view, and it strips X-Powered-By on the way back
         // out. See the class for why 'self' alone is not enough here.
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'daybook.once' => \App\Http\Middleware\SaveDaybookEntryOnce::class,
+        ]);
+
         $middleware->web(prepend: [
             \App\Http\Middleware\ContentSecurityPolicy::class,
         ]);

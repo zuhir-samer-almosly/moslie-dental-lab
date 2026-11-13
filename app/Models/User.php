@@ -22,7 +22,25 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
+
+    /**
+     * Mirrors the migration's `default('admin')`, so a freshly created
+     * in-memory user already answers `isAdmin()` the way its row will.
+     */
+    protected $attributes = [
+        'role' => 'admin',
+    ];
+
+    /**
+     * Whether this login may use the whole app. The alternative, `entry`, is
+     * the lab tablet: daybook and dentist notebooks only.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
 
     /**
      * The attributes that should be hidden for serialization.

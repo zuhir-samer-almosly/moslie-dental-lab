@@ -14,7 +14,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Not for the tablet's `entry` login: one wrong tap there must not be
+    // able to delete the account the lab records its day with.
+    Route::delete('settings/profile', [ProfileController::class, 'destroy'])
+        ->middleware('admin')->name('profile.destroy');
 
     Route::get('settings/password', [PasswordController::class, 'edit'])->name('user-password.edit');
 

@@ -2,6 +2,8 @@ export type User = {
     id: number;
     name: string;
     email: string;
+    /** `entry` is the lab tablet: daybook and dentist notebooks only. */
+    role: 'admin' | 'entry';
     avatar?: string;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;

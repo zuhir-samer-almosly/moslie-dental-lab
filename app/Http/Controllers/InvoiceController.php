@@ -11,10 +11,10 @@ use App\Money\Currency;
 use App\Money\Rate;
 use App\Support\InvoiceFilename;
 use App\Support\OrderPeriod;
+use App\Support\PdfRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
-use Spatie\Browsershot\Browsershot;
 
 class InvoiceController extends Controller
 {
@@ -57,51 +57,7 @@ class InvoiceController extends Controller
 
         abort_if($report['orders'] === null, 422, 'حدد فترة صالحة أولاً.');
 
-        // Signed as a relative URL, then pointed at the container-internal
-        // host: nginx and php-fpm share this container, so there is no reason
-        // to send the request back out through the public domain.
-        $path = URL::temporarySignedRoute(
-            'invoices.print-view',
-            now()->addMinutes(config('pdf.signed_url_ttl')),
-            array_filter($report['filters'], fn ($value) => $value !== null),
-            absolute: false,
-        );
-
-        $browsershot = Browsershot::url(rtrim(config('pdf.internal_url'), '/').$path)
-            ->noSandbox() // the container runs as root
-            // Chromium's default /dev/shm is tiny in Docker and it crashes
-            // mid-render without this.
-            ->addChromiumArguments(['disable-dev-shm-usage'])
-            // Apply the tuned @media print rules from app.css, so the PDF and
-            // the browser's own print preview render identically.
-            ->emulateMedia('print')
-            ->format('A4')
-            ->landscape()
-            // Kept equal to the `@page pdf-invoice` margin in app.css, which
-            // is the one that actually takes effect: a CSS @page margin
-            // overrides whatever is passed here. Change both together.
-            ->margins(12, 12, 12, 12)
-            ->showBackground()
-            ->waitUntilNetworkIdle(strict: false)
-            // Network-idle is not font-loaded: web fonts are only requested
-            // once layout needs them. The print page raises this flag when
-            // they are in (see resources/js/hooks/use-print-ready.ts).
-            ->waitForFunction('document.documentElement.dataset.printReady === "true"')
-            ->timeout(120);
-
-        if ($chromePath = config('pdf.chrome_path')) {
-            $browsershot->setChromePath($chromePath);
-        }
-
-        if ($node = config('pdf.node_binary')) {
-            $browsershot->setNodeBinary($node);
-        }
-
-        if ($npm = config('pdf.npm_binary')) {
-            $browsershot->setNpmBinary($npm);
-        }
-
-        $contents = $browsershot->pdf();
+        $contents = PdfRenderer::render('invoices.print-view', $report['filters'], landscape: true, margin: 12);
 
         $dentistId = $report['filters']['dentist_id'];
 

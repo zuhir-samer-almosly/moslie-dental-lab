@@ -9,10 +9,10 @@ use App\Models\Account;
 use App\Models\Dentist;
 use App\Models\JournalEntry;
 use App\Money\Currency;
+use App\Support\PdfRenderer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
-use Spatie\Browsershot\Browsershot;
 
 /**
  * The read-only accounting views. Nothing here writes to the ledger — every
@@ -138,46 +138,8 @@ class LedgerController extends Controller
 
         abort_if($data['statement'] === null, 422, 'اختر طبيباً أولاً.');
 
-        // Signed as a relative URL, then pointed at the container-internal
-        // host, exactly as InvoiceController::pdf does.
-        $path = URL::temporarySignedRoute(
-            'ledger.statement.print-view',
-            now()->addMinutes(config('pdf.signed_url_ttl')),
-            array_filter($data['filters'], fn ($value) => $value !== null),
-            absolute: false,
-        );
-
-        $browsershot = Browsershot::url(rtrim(config('pdf.internal_url'), '/').$path)
-            ->noSandbox() // the container runs as root
-            // Chromium's default /dev/shm is tiny in Docker and it crashes
-            // mid-render without this.
-            ->addChromiumArguments(['disable-dev-shm-usage'])
-            ->emulateMedia('print')
-            ->format('A4')
-            // Kept equal to the `@page pdf-statement` margin in app.css,
-            // which is the one that actually takes effect: a CSS @page margin
-            // overrides whatever is passed here. Change both together.
-            ->margins(15, 15, 15, 15)
-            ->showBackground()
-            ->waitUntilNetworkIdle(strict: false)
-            // Wait for the web fonts too — see use-print-ready.ts.
-            ->waitForFunction('document.documentElement.dataset.printReady === "true"')
-            ->timeout(120);
-
-        if ($chromePath = config('pdf.chrome_path')) {
-            $browsershot->setChromePath($chromePath);
-        }
-
-        if ($node = config('pdf.node_binary')) {
-            $browsershot->setNodeBinary($node);
-        }
-
-        if ($npm = config('pdf.npm_binary')) {
-            $browsershot->setNpmBinary($npm);
-        }
-
         return response(
-            $browsershot->pdf(),
+            PdfRenderer::render('ledger.statement.print-view', $data['filters']),
             200,
             [
                 'Content-Type' => 'application/pdf',

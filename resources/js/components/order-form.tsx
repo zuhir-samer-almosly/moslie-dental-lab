@@ -23,6 +23,11 @@ import {
     rateValue,
     usdToSyp,
 } from '@/lib/money';
+import {
+    priceListKey as lookupPriceListKey,
+    quoteFor,
+    rankedWorkTypes,
+} from '@/lib/price-list';
 import { cn, today } from '@/lib/utils';
 import type { Dentist, Order } from '@/types';
 import { ORDER_STATUSES } from '@/types';
@@ -103,42 +108,19 @@ export default function OrderForm({
     // The dentist's own priced types, the ones he orders most first — so the
     // quick buttons and the top of the dropdown are what is actually typed
     // all day, not whatever order the price list was written in.
-    const workTypeNames = useMemo(() => {
-        const names = Object.keys(selectedDentist?.price_list ?? {});
-        const usage = workTypes.usage[data.dentist_id] ?? [];
-        const rank = (name: string) => {
-            const index = usage.indexOf(name);
+    const workTypeNames = useMemo(
+        () =>
+            rankedWorkTypes(
+                selectedDentist,
+                workTypes.usage[data.dentist_id] ?? [],
+            ),
+        [selectedDentist, workTypes.usage, data.dentist_id],
+    );
 
-            return index === -1 ? usage.length : index;
-        };
-
-        // Stable sort: unused types keep their price-list order.
-        return [...names].sort((a, b) => rank(a) - rank(b));
-    }, [selectedDentist, workTypes.usage, data.dentist_id]);
-
-    /**
-     * The price-list entry a typed name refers to. Spelling variants of one
-     * name (إعادة / اعادة) find the same entry, so the line is priced as it is
-     * typed; the server then files it under the price list's own spelling.
-     */
+    // Spelling variants of one name find the same price-list entry — see
+    // lib/price-list, shared with the daybook.
     const priceListKey = useCallback(
-        (type: string): string | null => {
-            const list = selectedDentist?.price_list ?? {};
-            if (type in list) {
-                return type;
-            }
-
-            const wanted = normalizeArabic(type);
-            if (wanted === '') {
-                return null;
-            }
-
-            return (
-                Object.keys(list).find(
-                    (name) => normalizeArabic(name) === wanted,
-                ) ?? null
-            );
-        },
+        (type: string) => lookupPriceListKey(selectedDentist, type),
         [selectedDentist],
     );
 
@@ -163,65 +145,10 @@ export default function OrderForm({
         ];
     }, [selectedDentist, workTypeNames, workTypes.catalog, dollarDentist]);
 
-    /**
-     * The price fields a work type implies, from the dentist's own list.
-     *
-     * A dollar quote is converted here, at the rate recorded for today, and
-     * the item carries lira from then on — the quote and its rate ride along
-     * so the invoice can show what the price came from. If no rate has been
-     * recorded yet the rate is left empty for the user to type; the price is
-     * then 0 until they do, rather than silently pricing the work at nothing.
-     */
+    // The price fields a work type implies, from the dentist's own list.
     const quoteFields = useCallback(
-        (
-            type: string,
-        ): Pick<
-            OrderItemForm,
-            'price' | 'currency' | 'original_amount' | 'rate'
-        > | null => {
-            const key = priceListKey(type);
-            const entry = key
-                ? getSelectedDentist()?.price_list?.[key]
-                : undefined;
-            if (!entry) {
-                return null;
-            }
-
-            // A dollar dentist's price list is dollars, full stop — it fills
-            // straight into the dollar field with no rate and no conversion.
-            // His lira price is always zero.
-            if (dollarDentist) {
-                return {
-                    currency: 'USD',
-                    original_amount: entry.price,
-                    rate: '',
-                    price: 0,
-                };
-            }
-
-            if (entry.currency === 'USD') {
-                const rate = rateValue(todayRate);
-                const parsed = parseFloat(rate);
-                return {
-                    currency: 'USD',
-                    original_amount: entry.price,
-                    rate,
-                    price: Number.isFinite(parsed)
-                        ? usdToSyp(entry.price / 100, parsed)
-                        : 0,
-                };
-            }
-
-            return {
-                currency: 'SYP',
-                original_amount: 0,
-                rate: '',
-                // Round: legacy price lists may hold decimals, but the server
-                // only accepts integer item prices.
-                price: Math.round(entry.price),
-            };
-        },
-        [getSelectedDentist, todayRate, dollarDentist, priceListKey],
+        (type: string) => quoteFor(selectedDentist, type, todayRate),
+        [selectedDentist, todayRate],
     );
 
     const handleDentistChange = (value: string) => {
