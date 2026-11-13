@@ -78,6 +78,21 @@ class WorkTypes
     }
 
     /**
+     * What an entry form needs to offer types quickly: every name in use, and
+     * each dentist's own, most-used first. Shared by the order form and the
+     * daybook so both offer exactly the same names.
+     *
+     * @return array{catalog: list<string>, usage: array<int, list<string>>}
+     */
+    public static function forOrderForm(): array
+    {
+        return [
+            'catalog' => self::summary()->pluck('name')->all(),
+            'usage' => self::usageByDentist(),
+        ];
+    }
+
+    /**
      * Each dentist's own types, his most-used first — what the order form
      * offers as one-tap buttons.
      *

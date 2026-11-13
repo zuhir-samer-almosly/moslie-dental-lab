@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import {
     Banknote,
     BookOpen,
@@ -7,6 +7,8 @@ import {
     CreditCard,
     FileText,
     LayoutGrid,
+    NotebookPen,
+    NotebookTabs,
     Package,
     PiggyBank,
     Receipt,
@@ -33,10 +35,20 @@ import {
 import { dashboard } from '@/routes';
 import AppLogo from './app-logo';
 
+/** The daily sheet and the dentists' notebooks — all an `entry` login sees. */
+const daybookGroup: NavGroup = {
+    label: 'اليومية',
+    items: [
+        { title: 'اليومية', href: '/daybook', icon: NotebookPen },
+        { title: 'دفاتر الأطباء', href: '/notebook', icon: NotebookTabs },
+    ],
+};
+
 const navGroups: NavGroup[] = [
     {
         items: [{ title: 'لوحة التحكم', href: dashboard(), icon: LayoutGrid }],
     },
+    daybookGroup,
     {
         label: 'الأطباء والطلبات',
         items: [
@@ -78,27 +90,32 @@ const navGroups: NavGroup[] = [
 ];
 
 export function AppSidebar() {
+    // The tablet's `entry` login gets its two pages and nothing that leads
+    // to a 403: no search, no exchange-rate control, no other sections.
+    const isAdmin = usePage().props.auth.user.role === 'admin';
+    const home = isAdmin ? dashboard() : '/daybook';
+
     return (
         <Sidebar side="right" collapsible="icon" variant="inset">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href={home} prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-                <GlobalSearch />
+                {isAdmin && <GlobalSearch />}
             </SidebarHeader>
 
             <SidebarContent className="[scrollbar-width:thin]">
-                <NavMain groups={navGroups} />
+                <NavMain groups={isAdmin ? navGroups : [daybookGroup]} />
             </SidebarContent>
 
             <SidebarFooter>
-                <NavRate />
+                {isAdmin && <NavRate />}
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

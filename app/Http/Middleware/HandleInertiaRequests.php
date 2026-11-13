@@ -81,10 +81,13 @@ class HandleInertiaRequests extends Middleware
             // Guest-gated for the same reason as `dailyRate` above: the chart
             // of accounts is internal business configuration and has no
             // business being readable from the login page.
-            'expenseCategories' => fn () => $request->user() === null
+            //
+            // An `entry` login is gated the same way: it never sees an expense
+            // page, so it is not sent the chart of accounts either.
+            'expenseCategories' => fn () => ! $request->user()?->isAdmin()
                 ? []
                 : Account::expenseCategories()->pluck('name', 'category_key'),
-            'expenseCategoryLabels' => fn () => $request->user() === null
+            'expenseCategoryLabels' => fn () => ! $request->user()?->isAdmin()
                 ? []
                 : Account::allExpenseCategories()->pluck('name', 'category_key'),
         ];

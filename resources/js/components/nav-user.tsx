@@ -32,7 +32,11 @@ export function NavUser() {
                         >
                             <UserInfo
                                 user={auth.user}
-                                subtitle="مدير المختبر"
+                                subtitle={
+                                    auth.user.role === 'admin'
+                                        ? 'مدير المختبر'
+                                        : 'إدخال اليومية'
+                                }
                             />
                             <ChevronsUpDown className="ml-auto size-4" />
                         </SidebarMenuButton>

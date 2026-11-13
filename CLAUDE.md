@@ -80,6 +80,31 @@ orders directly. When adding a new CRUD section, follow the existing pattern via
 
 - **CSS**: Tailwind utility classes, no custom CSS unless necessary
 
+### Roles, daybook and notebooks (the lab tablet)
+
+- `users.role` is `admin` (everything) or `entry` (the tablet at the bench).
+  Every existing route sits behind the `admin` middleware (`EnsureAdmin`);
+  only the `daybook.*` and `notebook.*` routes are open to an `entry` login.
+  A new section's routes go in the `admin` group. Create an entry login with
+  `php artisan app:create-user --role=entry`.
+- **Daybook** (`/daybook`, اليومية): one day's work and payments, touch-first.
+  `DaybookController` only reads. A line is saved by the **existing**
+  `OrderController` / `DentistPaymentController` actions on `daybook/...`
+  routes — no second copy of the rules — and `RedirectsToDaybook` sends the
+  user back. Each work line is its own one-item order; a line of a larger
+  order shows but is not editable there.
+- The lab's connection is slow: daybook POSTs carry an `entry_token` and
+  `SaveDaybookEntryOnce` records a token once, so a retried save cannot
+  duplicate a line. Keep that middleware on any new daybook write route.
+- **Notebook** (`/notebook/{dentist}`, دفتر الطبيب): a dentist's work and
+  payments with a running balance. Detail from the domain tables, opening
+  and closing balance from `LedgerReports::dentistStatement`; the lines are
+  dated exactly as `OrderPosting` dates them so they add up to the ledger.
+- All PDFs go through `App\Support\PdfRenderer` (signed print-view route +
+  headless Chromium).
+- Installable on Android from Chrome via `public/manifest.json`
+  (`start_url: /daybook`). No service worker, on purpose: online-only.
+
 ### MCP server (data entry by an assistant)
 
 `App\Mcp\Servers\DentalLabServer` exposes data-entry tools over stdio

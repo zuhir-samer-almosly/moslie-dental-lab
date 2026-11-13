@@ -36,6 +36,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * The lab tablet's login: daybook and dentist notebooks only.
+     */
+    public function entry(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'entry',
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

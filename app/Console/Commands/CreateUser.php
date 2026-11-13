@@ -21,7 +21,8 @@ class CreateUser extends Command
     protected $signature = 'app:create-user
         {--name= : The user\'s full name}
         {--email= : The user\'s email address}
-        {--password= : The user\'s password (min 8 characters)}';
+        {--password= : The user\'s password (min 8 characters)}
+        {--role=admin : admin (everything) or entry (daybook and notebooks only)}';
 
     protected $description = 'Create a login account (registration is disabled; use this to add yourself or staff)';
 
@@ -31,9 +32,12 @@ class CreateUser extends Command
         $email = $this->option('email') ?: text('Email', required: true);
         $password = $this->option('password') ?: promptPassword('Password (min 8 chars)', required: true);
 
+        $role = $this->option('role');
+
         $validator = Validator::make(
-            compact('name', 'email', 'password'),
+            compact('name', 'email', 'password', 'role'),
             [
+                'role' => ['required', 'in:admin,entry'],
                 'name' => ['required', 'string', 'max:255'],
                 'email' => ['required', 'email', 'max:255', 'unique:users,email'],
                 'password' => ['required', 'string', 'min:8'],
@@ -52,6 +56,7 @@ class CreateUser extends Command
             'name' => $name,
             'email' => $email,
             'password' => $password,
+            'role' => $role,
         ]);
 
         // Mark verified so the new account can log in immediately without

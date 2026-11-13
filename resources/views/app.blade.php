@@ -38,6 +38,13 @@
         <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
 
+        {{-- Lets Chrome on Android offer "Add to Home screen": the lab's tablet
+             opens the daybook full-screen from an icon, like an app. There is
+             deliberately no service worker — the app is online-only, and one
+             would only add stale-cache problems. --}}
+        <link rel="manifest" href="/manifest.json?v=1">
+        <meta name="theme-color" content="#0f766e">
+
         {{-- Self-hosted, and root-relative on purpose: it must resolve against the
              page's own origin so the PDF renderer can always load it. See the
              comment at the top of that stylesheet. --}}

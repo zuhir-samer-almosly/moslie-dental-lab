@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\ParsesDate;
+use App\Concerns\RedirectsToDaybook;
 use App\Http\Requests\StoreDentistPaymentRequest;
 use App\Http\Requests\StoreDentistPaymentsRequest;
 use App\Http\Requests\UpdateDentistPaymentRequest;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class DentistPaymentController extends Controller
 {
-    use ParsesDate;
+    use ParsesDate, RedirectsToDaybook;
 
     /**
      * Display a listing of the resource — paginated and filterable by dentist
@@ -70,7 +71,7 @@ class DentistPaymentController extends Controller
             Rate::remember($payment->payment_date, $payment->rate);
         }
 
-        return redirect()->route('payments.index')
+        return $this->redirectAfterSave('payments.index')
             ->with('success', 'تم إضافة الدفعة بنجاح');
     }
 
@@ -120,7 +121,7 @@ class DentistPaymentController extends Controller
             Rate::remember($dentistPayment->payment_date, $dentistPayment->rate);
         }
 
-        return redirect()->route('payments.index')
+        return $this->redirectAfterSave('payments.index')
             ->with('success', 'تم تحديث الدفعة بنجاح');
     }
 
@@ -131,7 +132,7 @@ class DentistPaymentController extends Controller
     {
         $dentistPayment->delete();
 
-        return redirect()->route('payments.index')
+        return $this->redirectAfterSave('payments.index')
             ->with('success', 'تم حذف الدفعة بنجاح');
     }
 }
