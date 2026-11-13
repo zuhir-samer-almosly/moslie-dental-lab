@@ -80,6 +80,17 @@ orders directly. When adding a new CRUD section, follow the existing pattern via
 
 - **CSS**: Tailwind utility classes, no custom CSS unless necessary
 
+### MCP server (data entry by an assistant)
+
+`App\Mcp\Servers\DentalLabServer` exposes data-entry tools over stdio
+(`php artisan mcp:start dental-lab`, registered in `routes/ai.php`; there is
+no HTTP route on purpose — the tools write to the books and have no auth of
+their own). Tools in `app/Mcp/Tools` extend `FormTool` and write by handing a
+payload to the **existing FormRequest and controller action** — never by
+calling models directly, so validation, currency handling and ledger posting
+stay in one place. A new tool translates arguments; it does not re-implement
+rules. Tests: `tests/Feature/Mcp`.
+
 ## Notes
 
 - **Local** dev runs in Docker via `docker-compose.local.yml` (`./docker-start-local.sh`, served at `http://dental.test`). Run artisan/migrations inside the `app` container.
