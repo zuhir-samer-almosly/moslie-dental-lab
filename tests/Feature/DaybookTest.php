@@ -232,3 +232,23 @@ test('an order of several lines cannot be replaced or deleted through the dayboo
     expect($order->fresh()->items()->count())->toBe(2)
         ->and($order->fresh()->amount)->toBe(300);
 });
+
+test('a retry that arrives while the first save is still running is not told it was saved', function () {
+    Illuminate\Support\Sleep::fake();
+    $key = 'daybook-entry:'.auth()->id().':token-1';
+    Illuminate\Support\Facades\Cache::put($key, 'saving', now()->addMinutes(2));
+
+    $payload = workLine($this->dentist, [], ['entry_token' => 'token-1']);
+
+    $this->post(route('daybook.orders.store'), $payload)->assertStatus(409);
+    expect(Order::count())->toBe(0);
+
+    // The first request failed and released the token: the retry does the work.
+    Illuminate\Support\Facades\Cache::forget($key);
+    $this->post(route('daybook.orders.store'), $payload)->assertSessionHasNoErrors();
+    expect(Order::count())->toBe(1);
+
+    // And from then on the token is answered as saved.
+    $this->post(route('daybook.orders.store'), $payload)->assertSessionHas('success');
+    expect(Order::count())->toBe(1);
+});

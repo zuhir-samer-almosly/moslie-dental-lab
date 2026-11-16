@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasForeignCurrency;
+use App\Concerns\WritesWithLedger;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,8 @@ class Expense extends Model
 {
     /** @use HasFactory<\Database\Factories\ExpenseFactory> */
     use HasFactory, HasForeignCurrency;
+
+    use WritesWithLedger;
 
     protected $fillable = [
         'category',

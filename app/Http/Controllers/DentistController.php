@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDentistRequest;
 use App\Http\Requests\UpdateDentistRequest;
 use App\Models\Dentist;
-use Illuminate\Support\Facades\DB;
 
 class DentistController extends Controller
 {
@@ -14,35 +13,9 @@ class DentistController extends Controller
      */
     public function index()
     {
-        $dentists = Dentist::latest()->get();
-
-        $this->markLedgerHistory($dentists);
-
         return inertia('dentists/index', [
-            'dentists' => $dentists,
+            'dentists' => Dentist::markLedgerHistory(Dentist::latest()->get()),
         ]);
-    }
-
-    /**
-     * Stamp `has_ledger_lines` on each dentist so the edit form can disable
-     * its currency choice honestly. One query for the whole set — a per-
-     * dentist EXISTS would make the index (and every `Dentist::all()`
-     * picker, if this were called from one) pay per row for something only
-     * the currency-editing form needs.
-     *
-     * @param  \Illuminate\Support\Collection<int, Dentist>  $dentists
-     */
-    private function markLedgerHistory($dentists): void
-    {
-        $withHistory = DB::table('journal_lines')
-            ->whereNotNull('dentist_id')
-            ->distinct()
-            ->pluck('dentist_id')
-            ->flip();
-
-        foreach ($dentists as $dentist) {
-            $dentist->has_ledger_lines = $withHistory->has($dentist->id);
-        }
     }
 
     /**

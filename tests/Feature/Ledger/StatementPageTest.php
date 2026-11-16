@@ -245,3 +245,11 @@ test('guests cannot download the statement pdf', function () {
 
     $this->get(route('ledger.statement.pdf'))->assertRedirect(route('login'));
 });
+
+test('a malformed dentist filter selects no dentist', function () {
+    $this->get('/ledger/statement?dentist_id[]=x')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('statement', null)
+            ->where('filters.dentist_id', null));
+});

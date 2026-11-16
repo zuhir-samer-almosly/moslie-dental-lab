@@ -151,7 +151,10 @@ class LedgerController extends Controller
     /** @return array{statement: array|null, dentist: Dentist|null, filters: array} */
     private function buildStatement(Request $request): array
     {
-        $dentistId = $request->integer('dentist_id') ?: null;
+        // Anything but a plain number (`dentist_id[]=x`) is no dentist at
+        // all — integer() would read an array as 1 and show a stranger.
+        $raw = $request->input('dentist_id');
+        $dentistId = is_numeric($raw) ? ((int) $raw ?: null) : null;
         $from = $this->parseDate($request->query('from'));
         $to = $this->parseDate($request->query('to'));
 

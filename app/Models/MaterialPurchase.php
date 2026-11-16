@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasForeignCurrency;
+use App\Concerns\WritesWithLedger;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,8 @@ class MaterialPurchase extends Model
 {
     /** @use HasFactory<\Database\Factories\MaterialPurchaseFactory> */
     use HasFactory, HasForeignCurrency;
+
+    use WritesWithLedger;
 
     protected $fillable = [
         'name',

@@ -40,14 +40,11 @@ class InvoiceController extends Controller
     /**
      * Render the invoice as a real A4 landscape PDF.
      *
-     * Printing from the browser cannot be made to work: CSS `@page { size:
-     * landscape }` sets the layout box, but the sheet orientation comes from
-     * the print dialog's Layout dropdown, which no stylesheet can touch. Left
-     * on Portrait — the default — the driver rotates the wide render onto a
-     * narrow sheet and the invoice comes out sideways and shrunken.
-     *
-     * Driving Chromium ourselves means passing landscape explicitly, so the
-     * output is correct no matter what any dialog says. It renders the live
+     * The page's own print button relies on the named landscape `@page` in
+     * app.css, which Chromium's print dialog honours but which is still the
+     * browser's call. Driving Chromium ourselves means passing landscape
+     * explicitly, so this file is correct whatever any dialog says, and it
+     * is the one that gets sent to the dentist. It renders the live
      * print page rather than a separate PHP template so the figures can never
      * diverge from what the user saw on screen.
      */

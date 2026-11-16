@@ -185,3 +185,18 @@ test('a deactivated category with an existing expense still labels correctly in 
             ->missing('expenseCategories.rent')
         );
 });
+
+test('a record whose ledger posting fails is not saved', function () {
+    $this->mock(App\Ledger\Ledger::class)
+        ->shouldReceive('sync')
+        ->andThrow(new RuntimeException('posting failed'));
+
+    expect(fn () => Expense::create([
+        'category' => 'transport',
+        'description' => 'رحلة',
+        'amount' => 50000,
+        'expense_date' => '2026-06-10',
+    ]))->toThrow(RuntimeException::class);
+
+    expect(Expense::count())->toBe(0);
+});
