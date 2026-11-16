@@ -93,7 +93,8 @@ class InvoiceController extends Controller
         // Anything that is not a plain id — `dentist_id[]=1`, say — means
         // "no dentist chosen" rather than reaching `find()` as an array.
         // Kept a string: the page compares it against its picker's values.
-        $dentistId = is_numeric($raw = $request->input('dentist_id')) ? (string) (int) $raw : null;
+        $dentistId = filter_var($request->input('dentist_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $dentistId = $dentistId === false ? null : (string) $dentistId;
 
         // With one dentist selected the report is single-currency — which is
         // how an invoice is actually printed. With none selected it spans
