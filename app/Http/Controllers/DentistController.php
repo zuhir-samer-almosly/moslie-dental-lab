@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreDentistRequest;
 use App\Http\Requests\UpdateDentistRequest;
 use App\Models\Dentist;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DentistController extends Controller
@@ -47,35 +46,16 @@ class DentistController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return inertia('dentists/create');
-    }
-
-    /**
      * Store a newly created resource in storage.
      */
     public function store(StoreDentistRequest $request)
     {
         Dentist::create($request->validated());
 
-        return $this->redirectAfterWrite($request, 'تم إضافة الطبيب بنجاح');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Dentist $dentist)
-    {
-        // Single dentist, single EXISTS query — no need for the batched
-        // lookup markLedgerHistory() uses for the index's whole list.
-        $dentist->has_ledger_lines = $dentist->hasLedgerLines();
-
-        return inertia('dentists/edit', [
-            'dentist' => $dentist,
-        ]);
+        // Dentists are edited from a dialog that can float over any page —
+        // most importantly a half-typed order — so a write lands the user
+        // back where they were.
+        return back()->with('success', 'تم إضافة الطبيب بنجاح');
     }
 
     /**
@@ -85,7 +65,7 @@ class DentistController extends Controller
     {
         $dentist->update($request->validated());
 
-        return $this->redirectAfterWrite($request, 'تم تحديث الطبيب بنجاح');
+        return back()->with('success', 'تم تحديث الطبيب بنجاح');
     }
 
     /**
@@ -104,23 +84,5 @@ class DentistController extends Controller
 
         return back()
             ->with('success', 'تم حذف الطبيب بنجاح');
-    }
-
-    /**
-     * Dentists are edited from a dialog that can float over any page — most
-     * importantly a half-typed order — so a write must land the user back
-     * where they were. Only the standalone create/edit pages ask to be sent
-     * to the list, via a `to_index` flag on the payload. It is a boolean form
-     * field rather than a URL, so there is no open-redirect surface, and it is
-     * absent from the request rules so `validated()` never hands it to the
-     * model.
-     */
-    private function redirectAfterWrite(Request $request, string $message)
-    {
-        $redirect = $request->boolean('to_index')
-            ? redirect()->route('dentists.index')
-            : back();
-
-        return $redirect->with('success', $message);
     }
 }

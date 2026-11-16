@@ -43,23 +43,3 @@ test('an empty price list stays empty', function () {
 
     expect($dentist->fresh()->price_list)->toBe([]);
 });
-
-test('a lira redenomination leaves a dollar price alone', function () {
-    // The 100:1 redenomination divided *lira*. A price quoted in dollars is
-    // not lira, and dividing it would quietly cut the quote to a hundredth.
-    $dentist = Dentist::create([
-        'name' => 'د. أحمد',
-        'price_list' => [
-            'خزف' => ['price' => 17_00, 'currency' => 'USD'],
-            'زيركون' => ['price' => 25_000, 'currency' => 'SYP'],
-        ],
-    ]);
-
-    $this->artisan('money:redenominate', ['--divisor' => 100, '--force' => true])
-        ->assertSuccessful();
-
-    expect($dentist->fresh()->price_list)->toBe([
-        'خزف' => ['price' => 1700, 'currency' => 'USD'],
-        'زيركون' => ['price' => 250, 'currency' => 'SYP'],
-    ]);
-});

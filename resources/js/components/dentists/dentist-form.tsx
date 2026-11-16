@@ -28,9 +28,8 @@ const toRows = (dentist?: Dentist | null): PriceRow[] =>
           }));
 
 /**
- * The one dentist form in the app. Rendered three ways: the standalone
- * create/edit pages, the dialog on the dentists list, and the manager dialog
- * that floats over the order form. It owns no chrome — no Dialog, no
+ * The one dentist form in the app. Rendered two ways: the dialog on the
+ * dentists list, and the manager dialog that floats over the order form. It owns no chrome — no Dialog, no
  * AppLayout — so each caller supplies its own.
  *
  * It has no reset-on-prop-change effect on purpose: callers remount it with a
@@ -39,12 +38,10 @@ const toRows = (dentist?: Dentist | null): PriceRow[] =>
  */
 export default function DentistForm({
     dentist = null,
-    redirectToIndex = false,
     onSaved,
     onCancel,
 }: {
     dentist?: Dentist | null;
-    redirectToIndex?: boolean;
     onSaved?: () => void;
     onCancel?: () => void;
 }) {
@@ -90,9 +87,6 @@ export default function DentistForm({
                     },
                 ]),
         ),
-        // Only the standalone pages want to land on the list afterwards; the
-        // dialogs must stay on whatever page they opened over.
-        ...(redirectToIndex ? { to_index: true } : {}),
     }));
 
     /**
