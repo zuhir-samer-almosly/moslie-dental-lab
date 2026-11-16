@@ -42,15 +42,14 @@ class OrderController extends Controller
         // Show one month at a time (consistent with the other ledgers) so the
         // list stays bounded regardless of how many orders exist overall.
         $month = $this->resolveMonth($request->query('month'));
-        $start = $month->copy()->startOfMonth();
-        $end = $month->copy()->endOfMonth();
+        [$start, $end] = $this->monthRange($month);
 
         // Scope to the items dated in this month, not to whole orders: an
         // order's due_date is only its EARLIEST item date, so matching on it
         // alone both drags an order's later-dated items into this month and
         // hides an order whose earliest item fell in an earlier one.
         $visible = $orders
-            ->map(fn (Order $o) => OrderPeriod::scope($o, $start->toDateString(), $end->toDateString()))
+            ->map(fn (Order $o) => OrderPeriod::scope($o, $start, $end))
             ->filter()
             ->values();
 
@@ -138,23 +137,7 @@ class OrderController extends Controller
      */
     public function store(StoreOrderRequest $request)
     {
-        $validated = $request->validated();
-        $items = $validated['items'];
-        unset($validated['items']);
-
-        $dentist = Dentist::findOrFail($validated['dentist_id']);
-        $items = $this->withCanonicalTypes($this->withResolvedPrices($items, $dentist), $dentist);
-
-        // Both totals are derived from the items, so neither can drift from
-        // them. For a dollar dentist the lira total is legitimately zero and
-        // the cents total is what he owes; for a lira dentist, the reverse.
-        $validated['currency'] = $dentist->billingCurrency()->value;
-        $validated['amount'] = collect($items)->sum(fn ($item) => $item['quantity'] * $item['price']);
-        $validated['original_amount'] = $dentist->isDollar()
-            ? collect($items)->sum(fn ($item) => $item['quantity'] * (int) $item['original_amount'])
-            : null;
-        // The order's due date is derived from the earliest item date.
-        $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
+        [$validated, $items, $dentist] = $this->prepare($request->validated());
 
         DB::transaction(fn () => $this->ledger->defer(function () use ($validated, $items, $dentist) {
             $order = Order::create($validated);
@@ -190,7 +173,34 @@ class OrderController extends Controller
      */
     public function update(UpdateOrderRequest $request, Order $order)
     {
-        $validated = $request->validated();
+        [$validated, $items, $dentist] = $this->prepare($request->validated());
+
+        DB::transaction(fn () => $this->ledger->defer(function () use ($order, $validated, $items, $dentist) {
+            $order->update($validated);
+            $order->setRelation('dentist', $dentist);
+
+            // Delete old items and create new ones
+            $order->items()->delete();
+            foreach ($items as $item) {
+                $order->items()->save($this->itemFor($order, $item));
+            }
+        }));
+
+        return $this->redirectAfterSave('orders.index')
+            ->with('success', 'تم تحديث الطلب بنجاح');
+    }
+
+    /**
+     * Turn a validated order payload into what gets written: the order's own
+     * attributes, its items with their stored values resolved, and the
+     * dentist it is for. Shared by storing and updating, which differ only
+     * in what they do with the result.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array{0: array<string, mixed>, 1: list<array<string, mixed>>, 2: Dentist}
+     */
+    private function prepare(array $validated): array
+    {
         $items = $validated['items'];
         unset($validated['items']);
 
@@ -208,19 +218,7 @@ class OrderController extends Controller
         // The order's due date is derived from the earliest item date.
         $validated['due_date'] = collect($items)->pluck('date')->filter()->min() ?? now()->toDateString();
 
-        DB::transaction(fn () => $this->ledger->defer(function () use ($order, $validated, $items, $dentist) {
-            $order->update($validated);
-            $order->setRelation('dentist', $dentist);
-
-            // Delete old items and create new ones
-            $order->items()->delete();
-            foreach ($items as $item) {
-                $order->items()->save($this->itemFor($order, $item));
-            }
-        }));
-
-        return $this->redirectAfterSave('orders.index')
-            ->with('success', 'تم تحديث الطلب بنجاح');
+        return [$validated, $items, $dentist];
     }
 
     /**

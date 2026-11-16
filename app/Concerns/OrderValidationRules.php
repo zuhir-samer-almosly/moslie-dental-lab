@@ -4,6 +4,8 @@ namespace App\Concerns;
 
 trait OrderValidationRules
 {
+    use ResolvesDentistCurrency;
+
     /**
      * Validation rules shared by storing and updating an order.
      *
@@ -57,25 +59,5 @@ trait OrderValidationRules
             'items.*.selected_teeth' => ['nullable', 'array'],
             'items.*.selected_teeth.*' => ['integer', 'in:'.$teeth],
         ];
-    }
-
-    /**
-     * Whether the dentist this order is for is billed in dollars. Read from
-     * the request rather than the route, because both storing and updating
-     * submit `dentist_id`.
-     *
-     * Guarded with `is_numeric` as the payment requests are: this runs before
-     * validation, and an array id (`dentist_id[]=1`) makes `find()` return a
-     * Collection, which would throw here instead of failing `exists`.
-     */
-    protected function dentistIsDollar(): bool
-    {
-        $dentistId = $this->input('dentist_id');
-
-        if (! is_numeric($dentistId)) {
-            return false;
-        }
-
-        return (bool) \App\Models\Dentist::find($dentistId)?->isDollar();
     }
 }

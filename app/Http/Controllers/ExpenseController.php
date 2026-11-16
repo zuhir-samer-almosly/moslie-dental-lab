@@ -19,9 +19,7 @@ class ExpenseController extends Controller
     public function index(Request $request)
     {
         $month = $this->resolveMonth($request->query('month'));
-
-        $start = $month->copy()->startOfMonth()->toDateString();
-        $end = $month->copy()->endOfMonth()->toDateString();
+        [$start, $end] = $this->monthRange($month);
 
         $expenses = Expense::query()
             ->whereBetween('expense_date', [$start, $end])
@@ -53,9 +51,7 @@ class ExpenseController extends Controller
     {
         $expense = Expense::create($request->payload());
 
-        if ($expense->isForeign()) {
-            Rate::remember($expense->expense_date, $expense->rate);
-        }
+        Rate::remember($expense->expense_date, $expense->rate);
 
         return redirect()->route('expenses.index')
             ->with('success', 'تم تسجيل المصروف بنجاح');
@@ -79,9 +75,7 @@ class ExpenseController extends Controller
     {
         $expense->update($request->payload());
 
-        if ($expense->isForeign()) {
-            Rate::remember($expense->expense_date, $expense->rate);
-        }
+        Rate::remember($expense->expense_date, $expense->rate);
 
         return redirect()->route('expenses.index')
             ->with('success', 'تم تحديث المصروف بنجاح');
