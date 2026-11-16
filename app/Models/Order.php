@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Concerns\WritesWithLedger;
 use App\Money\Currency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -15,6 +16,8 @@ class Order extends Model
 {
     /** @use HasFactory<\Database\Factories\OrderFactory> */
     use HasFactory;
+
+    use WritesWithLedger;
 
     /**
      * Mirrors the migration's own `default('SYP')`, so a brand-new in-memory

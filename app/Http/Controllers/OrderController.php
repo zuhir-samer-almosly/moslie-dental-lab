@@ -33,16 +33,30 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $orders = Order::with(['dentist', 'items'])->latest()->get();
-
-        // Compute carried balances against the FULL history first, so filtering
-        // the visible list to one month below doesn't distort them.
-        $this->assignPreviousBalances($orders);
-
         // Show one month at a time (consistent with the other ledgers) so the
         // list stays bounded regardless of how many orders exist overall.
         $month = $this->resolveMonth($request->query('month'));
         [$start, $end] = $this->monthRange($month);
+
+        // Only the orders that can have a line in this month are loaded — the
+        // same two ways OrderPeriod::scope() below can match one: an item
+        // dated inside the month, or (for an undated item, or an order with
+        // no items) a due date inside it. Loading every order ever written
+        // to filter here made each visit slower as the books grew.
+        $orders = Order::with(['dentist', 'items'])
+            ->where(fn ($query) => $query
+                ->where(fn ($due) => $due
+                    ->whereDate('due_date', '>=', $start)
+                    ->whereDate('due_date', '<=', $end))
+                ->orWhereHas('items', fn ($items) => $items
+                    ->where('meta->date', '>=', $start)
+                    ->where('meta->date', '<=', $end)))
+            ->latest()
+            ->get();
+
+        // Each order's carried balance is read from the ledger by its own
+        // date, so it does not depend on which other orders were loaded.
+        $this->assignPreviousBalances($orders);
 
         // Scope to the items dated in this month, not to whole orders: an
         // order's due_date is only its EARLIEST item date, so matching on it
@@ -123,7 +137,8 @@ class OrderController extends Controller
      */
     public function create()
     {
-        $dentists = \App\Models\Dentist::all();
+        // Marked, because the form's dentist manager can edit a currency.
+        $dentists = Dentist::markLedgerHistory(Dentist::all());
 
         return inertia('orders/create', [
             'dentists' => $dentists,
@@ -158,7 +173,8 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $order->load('items');
-        $dentists = \App\Models\Dentist::all();
+        // Marked, because the form's dentist manager can edit a currency.
+        $dentists = Dentist::markLedgerHistory(Dentist::all());
 
         return inertia('orders/edit', [
             'order' => $order,

@@ -298,3 +298,14 @@ test('the payments list is ordered by payment date, not by entry time', function
             ->where('payments.data.1.payment_date', '2026-09-05')
         );
 });
+
+test('a payment date must be a plain Y-m-d date', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id, 'amount' => 1000, 'payment_date' => '15 June 2026',
+    ])->assertSessionHasErrors('payment_date');
+
+    expect(DentistPayment::count())->toBe(0);
+});

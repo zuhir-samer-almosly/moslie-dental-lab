@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Settings;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -43,9 +45,27 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
-        Auth::logout();
+        // Accounts are only ever created from the server (app:create-user),
+        // so deleting the last admin would lock everyone out of the app.
+        $user->getConnection()->transaction(function () use ($user) {
+            $admins = User::where('role', 'admin')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
 
-        $user->delete();
+            if ($admins->where('id', '!=', $user->getKey())->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'password' => 'لا يمكن حذف آخر حساب مدير. أنشئ حساب مدير آخر أولاً.',
+                ]);
+            }
+
+            // Log out BEFORE deleting: logout() cycles the remember token
+            // and saves the user, and saving a deleted model inserts it
+            // again — the account would come straight back.
+            Auth::logout();
+
+            $user->delete();
+        });
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -156,7 +156,10 @@ export default function OrderForm({
             const dentist = dentists.find((d) => d.id.toString() === value);
             const isDollar = dentist?.currency === 'USD';
             const updatedItems = prev.items.map((item) => {
-                const entry = dentist?.price_list?.[item.type];
+                // Looked up the way a typed line is: a spelling variant of
+                // the name still finds the new dentist's price.
+                const key = lookupPriceListKey(dentist, item.type);
+                const entry = key ? dentist?.price_list?.[key] : undefined;
                 if (!entry) {
                     // No price to fill in. Between two dentists of the same
                     // currency the typed price still means what it said; across

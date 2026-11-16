@@ -8,9 +8,9 @@ export interface Dentist {
     currency?: 'SYP' | 'USD';
     /**
      * Whether anything has posted to this dentist's ledger account yet.
-     * Populated only where the currency-editing form needs it (the dentists
-     * index and edit pages) — absent elsewhere, including the plain
-     * `Dentist::all()` pickers on the order and payment pages.
+     * Populated only where the dentist form can open (the dentists index and
+     * the order form, through its manager dialog) — absent elsewhere,
+     * including the plain `Dentist::all()` picker on the payment pages.
      */
     has_ledger_lines?: boolean;
     gender: 'male' | 'female';

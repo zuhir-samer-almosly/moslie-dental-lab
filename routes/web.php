@@ -24,10 +24,12 @@ Route::middleware(['auth'])->group(function () {
     // `daybook.once` makes a save safe to retry on the lab's slow connection.
     Route::post('daybook/orders', [App\Http\Controllers\OrderController::class, 'store'])
         ->middleware('daybook.once')->name('daybook.orders.store');
+    // `daybook.line`: only an order that is a single line may be changed
+    // from here — saving a line replaces its order's items.
     Route::put('daybook/orders/{order}', [App\Http\Controllers\OrderController::class, 'update'])
-        ->name('daybook.orders.update');
+        ->middleware('daybook.line')->name('daybook.orders.update');
     Route::delete('daybook/orders/{order}', [App\Http\Controllers\OrderController::class, 'destroy'])
-        ->name('daybook.orders.destroy');
+        ->middleware('daybook.line')->name('daybook.orders.destroy');
     Route::post('daybook/payments', [App\Http\Controllers\DentistPaymentController::class, 'store'])
         ->middleware('daybook.once')->name('daybook.payments.store');
     Route::put('daybook/payments/{dentistPayment}', [App\Http\Controllers\DentistPaymentController::class, 'update'])

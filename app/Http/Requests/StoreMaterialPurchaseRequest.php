@@ -28,7 +28,7 @@ class StoreMaterialPurchaseRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'supplier' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'string', 'max:255'],
-            'purchase_date' => ['required', 'date'],
+            'purchase_date' => ['required', 'date_format:Y-m-d'],
             'notes' => ['nullable', 'string'],
             ...$this->moneyRules(),
         ];

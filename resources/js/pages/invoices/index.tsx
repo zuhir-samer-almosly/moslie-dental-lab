@@ -79,10 +79,10 @@ export default function InvoicesIndex(props: InvoiceData) {
     };
 
     /**
-     * The browser's own print dialog decides the paper orientation, and CSS
-     * can't set it — printing straight from the page comes out sideways on a
-     * portrait sheet. This asks the server to render the same report through
-     * headless Chromium with landscape forced, so the file is always right.
+     * The print button leaves the paper orientation to the browser (the
+     * landscape `@page` in app.css asks for it). This asks the server to
+     * render the same report through headless Chromium with landscape
+     * forced, so the file is right whatever a print dialog would have done.
      *
      * Fetched as a blob rather than navigated to, so the button can show real
      * progress (the render takes a few seconds) and surface failures instead

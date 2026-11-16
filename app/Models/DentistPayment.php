@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Concerns\HasForeignCurrency;
+use App\Concerns\WritesWithLedger;
 use App\Money\Currency;
 use App\Observers\LedgerObserver;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -14,6 +15,8 @@ class DentistPayment extends Model
 {
     /** @use HasFactory<\Database\Factories\DentistPaymentFactory> */
     use HasFactory, HasForeignCurrency;
+
+    use WritesWithLedger;
 
     protected $fillable = [
         'dentist_id',

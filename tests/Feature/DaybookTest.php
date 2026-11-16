@@ -208,3 +208,47 @@ test('the daybook print view needs a valid signature', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('daybook/print')->has('lines', 1));
 });
+
+test('editing a line from the daybook keeps the note its order was given', function () {
+    $this->post(route('daybook.orders.store'), workLine($this->dentist, [], ['notes' => 'يُسلَّم يوم الخميس']));
+    $order = Order::sole();
+
+    // What the daybook form sends: no order-level `notes` at all.
+    $this->put(route('daybook.orders.update', $order), workLine($this->dentist, ['price' => 60000]))
+        ->assertSessionHasNoErrors();
+
+    expect($order->fresh()->notes)->toBe('يُسلَّم يوم الخميس')
+        ->and($order->fresh()->amount)->toBe(120000);
+});
+
+test('an order of several lines cannot be replaced or deleted through the daybook', function () {
+    $order = Order::create(['dentist_id' => $this->dentist->id, 'due_date' => '2026-06-15', 'amount' => 300, 'status' => 'pending']);
+    $order->items()->create(['type' => 'زيركون', 'quantity' => 1, 'price' => 100, 'meta' => ['date' => '2026-06-15']]);
+    $order->items()->create(['type' => 'خزف', 'quantity' => 1, 'price' => 200, 'meta' => ['date' => '2026-06-15']]);
+
+    $this->put(route('daybook.orders.update', $order), workLine($this->dentist))->assertForbidden();
+    $this->delete(route('daybook.orders.destroy', $order))->assertForbidden();
+
+    expect($order->fresh()->items()->count())->toBe(2)
+        ->and($order->fresh()->amount)->toBe(300);
+});
+
+test('a retry that arrives while the first save is still running is not told it was saved', function () {
+    Illuminate\Support\Sleep::fake();
+    $key = 'daybook-entry:'.auth()->id().':token-1';
+    Illuminate\Support\Facades\Cache::put($key, 'saving', now()->addMinutes(2));
+
+    $payload = workLine($this->dentist, [], ['entry_token' => 'token-1']);
+
+    $this->post(route('daybook.orders.store'), $payload)->assertStatus(409);
+    expect(Order::count())->toBe(0);
+
+    // The first request failed and released the token: the retry does the work.
+    Illuminate\Support\Facades\Cache::forget($key);
+    $this->post(route('daybook.orders.store'), $payload)->assertSessionHasNoErrors();
+    expect(Order::count())->toBe(1);
+
+    // And from then on the token is answered as saved.
+    $this->post(route('daybook.orders.store'), $payload)->assertSessionHas('success');
+    expect(Order::count())->toBe(1);
+});

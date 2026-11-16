@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\ParsesDate;
+use App\Ledger\AccountCode;
 use App\Ledger\LedgerReports;
 use App\Models\DentistPayment;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
 use App\Models\MaterialPurchase;
 use App\Models\Order;
+use App\Money\Currency;
 use App\Support\OrderPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -90,6 +92,21 @@ class ReportController extends Controller
                     ? $order->amount
                     : $order->items->sum(fn ($item) => $item->price * $item->quantity)),
                 'orders_count' => $orders->count(),
+                // The dollar side, in cents: dollar-billed dentists hold 0 in
+                // every lira column, so without these the report counted
+                // their orders and showed their money as nothing. Kept apart
+                // from the lira figures, never added to them.
+                'income_usd' => $reports->movementBetween(
+                    AccountCode::CASH_USD->value, AccountCode::RECEIVABLE_USD->value, $from, $to,
+                ),
+                'earned_usd' => $reports->movementBetween(
+                    AccountCode::RECEIVABLE_USD->value, AccountCode::REVENUE_USD->value, $from, $to,
+                ),
+                'orders_value_usd' => (int) $orders
+                    ->filter(fn (Order $order) => $order->billingCurrency() === Currency::USD)
+                    ->sum(fn (Order $order) => $order->items->isEmpty()
+                        ? $order->original_amount
+                        : $order->items->sum(fn ($item) => $item->original_amount * $item->quantity)),
                 'salaries' => $split['salaries'],
                 'materials' => $split['materials'],
                 'general_expenses' => $split['other'],

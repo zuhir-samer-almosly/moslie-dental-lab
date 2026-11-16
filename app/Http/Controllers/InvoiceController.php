@@ -40,14 +40,11 @@ class InvoiceController extends Controller
     /**
      * Render the invoice as a real A4 landscape PDF.
      *
-     * Printing from the browser cannot be made to work: CSS `@page { size:
-     * landscape }` sets the layout box, but the sheet orientation comes from
-     * the print dialog's Layout dropdown, which no stylesheet can touch. Left
-     * on Portrait — the default — the driver rotates the wide render onto a
-     * narrow sheet and the invoice comes out sideways and shrunken.
-     *
-     * Driving Chromium ourselves means passing landscape explicitly, so the
-     * output is correct no matter what any dialog says. It renders the live
+     * The page's own print button relies on the named landscape `@page` in
+     * app.css, which Chromium's print dialog honours but which is still the
+     * browser's call. Driving Chromium ourselves means passing landscape
+     * explicitly, so this file is correct whatever any dialog says, and it
+     * is the one that gets sent to the dentist. It renders the live
      * print page rather than a separate PHP template so the figures can never
      * diverge from what the user saw on screen.
      */
@@ -93,7 +90,11 @@ class InvoiceController extends Controller
 
         $from = $start?->toDateString();
         $to = $end?->toDateString();
-        $dentistId = $request->input('dentist_id');
+        // Anything that is not a plain id — `dentist_id[]=1`, say — means
+        // "no dentist chosen" rather than reaching `find()` as an array.
+        // Kept a string: the page compares it against its picker's values.
+        $dentistId = filter_var($request->input('dentist_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $dentistId = $dentistId === false ? null : (string) $dentistId;
 
         // With one dentist selected the report is single-currency — which is
         // how an invoice is actually printed. With none selected it spans

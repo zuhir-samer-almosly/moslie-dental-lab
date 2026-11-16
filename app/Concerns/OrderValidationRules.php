@@ -54,7 +54,11 @@ trait OrderValidationRules
                 ? ['prohibited']
                 : ['exclude_unless:items.*.currency,USD', 'required', 'numeric', 'min:0.000001'],
             'items.*.notes' => ['nullable', 'string'],
-            'items.*.date' => ['required', 'date'],
+            // A bare `Y-m-d`, not the loose `date` rule: this value is stored
+            // as typed and compared as a string everywhere a period is
+            // filtered (OrderPeriod), so "15 June 2026" would be booked by
+            // the ledger and then missing from every list.
+            'items.*.date' => ['required', 'date_format:Y-m-d'],
             'items.*.patient_name' => ['nullable', 'string', 'max:255'],
             'items.*.selected_teeth' => ['nullable', 'array'],
             'items.*.selected_teeth.*' => ['integer', 'in:'.$teeth],

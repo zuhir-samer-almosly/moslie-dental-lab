@@ -52,6 +52,8 @@ test('email verification status is unchanged when the email address is unchanged
 
 test('user can delete their account', function () {
     $user = User::factory()->create();
+    // Another admin remains, so the app is not left without one.
+    User::factory()->create();
 
     $response = $this
         ->actingAs($user)
@@ -81,5 +83,19 @@ test('correct password must be provided to delete account', function () {
         ->assertSessionHasErrors('password')
         ->assertRedirect(route('profile.edit'));
 
+    expect($user->fresh())->not->toBeNull();
+});
+
+test('the last admin cannot delete their account', function () {
+    $user = User::factory()->create();
+    User::factory()->entry()->create();
+
+    $this->actingAs($user)
+        ->from(route('profile.edit'))
+        ->delete(route('profile.destroy'), ['password' => 'password'])
+        ->assertSessionHasErrors('password')
+        ->assertRedirect(route('profile.edit'));
+
+    $this->assertAuthenticated();
     expect($user->fresh())->not->toBeNull();
 });

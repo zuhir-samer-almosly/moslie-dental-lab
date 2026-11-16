@@ -72,14 +72,6 @@ Several read-only controllers aggregate the models above into reports; no models
 ones do not), but money totals come from `LedgerReports`, not from summing
 orders directly. When adding a new CRUD section, follow the existing pattern via the **`add-section` skill** (Arabic/RTL list + create/edit + optional finance roll-up).
 
-### Testing Strategy
-
-- Run tests via the `run-checks` skill (host execution with storage/cache env redirects), not bare `php artisan test`
-
-## Key Conventions
-
-- **CSS**: Tailwind utility classes, no custom CSS unless necessary
-
 ### Roles, daybook and notebooks (the lab tablet)
 
 - `users.role` is `admin` (everything) or `entry` (the tablet at the bench).
@@ -118,7 +110,5 @@ rules. Tests: `tests/Feature/Mcp`.
 
 ## Notes
 
-- **Local** dev runs in Docker via `docker-compose.local.yml` (`./docker-start-local.sh`, served at `http://dental.test`). Run artisan/migrations inside the `app` container.
 - **Production** runs on a Contabo VPS via Docker (`docker-compose.yml`) at `dental-lab.zoher-moslie.me`, in `/var/www/moslie-dental-lab` as the `deploy` user; a code change requires an image **rebuild** (composer install and `npm run build` happen at build time), never just a restart. Use the **`deploy` skill**; full reference in `DEPLOYMENT.md`.
-- Single-tenant by design: one shared dataset, no per-user data scoping, public registration disabled.
 - Nightly off-site DB backups go to Google Drive (spatie/laravel-backup); see `BACKUPS.md` and the `backups` skill.

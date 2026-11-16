@@ -278,3 +278,54 @@ test('a dollar dentist\'s previous balance is read from the dollar receivable, i
             expect($orders->firstWhere('items.0.type', 'أول')['previous_balance'])->toBe(0);
         });
 });
+
+test('an item date must be a plain Y-m-d date', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+
+    // The loose `date` rule took this, stored it as typed, and the order then
+    // vanished from every list while the ledger still counted it.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'price' => 1000, 'date' => '15 June 2026', 'selected_teeth' => []]],
+    ])->assertSessionHasErrors('items.0.date');
+
+    expect(Order::count())->toBe(0);
+});
+
+test('the orders index loads the month\'s orders up to its last day and no others', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. آخر الشهر']);
+
+    $store = fn (array $dates) => $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => array_map(fn ($date) => [
+            'type' => 'زيركون', 'quantity' => 1, 'price' => 100, 'date' => $date, 'selected_teeth' => [],
+        ], $dates),
+    ])->assertSessionHasNoErrors();
+
+    $store(['2026-07-31']);
+    $store(['2026-06-20', '2026-07-01']);
+    $store(['2026-06-30']);
+    $store(['2026-08-01']);
+
+    $this->get(route('orders.index', ['month' => '2026-07']))
+        ->assertInertia(fn ($page) => $page
+            ->has('orders', 2)
+            ->where('orders', fn ($orders) => collect($orders)
+                ->flatMap(fn ($order) => collect($order['items'])->pluck('meta.date'))
+                ->sort()->values()->all() === ['2026-07-01', '2026-07-31']));
+});
+
+test('the order form knows which dentists already have ledger history', function () {
+    $this->actingAs(User::factory()->create());
+    $billed = Dentist::create(['name' => 'د. له حساب']);
+    $fresh = Dentist::create(['name' => 'د. جديد']);
+    Order::create(['dentist_id' => $billed->id, 'due_date' => '2026-06-10', 'amount' => 1000, 'status' => 'pending']);
+
+    $this->get(route('orders.create'))
+        ->assertInertia(fn ($page) => $page->where('dentists', fn ($dentists) => collect($dentists)
+            ->pluck('has_ledger_lines', 'id')->all() === [$billed->id => true, $fresh->id => false]));
+});

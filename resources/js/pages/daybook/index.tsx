@@ -101,6 +101,15 @@ export default function Daybook({
                 router.reload();
                 setNotice('انتهت الجلسة وتم تجديدها — اضغط «حفظ» مرة أخرى.');
             }
+            // The first attempt at this save is still running on the server
+            // (SaveDaybookEntryOnce). The form keeps what was typed; sending
+            // it again a moment later gets the real outcome.
+            if (event.detail.response.status === 409) {
+                event.preventDefault();
+                setNotice(
+                    'ما زال الحفظ السابق جارياً — انتظر لحظة ثم اضغط «حفظ» مرة أخرى.',
+                );
+            }
         });
         // A request that never got an answer is reported by the form itself
         // (useDaybookSave); this only stops it surfacing as an uncaught error.

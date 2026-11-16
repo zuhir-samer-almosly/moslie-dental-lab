@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
             'daybook.once' => \App\Http\Middleware\SaveDaybookEntryOnce::class,
+            'daybook.line' => \App\Http\Middleware\EnsureDaybookLine::class,
         ]);
 
         $middleware->web(prepend: [

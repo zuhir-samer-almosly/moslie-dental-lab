@@ -37,6 +37,33 @@ class Dentist extends Model
     ];
 
     /**
+     * Stamp `has_ledger_lines` on each dentist so the edit form can disable
+     * its currency choice honestly. One query for the whole set — a per-
+     * dentist EXISTS would make every list pay per row. Called wherever the
+     * dentist form can open: the dentists index and the order form's
+     * manager dialog.
+     *
+     * @template T of \Illuminate\Support\Collection<int, self>
+     *
+     * @param  T  $dentists
+     * @return T
+     */
+    public static function markLedgerHistory($dentists)
+    {
+        $withHistory = DB::table('journal_lines')
+            ->whereNotNull('dentist_id')
+            ->distinct()
+            ->pluck('dentist_id')
+            ->flip();
+
+        foreach ($dentists as $dentist) {
+            $dentist->has_ledger_lines = $withHistory->has($dentist->id);
+        }
+
+        return $dentists;
+    }
+
+    /**
      * A dentist's own prices, as `name => ['price' => int, 'currency' => str]`.
      *
      * The unit of `price` follows its currency, the same way payments work:

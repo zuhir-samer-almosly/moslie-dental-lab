@@ -272,3 +272,23 @@ test('the lookups return what entry needs', function () {
     DentalLabServer::tool(ListRecords::class, ['type' => 'orders', 'from' => '2026-07-01'])
         ->assertOk()->assertDontSee('زيركون');
 });
+
+test('a note left out is kept, and an empty string clears it', function () {
+    $category = Account::expenseCategories()->first()->category_key;
+
+    DentalLabServer::tool(SaveExpense::class, [
+        'category' => $category, 'amount' => 2000, 'expense_date' => '2026-06-05', 'notes' => 'دُفع نقداً',
+    ])->assertOk();
+    $expense = Expense::sole();
+
+    DentalLabServer::tool(SaveExpense::class, [
+        'id' => $expense->id, 'category' => $category, 'amount' => 2500, 'expense_date' => '2026-06-05',
+    ])->assertOk();
+    expect($expense->fresh()->notes)->toBe('دُفع نقداً')
+        ->and($expense->fresh()->amount)->toBe(2500);
+
+    DentalLabServer::tool(SaveExpense::class, [
+        'id' => $expense->id, 'category' => $category, 'amount' => 2500, 'expense_date' => '2026-06-05', 'notes' => '',
+    ])->assertOk();
+    expect($expense->fresh()->notes)->toBeNull();
+});
