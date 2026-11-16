@@ -417,8 +417,24 @@ export default function Dashboard({
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <span className="shrink-0 text-[15px] font-bold tabular-nums">
-                                                    {nf(order.amount)}
+                                                <span
+                                                    dir={
+                                                        order.currency === 'USD'
+                                                            ? 'ltr'
+                                                            : undefined
+                                                    }
+                                                    className="shrink-0 text-[15px] font-bold tabular-nums"
+                                                >
+                                                    {/* A dollar dentist's lira
+                                                    total is 0 by design; his
+                                                    money is the cents. */}
+                                                    {order.currency === 'USD'
+                                                        ? formatMoney(
+                                                              order.original_amount ??
+                                                                  0,
+                                                              'USD',
+                                                          )
+                                                        : nf(order.amount)}
                                                 </span>
                                             </Link>
                                         </li>
@@ -476,8 +492,24 @@ export default function Dashboard({
                                                     </span>
                                                 </div>
                                             </div>
-                                            <span className="shrink-0 text-[15px] font-bold text-[#047857] tabular-nums">
-                                                +{nf(payment.amount)}
+                                            <span
+                                                dir={
+                                                    payment.dentist
+                                                        ?.currency === 'USD'
+                                                        ? 'ltr'
+                                                        : undefined
+                                                }
+                                                className="shrink-0 text-[15px] font-bold text-[#047857] tabular-nums"
+                                            >
+                                                +
+                                                {payment.dentist?.currency ===
+                                                'USD'
+                                                    ? formatMoney(
+                                                          payment.original_amount ??
+                                                              0,
+                                                          'USD',
+                                                      )
+                                                    : nf(payment.amount)}
                                             </span>
                                         </li>
                                     ))}

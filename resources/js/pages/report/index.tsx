@@ -11,7 +11,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { formatDate, itemAmount } from '@/components/order-display';
+import { formatDate } from '@/components/order-display';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DateInput } from '@/components/ui/date-input';
@@ -24,6 +24,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoney } from '@/lib/money';
 import { cn } from '@/lib/utils';
 import type {
     BreadcrumbItem,
@@ -49,6 +50,10 @@ type Totals = {
     earned: number;
     orders_value: number;
     orders_count: number;
+    /** The dollar side — dollar-billed dentists — in cents. Never added to the lira. */
+    income_usd: number;
+    earned_usd: number;
+    orders_value_usd: number;
     salaries: number;
     materials: number;
     general_expenses: number;
@@ -65,6 +70,41 @@ type ReportProps = {
 };
 
 const nf = (value: number) => value.toLocaleString('en-US');
+
+/**
+ * What an order's visible items are worth, in the order's own currency. A
+ * dollar dentist's lira columns are 0 by design — his money is the cents in
+ * `original_amount` — so the lira column alone would print every one of his
+ * orders as nothing.
+ */
+const orderValue = (order: Order): number => {
+    const dollars = order.currency === 'USD';
+    const items = order.items ?? [];
+
+    if (items.length === 0) {
+        return dollars ? (order.original_amount ?? 0) : order.amount;
+    }
+
+    return items.reduce(
+        (sum, item) =>
+            sum +
+            (dollars ? (item.original_amount ?? 0) : (item.price ?? 0)) *
+                (item.quantity ?? 0),
+        0,
+    );
+};
+
+/**
+ * A payment in its dentist's own currency. Keyed off the DENTIST, not the
+ * payment's `currency`: a lira dentist can hand over dollars, and that
+ * payment is booked — and totalled above — as the lira it became.
+ */
+const paymentValue = (
+    payment: DentistPayment,
+): { amount: number; currency: 'SYP' | 'USD' } =>
+    payment.dentist?.currency === 'USD'
+        ? { amount: payment.original_amount ?? 0, currency: 'USD' }
+        : { amount: payment.amount, currency: 'SYP' };
 
 const isoDate = (d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -189,6 +229,7 @@ export default function ReportIndex({
                     <StatCard
                         title="الدخل"
                         value={nf(totals.income)}
+                        usd={totals.income_usd}
                         hint="مدفوعات الأطباء"
                         icon={TrendingUp}
                         tone="emerald"
@@ -196,6 +237,7 @@ export default function ReportIndex({
                     <StatCard
                         title="الأعمال المنجزة"
                         value={nf(totals.earned)}
+                        usd={totals.earned_usd}
                         hint="قيمة الطلبات المستحقة في هذه الفترة"
                         icon={ClipboardCheck}
                         tone="emerald"
@@ -217,6 +259,7 @@ export default function ReportIndex({
                     <StatCard
                         title="الطلبات"
                         value={nf(totals.orders_count)}
+                        usd={totals.orders_value_usd}
                         hint={`بقيمة ${nf(totals.orders_value)}`}
                         icon={ClipboardList}
                         tone="blue"
@@ -271,16 +314,17 @@ export default function ReportIndex({
                                             {ORDER_STATUSES[order.status]}
                                         </span>
                                     </TableCell>
-                                    <TableCell className="text-end font-semibold tabular-nums">
-                                        {nf(
-                                            order.items &&
-                                                order.items.length > 0
-                                                ? order.items.reduce(
-                                                      (s, i) =>
-                                                          s + itemAmount(i),
-                                                      0,
-                                                  )
-                                                : order.amount,
+                                    <TableCell
+                                        className="text-end font-semibold tabular-nums"
+                                        dir={
+                                            order.currency === 'USD'
+                                                ? 'ltr'
+                                                : undefined
+                                        }
+                                    >
+                                        {formatMoney(
+                                            orderValue(order),
+                                            order.currency ?? 'SYP',
                                         )}
                                     </TableCell>
                                 </TableRow>
@@ -302,7 +346,7 @@ export default function ReportIndex({
                             key: p.id,
                             date: p.payment_date,
                             label: p.dentist?.name ?? '—',
-                            amount: p.amount,
+                            ...paymentValue(p),
                         }))}
                         tone="emerald"
                     />
@@ -390,12 +434,15 @@ const amountColor: Record<'emerald' | 'rose', string> = {
 function StatCard({
     title,
     value,
+    usd = 0,
     hint,
     icon: Icon,
     tone,
 }: {
     title: string;
     value: string | number;
+    /** The same figure for dollar-billed dentists, in cents. Hidden at zero. */
+    usd?: number;
     hint: string;
     icon: LucideIcon;
     tone: Tone;
@@ -410,6 +457,14 @@ function StatCard({
                     <p className="text-3xl font-bold tracking-tight tabular-nums">
                         {value}
                     </p>
+                    {usd !== 0 && (
+                        <p
+                            dir="ltr"
+                            className="text-end text-sm font-semibold tabular-nums"
+                        >
+                            {formatMoney(usd, 'USD')}
+                        </p>
+                    )}
                     <p className="text-xs text-muted-foreground">{hint}</p>
                 </div>
                 <div
@@ -475,6 +530,8 @@ type SimpleRow = {
     label: string;
     note?: string | null;
     amount: number;
+    /** Defaults to lira; only a dollar dentist's payment is anything else. */
+    currency?: 'SYP' | 'USD';
 };
 
 function SimpleRows({
@@ -503,8 +560,9 @@ function SimpleRows({
                                 'text-end font-semibold tabular-nums',
                                 amountColor[tone],
                             )}
+                            dir={row.currency === 'USD' ? 'ltr' : undefined}
                         >
-                            {nf(row.amount)}
+                            {formatMoney(row.amount, row.currency)}
                         </TableCell>
                     </TableRow>
                 ))}

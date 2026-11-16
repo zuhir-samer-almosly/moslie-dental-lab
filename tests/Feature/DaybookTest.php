@@ -208,3 +208,27 @@ test('the daybook print view needs a valid signature', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('daybook/print')->has('lines', 1));
 });
+
+test('editing a line from the daybook keeps the note its order was given', function () {
+    $this->post(route('daybook.orders.store'), workLine($this->dentist, [], ['notes' => 'يُسلَّم يوم الخميس']));
+    $order = Order::sole();
+
+    // What the daybook form sends: no order-level `notes` at all.
+    $this->put(route('daybook.orders.update', $order), workLine($this->dentist, ['price' => 60000]))
+        ->assertSessionHasNoErrors();
+
+    expect($order->fresh()->notes)->toBe('يُسلَّم يوم الخميس')
+        ->and($order->fresh()->amount)->toBe(120000);
+});
+
+test('an order of several lines cannot be replaced or deleted through the daybook', function () {
+    $order = Order::create(['dentist_id' => $this->dentist->id, 'due_date' => '2026-06-15', 'amount' => 300, 'status' => 'pending']);
+    $order->items()->create(['type' => 'زيركون', 'quantity' => 1, 'price' => 100, 'meta' => ['date' => '2026-06-15']]);
+    $order->items()->create(['type' => 'خزف', 'quantity' => 1, 'price' => 200, 'meta' => ['date' => '2026-06-15']]);
+
+    $this->put(route('daybook.orders.update', $order), workLine($this->dentist))->assertForbidden();
+    $this->delete(route('daybook.orders.destroy', $order))->assertForbidden();
+
+    expect($order->fresh()->items()->count())->toBe(2)
+        ->and($order->fresh()->amount)->toBe(300);
+});

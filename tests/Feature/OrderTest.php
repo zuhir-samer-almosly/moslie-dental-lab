@@ -278,3 +278,18 @@ test('a dollar dentist\'s previous balance is read from the dollar receivable, i
             expect($orders->firstWhere('items.0.type', 'أول')['previous_balance'])->toBe(0);
         });
 });
+
+test('an item date must be a plain Y-m-d date', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامر']);
+
+    // The loose `date` rule took this, stored it as typed, and the order then
+    // vanished from every list while the ledger still counted it.
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id,
+        'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 1, 'price' => 1000, 'date' => '15 June 2026', 'selected_teeth' => []]],
+    ])->assertSessionHasErrors('items.0.date');
+
+    expect(Order::count())->toBe(0);
+});

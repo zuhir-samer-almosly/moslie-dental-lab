@@ -348,3 +348,11 @@ test('an overflow date is rejected rather than rolled into the next month', func
             ->where('orders', null)
         );
 });
+
+test('a malformed dentist filter is ignored rather than crashing the invoice', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get('/invoices?from=2026-01-01&to=2026-01-31&dentist_id[]=1')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->where('filters.dentist_id', null));
+});

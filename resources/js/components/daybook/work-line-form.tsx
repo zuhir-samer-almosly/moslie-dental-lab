@@ -229,10 +229,12 @@ export default function WorkLineForm({
                   rate: draft.rate,
               };
 
+        // No order-level `notes`: a line's note is the item's. Left out — not
+        // sent empty — so editing a line here keeps whatever note its order
+        // was given on the full order form.
         const payload = {
             dentist_id: dentistId,
             status: editing?.status ?? 'pending',
-            notes: '',
             items: [item],
         };
 

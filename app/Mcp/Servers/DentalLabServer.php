@@ -35,7 +35,7 @@ use Laravel\Mcp\Server\Attributes\Version;
     - Dates are YYYY-MM-DD and default to today; when the source gives a date, pass it.
     - Every save tool returns the record as stored. Read the result back against what was asked (dentist, date, total) and tell the user about any difference.
     - When entering a batch, check `list-records` for the same dentist and dates first if there is any chance part of it was already entered.
-    - To fix a record, call its save tool again with the `id`. Use `delete-record` only for something entered by mistake, after the user confirms.
+    - To fix a record, call its save tool again with the `id`. An optional text field you leave out (notes, description, phone) keeps its saved value; pass an empty string to clear it. Use `delete-record` only for something entered by mistake, after the user confirms.
     MARKDOWN)]
 class DentalLabServer extends Server
 {

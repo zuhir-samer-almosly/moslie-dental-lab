@@ -28,7 +28,7 @@ class StoreExpenseRequest extends FormRequest
         return [
             'category' => ['required', 'string', Rule::exists('accounts', 'category_key')],
             'description' => ['nullable', 'string', 'max:255'],
-            'expense_date' => ['required', 'date'],
+            'expense_date' => ['required', 'date_format:Y-m-d'],
             'notes' => ['nullable', 'string'],
             ...$this->moneyRules(),
         ];

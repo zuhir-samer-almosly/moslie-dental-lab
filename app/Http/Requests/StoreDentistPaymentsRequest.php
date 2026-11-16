@@ -33,7 +33,7 @@ class StoreDentistPaymentsRequest extends FormRequest
         return [
             'dentist_id' => ['required', 'integer', 'exists:dentists,id'],
             'payments' => ['required', 'array', 'min:1'],
-            'payments.*.payment_date' => ['required', 'date'],
+            'payments.*.payment_date' => ['required', 'date_format:Y-m-d'],
             'payments.*.notes' => ['nullable', 'string'],
             ...$this->moneyRules('amount', $this->dentistIsDollar(), 'payments.*.'),
         ];

@@ -164,3 +164,33 @@ test('an order spanning two months is reported item by item, not whole on its ea
             ->where('totals.earned', 300)
         );
 });
+
+test('a dollar dentist is reported in dollars, apart from the lira totals', function () {
+    $this->actingAs(User::factory()->create());
+    $dentist = Dentist::create(['name' => 'د. سامي', 'currency' => 'USD']);
+
+    $this->post(route('orders.store'), [
+        'dentist_id' => $dentist->id, 'status' => 'pending',
+        'items' => [['type' => 'زيركون', 'quantity' => 2, 'date' => '2026-06-10',
+            'currency' => 'USD', 'original_amount' => 150_00, 'selected_teeth' => []]],
+    ])->assertSessionHasNoErrors();
+    $this->post(route('payments.store'), [
+        'dentist_id' => $dentist->id, 'payment_date' => '2026-06-20',
+        'currency' => 'USD', 'original_amount' => '100',
+    ])->assertSessionHasNoErrors();
+
+    $this->get(route('report.index', ['from' => '2026-06-01', 'to' => '2026-06-30']))
+        ->assertInertia(fn ($page) => $page
+            ->where('totals.orders_count', 1)
+            ->where('totals.orders_value', 0)
+            ->where('totals.orders_value_usd', 300_00)
+            ->where('totals.earned', 0)
+            ->where('totals.earned_usd', 300_00)
+            ->where('totals.income', 0)
+            ->where('totals.income_usd', 100_00)
+            // What the page reads to print the rows in dollars.
+            ->where('orders.0.currency', 'USD')
+            ->where('payments.0.dentist.currency', 'USD')
+            ->where('payments.0.original_amount', 100_00)
+        );
+});

@@ -39,7 +39,14 @@ abstract class FormTool extends Tool
      */
     protected function form(string $class, array $data, array $parameters = []): FormRequest
     {
-        $data = array_filter($data, fn ($value) => $value !== null);
+        // An argument left out is not submitted, so an update keeps that
+        // field. An empty string is how a field is cleared: the web forms get
+        // that from ConvertEmptyStringsToNull, which a request built here
+        // never passes through.
+        $data = array_map(
+            fn ($value) => $value === '' ? null : $value,
+            array_filter($data, fn ($value) => $value !== null),
+        );
 
         $request = $class::create('/', 'POST', $data);
         $request->setContainer(app())->setRedirector(app('redirect'));
