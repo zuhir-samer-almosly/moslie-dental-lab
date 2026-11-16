@@ -67,9 +67,7 @@ class DentistPaymentController extends Controller
     {
         $payment = DentistPayment::create($request->payload());
 
-        if ($payment->isForeign() && ! $payment->isNativeUsd()) {
-            Rate::remember($payment->payment_date, $payment->rate);
-        }
+        Rate::remember($payment->payment_date, $payment->rate);
 
         return $this->redirectAfterSave('payments.index')
             ->with('success', 'تم إضافة الدفعة بنجاح');
@@ -86,9 +84,7 @@ class DentistPaymentController extends Controller
             foreach ($request->payloads() as $payload) {
                 $payment = DentistPayment::create($payload);
 
-                if ($payment->isForeign() && ! $payment->isNativeUsd()) {
-                    Rate::remember($payment->payment_date, $payment->rate);
-                }
+                Rate::remember($payment->payment_date, $payment->rate);
             }
         });
 
@@ -117,9 +113,7 @@ class DentistPaymentController extends Controller
     {
         $dentistPayment->update($request->payload());
 
-        if ($dentistPayment->isForeign() && ! $dentistPayment->isNativeUsd()) {
-            Rate::remember($dentistPayment->payment_date, $dentistPayment->rate);
-        }
+        Rate::remember($dentistPayment->payment_date, $dentistPayment->rate);
 
         return $this->redirectAfterSave('payments.index')
             ->with('success', 'تم تحديث الدفعة بنجاح');

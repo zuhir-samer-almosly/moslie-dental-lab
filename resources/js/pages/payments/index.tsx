@@ -242,8 +242,7 @@ export default function PaymentsIndex({ payments, dentists, filters }: Props) {
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap text-muted-foreground">
                                                 {formatDate(
-                                                    payment.payment_date ||
-                                                        payment.created_at,
+                                                    payment.payment_date,
                                                 )}
                                             </TableCell>
                                             <TableCell className="max-w-xs truncate text-muted-foreground">

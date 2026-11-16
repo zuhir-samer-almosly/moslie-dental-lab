@@ -79,7 +79,7 @@ export interface DentistPayment {
     original_amount?: number | null;
     /** Lira per 1 USD, frozen at the day of the payment. */
     rate?: string | null;
-    payment_date?: string;
+    payment_date: string;
     notes: string | null;
     created_at: string;
     updated_at: string;

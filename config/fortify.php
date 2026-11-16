@@ -154,7 +154,6 @@ return [
         // Create accounts for staff with `php artisan app:create-user` instead.
         // Features::registration(),
         Features::resetPasswords(),
-        Features::emailVerification(),
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,

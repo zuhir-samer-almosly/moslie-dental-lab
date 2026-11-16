@@ -24,7 +24,7 @@ class ReportController extends Controller
      *
      * Each stream is bucketed by its own date column, consistent with the
      * other reporting controllers: orders by `due_date`, payments by
-     * `payment_date` (fallback `created_at`), salaries by `payment_date`,
+     * `payment_date`, salaries by `payment_date`,
      * materials by `purchase_date`, expenses by `expense_date`.
      *
      * Totals come from the ledger so they cannot disagree with the finance
@@ -49,8 +49,9 @@ class ReportController extends Controller
             ->values();
 
         $payments = DentistPayment::with('dentist')
-            ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
-            ->orderByRaw('COALESCE(payment_date, created_at)')
+            ->whereDate('payment_date', '>=', $from)
+            ->whereDate('payment_date', '<=', $to)
+            ->orderBy('payment_date')
             ->get();
 
         $salaries = EmployeePayment::with('employee')

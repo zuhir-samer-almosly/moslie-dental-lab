@@ -100,24 +100,6 @@ test('a dollar dentist keeps the cents in his price list', function () {
     ]);
 });
 
-test('storing a dentist from the standalone page redirects to the index', function () {
-    $this->actingAs(User::factory()->create());
-
-    $this->from(route('dentists.create'))
-        ->post(route('dentists.store'), [
-            'name' => 'د. ليلى',
-            'gender' => 'female',
-            'to_index' => true,
-        ])
-        ->assertRedirect(route('dentists.index'))
-        ->assertSessionHas('success');
-
-    $dentist = Dentist::firstWhere('name', 'د. ليلى');
-
-    expect($dentist)->not->toBeNull()
-        ->and($dentist->getAttributes())->not->toHaveKey('to_index');
-});
-
 test('updating one work type price leaves the rest of the price list intact', function () {
     $this->actingAs(User::factory()->create());
     $dentist = Dentist::create([
@@ -141,12 +123,4 @@ test('updating one work type price leaves the rest of the price list intact', fu
         'خزف' => ['price' => 110000, 'currency' => 'SYP'],
         'زيركون' => ['price' => 150000, 'currency' => 'SYP'],
     ]);
-});
-
-test('the standalone dentist pages still load', function () {
-    $this->actingAs(User::factory()->create());
-    $dentist = Dentist::create(['name' => 'د. سامر']);
-
-    $this->get(route('dentists.create'))->assertOk();
-    $this->get(route('dentists.edit', $dentist))->assertOk();
 });

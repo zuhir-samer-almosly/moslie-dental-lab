@@ -25,8 +25,7 @@ class EmployeeController extends Controller
             ->each(fn (Employee $employee) => $employee->payments_sum_amount = (int) $employee->payments_sum_amount);
 
         $month = $this->resolveMonth($request->query('month'));
-        $start = $month->copy()->startOfMonth()->toDateString();
-        $end = $month->copy()->endOfMonth()->toDateString();
+        [$start, $end] = $this->monthRange($month);
 
         $payments = EmployeePayment::with('employee')
             ->whereBetween('payment_date', [$start, $end])

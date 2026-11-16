@@ -29,7 +29,7 @@ class FinanceController extends Controller
     public function index(Request $request)
     {
         $month = $this->resolveMonth($request->query('month'));
-        [$start, $end] = $this->range($month);
+        [$start, $end] = $this->monthRange($month);
 
         $income = $this->reports->cashReceipts($start, $end);
         // Dollar cash in from a dollar dentist. There is no dollar expense
@@ -159,7 +159,7 @@ class FinanceController extends Controller
 
         for ($i = 5; $i >= 0; $i--) {
             $bucket = $month->copy()->subMonths($i);
-            [$start, $end] = $this->range($bucket);
+            [$start, $end] = $this->monthRange($bucket);
 
             $income = $this->reports->cashReceipts($start, $end);
             $expenses = $this->reports->expensesTotal($start, $end);
@@ -173,14 +173,5 @@ class FinanceController extends Controller
         }
 
         return $trend;
-    }
-
-    /** @return array{0: string, 1: string} */
-    private function range(Carbon $month): array
-    {
-        return [
-            $month->copy()->startOfMonth()->toDateString(),
-            $month->copy()->endOfMonth()->toDateString(),
-        ];
     }
 }

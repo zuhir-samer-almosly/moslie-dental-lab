@@ -75,9 +75,9 @@ class ListRecords extends Tool
                 'date' => $row->due_date?->toDateString(),
                 'status' => $row->status,
                 'notes' => $row->notes,
-                'currency' => $row->currency,
+                'currency' => $row->billingCurrency()->value,
                 // Dollars for a dollar dentist, whole lira otherwise.
-                'total' => $row->currency === 'USD' ? $row->valueInOwnCurrency() / 100 : $row->valueInOwnCurrency(),
+                'total' => $row->billingCurrency()->value === 'USD' ? $row->valueInOwnCurrency() / 100 : $row->valueInOwnCurrency(),
                 'items' => $row->items->map(fn ($item) => array_filter([
                     'type' => $item->type,
                     'quantity' => $item->quantity,

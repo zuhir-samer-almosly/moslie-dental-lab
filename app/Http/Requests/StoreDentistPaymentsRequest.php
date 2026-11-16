@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Concerns\MoneyValidationRules;
+use App\Concerns\ResolvesDentistCurrency;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -12,7 +13,7 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class StoreDentistPaymentsRequest extends FormRequest
 {
-    use MoneyValidationRules;
+    use MoneyValidationRules, ResolvesDentistCurrency;
 
     /**
      * Determine if the user is authorized to make this request.
@@ -87,21 +88,5 @@ class StoreDentistPaymentsRequest extends FormRequest
             ],
             array_values($validated['payments']),
         );
-    }
-
-    /**
-     * Whether the dentist being paid is billed in dollars. Guarded with
-     * `is_numeric` for the same reason as StoreDentistPaymentRequest: a
-     * malformed id must reach the `exists` rule, not throw first.
-     */
-    private function dentistIsDollar(): bool
-    {
-        $dentistId = $this->input('dentist_id');
-
-        if (! is_numeric($dentistId)) {
-            return false;
-        }
-
-        return (bool) \App\Models\Dentist::find($dentistId)?->isDollar();
     }
 }

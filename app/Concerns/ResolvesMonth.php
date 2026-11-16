@@ -25,4 +25,18 @@ trait ResolvesMonth
 
         return Carbon::now()->startOfMonth();
     }
+
+    /**
+     * The first and last day of a month, as the inclusive `Y-m-d` bounds the
+     * queries and LedgerReports take.
+     *
+     * @return array{0: string, 1: string}
+     */
+    protected function monthRange(Carbon $month): array
+    {
+        return [
+            $month->copy()->startOfMonth()->toDateString(),
+            $month->copy()->endOfMonth()->toDateString(),
+        ];
+    }
 }

@@ -209,7 +209,7 @@ class NotebookController extends Controller
             $lines->push([
                 'kind' => 'payment',
                 'key' => 'payment-'.$payment->id,
-                'date' => Carbon::parse($payment->payment_date ?? $payment->created_at)->toDateString(),
+                'date' => Carbon::parse($payment->payment_date)->toDateString(),
                 'created_at' => $payment->created_at?->toIso8601String(),
                 'value' => $value,
                 'notes' => $payment->notes,

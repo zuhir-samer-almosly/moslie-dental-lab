@@ -19,9 +19,7 @@ class MaterialPurchaseController extends Controller
     public function index(Request $request)
     {
         $month = $this->resolveMonth($request->query('month'));
-
-        $start = $month->copy()->startOfMonth()->toDateString();
-        $end = $month->copy()->endOfMonth()->toDateString();
+        [$start, $end] = $this->monthRange($month);
 
         $purchases = MaterialPurchase::query()
             ->whereBetween('purchase_date', [$start, $end])
@@ -53,9 +51,7 @@ class MaterialPurchaseController extends Controller
     {
         $materialPurchase = MaterialPurchase::create($request->payload());
 
-        if ($materialPurchase->isForeign()) {
-            Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
-        }
+        Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
 
         return redirect()->route('material-purchases.index')
             ->with('success', 'تم تسجيل المادة بنجاح');
@@ -79,9 +75,7 @@ class MaterialPurchaseController extends Controller
     {
         $materialPurchase->update($request->payload());
 
-        if ($materialPurchase->isForeign()) {
-            Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
-        }
+        Rate::remember($materialPurchase->purchase_date, $materialPurchase->rate);
 
         return redirect()->route('material-purchases.index')
             ->with('success', 'تم تحديث المادة بنجاح');

@@ -17,12 +17,8 @@ class Order extends Model
     use HasFactory;
 
     /**
-     * A freshly-instantiated (unsaved) model has no 'currency' key in its
-     * attribute array unless one is given explicitly — mass assignment only
-     * sets what's passed. Mirrors the migration's own `default('SYP')` so a
-     * brand-new in-memory instance already agrees with what the row will get
-     * once saved, and so `billingCurrency()` never throws on an unsaved or
-     * factory-built order that never set `currency` explicitly.
+     * Mirrors the migration's own `default('SYP')`, so a brand-new in-memory
+     * instance already agrees with what the row will get once saved.
      */
     protected $attributes = [
         'currency' => 'SYP',
@@ -80,27 +76,18 @@ class Order extends Model
     }
 
     /**
-     * The currency this order is billed in — its dentist's currency at the
-     * time it was saved.
+     * The currency this order is billed in: its DENTIST's, always.
      *
-     * Named `billingCurrency()` rather than `currency()` for the same reason
-     * as `Dentist::billingCurrency()`: a method named exactly like the
-     * `currency` column collides with Eloquent's relationship resolution the
-     * moment a hydrated row is missing that column (e.g. a narrowed
-     * `select()`), throwing a confusing LogicException. The guard below keeps
-     * failure loud instead of silently defaulting a dollar order's money to
-     * lira.
+     * The row's own `currency` column is a copy OrderController writes on
+     * every save, and a dentist's currency is frozen once anything has been
+     * posted to his account (UpdateDentistRequest) — so the two agree on
+     * every real row. Asking the dentist rather than the copy is what keeps
+     * the ledger, the invoice and every screen on one answer even for a row
+     * built by hand, and it is the same authority `OrderItem` already uses.
      */
     public function billingCurrency(): Currency
     {
-        if (! array_key_exists('currency', $this->getAttributes())) {
-            throw new \LogicException(
-                'Order #'.$this->id.' was loaded without its `currency` column, so its '
-                .'billing currency is unknowable. Select the column, or do not ask.'
-            );
-        }
-
-        return Currency::from($this->currency ?? Currency::SYP->value);
+        return $this->dentist->billingCurrency();
     }
 
     /**
@@ -112,12 +99,5 @@ class Order extends Model
         return $this->billingCurrency() === Currency::USD
             ? (int) $this->original_amount
             : (int) $this->amount;
-    }
-
-    protected function total(): \Illuminate\Database\Eloquent\Casts\Attribute
-    {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
-            get: fn () => $this->items->sum(fn ($item) => $item->quantity * $item->price),
-        );
     }
 }

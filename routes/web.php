@@ -14,7 +14,7 @@ Route::get('/', function () {
 
 // Open to every login, the lab tablet's `entry` account included: the daybook
 // and the dentist notebooks, and nothing else.
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('daybook', [App\Http\Controllers\DaybookController::class, 'index'])->name('daybook.index');
     Route::get('daybook/pdf', [App\Http\Controllers\DaybookController::class, 'pdf'])->name('daybook.pdf');
 
@@ -41,13 +41,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // Everything else is the full app, for `admin` logins only.
-Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
     // The header search box; answers with JSON from any page.
     Route::get('search', App\Http\Controllers\SearchController::class)->name('search');
 
+    // No create/edit pages: dentists are added and edited from a dialog.
     Route::resource('dentists', App\Http\Controllers\DentistController::class)
-        ->except('show');
+        ->only(['index', 'store', 'update', 'destroy']);
     Route::resource('orders', App\Http\Controllers\OrderController::class)
         ->except('show');
     Route::get('work-types', [App\Http\Controllers\WorkTypeController::class, 'index'])->name('work-types.index');

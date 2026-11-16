@@ -16,9 +16,7 @@ class EmployeePaymentController extends Controller
     {
         $employeePayment = EmployeePayment::create($request->payload());
 
-        if ($employeePayment->isForeign()) {
-            Rate::remember($employeePayment->payment_date, $employeePayment->rate);
-        }
+        Rate::remember($employeePayment->payment_date, $employeePayment->rate);
 
         return redirect()->back()
             ->with('success', 'تم تسجيل الراتب بنجاح');
@@ -31,9 +29,7 @@ class EmployeePaymentController extends Controller
     {
         $employeePayment->update($request->payload());
 
-        if ($employeePayment->isForeign()) {
-            Rate::remember($employeePayment->payment_date, $employeePayment->rate);
-        }
+        Rate::remember($employeePayment->payment_date, $employeePayment->rate);
 
         return redirect()->back()
             ->with('success', 'تم تحديث الراتب بنجاح');

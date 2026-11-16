@@ -36,35 +36,23 @@ class Account extends Model
 
     public static function idFor(string $code): int
     {
-        $account = self::chart()->get($code);
-
-        if (! $account) {
-            throw new \InvalidArgumentException("Unknown account code [{$code}].");
-        }
-
-        return $account->id;
+        return self::row($code)->id;
     }
 
     public static function typeFor(string $code): string
     {
-        $account = self::chart()->get($code);
-
-        if (! $account) {
-            throw new \InvalidArgumentException("Unknown account code [{$code}].");
-        }
-
-        return $account->type;
+        return self::row($code)->type;
     }
 
     public static function currencyFor(string $code): Currency
     {
-        $account = self::chart()->get($code);
+        return Currency::from(self::row($code)->currency);
+    }
 
-        if (! $account) {
-            throw new \InvalidArgumentException("Unknown account code [{$code}].");
-        }
-
-        return Currency::from($account->currency);
+    private static function row(string $code): self
+    {
+        return self::chart()->get($code)
+            ?? throw new \InvalidArgumentException("Unknown account code [{$code}].");
     }
 
     /**
