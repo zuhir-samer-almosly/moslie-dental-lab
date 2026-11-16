@@ -300,7 +300,7 @@ export default function ReportIndex({
                     <SimpleRows
                         rows={payments.map((p) => ({
                             key: p.id,
-                            date: p.payment_date ?? p.created_at,
+                            date: p.payment_date,
                             label: p.dentist?.name ?? '—',
                             amount: p.amount,
                         }))}

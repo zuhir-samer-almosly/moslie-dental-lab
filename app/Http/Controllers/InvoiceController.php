@@ -124,8 +124,9 @@ class InvoiceController extends Controller
             // can be entered today but dated for a different month, and it
             // belongs in that month's invoice.
             $paymentsQuery = DentistPayment::with('dentist')
-                ->whereRaw('DATE(COALESCE(payment_date, created_at)) BETWEEN ? AND ?', [$from, $to])
-                ->orderByRaw('COALESCE(payment_date, created_at)');
+                ->whereDate('payment_date', '>=', $from)
+                ->whereDate('payment_date', '<=', $to)
+                ->orderBy('payment_date');
 
             if ($dentistId) {
                 $ordersQuery->where('dentist_id', $dentistId);
@@ -145,9 +146,9 @@ class InvoiceController extends Controller
             //
             // Note the intentional date asymmetry that formula used to
             // encode by hand: orders are bucketed by their own date
-            // (`due_date`) while payments are bucketed by `payment_date`
-            // (falling back to `created_at`). An order and the payment
-            // settling it can therefore land in different periods — that is
+            // (`due_date`) while payments are bucketed by `payment_date`. An
+            // order and the payment settling it can therefore land in
+            // different periods — that is
             // by design and must stay consistent with the in-period queries
             // above. The ledger's postings preserve this (see OrderPosting
             // and DentistPaymentPosting), so reading `asOf` here keeps it.
@@ -161,33 +162,16 @@ class InvoiceController extends Controller
             // would blend lira and cents together — filtered to one
             // currency's rows first, for exactly the reason totals below are
             // kept apart rather than added.
-            //
-            // The single authority for an order's currency is its DENTIST's,
-            // never the order row's own `currency` column — mirrors
-            // OrderPosting::dentistCurrency()/valueInDentistCurrency(), which
-            // refuses `Order::billingCurrency()`/`valueInOwnCurrency()` for
-            // exactly this reason: a row's own column can go stale (a
-            // factory default, a directly constructed test row) while the
-            // ledger and every item on the order still resolve through the
-            // dentist. `OrderItem::valueInOwnCurrency()` already does this
-            // (its `nativeCurrency()` reads `$item->order?->dentist`), so
-            // only the order-level filter and the item-less branch needed it
-            // spelled out here.
-            $orderCurrency = fn (Order $order) => $order->dentist?->billingCurrency() ?? Currency::SYP;
-            $orderOwnValue = fn (Order $order) => $orderCurrency($order) === Currency::USD
-                ? (int) $order->original_amount
-                : (int) $order->amount;
-
             $sumOrders = fn ($ordersInCurrency) => $ordersInCurrency->sum(
                 fn (Order $order) => $order->items->isEmpty()
-                    ? $orderOwnValue($order)
+                    ? $order->valueInOwnCurrency()
                     : $order->items->sum(fn ($item) => $item->valueInOwnCurrency() * $item->quantity)
             );
             $sumPayments = fn ($paymentsInCurrency) => $paymentsInCurrency->sum(
                 fn (DentistPayment $payment) => $payment->valueInOwnCurrency()
             );
 
-            $totalsFor = function (Currency $forCurrency) use ($orders, $payments, $sumOrders, $sumPayments, $orderCurrency, $asOf, $dentistId) {
+            $totalsFor = function (Currency $forCurrency) use ($orders, $payments, $sumOrders, $sumPayments, $asOf, $dentistId) {
                 $openingByDentist = $this->reports->receivablesByDentist($asOf, $forCurrency)
                     ->when($dentistId, fn ($balances) => $balances->only([$dentistId]))
                     ->reject(fn (int $balance) => $balance === 0)
@@ -196,7 +180,7 @@ class InvoiceController extends Controller
                 $openingTotal = array_sum($openingByDentist);
 
                 $ordersInCurrency = $orders->filter(
-                    fn (Order $order) => $orderCurrency($order) === $forCurrency
+                    fn (Order $order) => $order->billingCurrency() === $forCurrency
                 );
                 // A payment's `currency` is what it was HANDED OVER as, not
                 // what it's billed in — a lira dentist can still pay in

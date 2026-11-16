@@ -3,7 +3,6 @@
 use App\Ledger\LedgerReports;
 use App\Models\Dentist;
 use App\Models\DentistPayment;
-use App\Models\JournalEntry;
 use App\Models\JournalLine;
 use App\Models\Order;
 
@@ -37,18 +36,6 @@ test('a payment debits cash and credits the dentist receivable', function () {
 
     expect(balanceOf('1000'))->toBe(300000);   // cash box
     expect(app(LedgerReports::class)->receivablesByDentist()[$dentist->id] ?? 0)->toBe(200000);   // still owed
-});
-
-test('a payment with no payment_date falls back to created_at', function () {
-    $dentist = Dentist::create(['name' => 'د. سامي']);
-
-    $payment = DentistPayment::create([
-        'dentist_id' => $dentist->id,
-        'amount' => 100000,
-    ]);
-
-    expect(JournalEntry::sole()->entry_date->toDateString())
-        ->toBe($payment->created_at->toDateString());
 });
 
 test('deleting a payment restores the receivable', function () {

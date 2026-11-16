@@ -11,10 +11,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * Money in from a dentist: it lands in the cash box and reduces what that
- * dentist owes.
- *
- * Dated by `payment_date` falling back to `created_at`, matching the
- * COALESCE the existing reports use.
+ * dentist owes. Dated by its `payment_date`.
  */
 final class DentistPaymentPosting implements Posting
 {
@@ -29,7 +26,7 @@ final class DentistPaymentPosting implements Posting
 
     public function date(): string
     {
-        return Carbon::parse($this->payment->payment_date ?? $this->payment->created_at)->toDateString();
+        return Carbon::parse($this->payment->payment_date)->toDateString();
     }
 
     public function description(): string

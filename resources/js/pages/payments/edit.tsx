@@ -36,9 +36,7 @@ export default function PaymentsEdit({
     const form = useForm({
         dentist_id: payment.dentist_id.toString(),
         amount: payment.amount.toString(),
-        payment_date:
-            payment.payment_date ||
-            new Date(payment.created_at).toISOString().split('T')[0],
+        payment_date: payment.payment_date,
         currency: (payment.currency ?? 'SYP') as CurrencyAmount['currency'],
         // Stored in cents; the field edits whole dollars the way they were handed over.
         original_amount:

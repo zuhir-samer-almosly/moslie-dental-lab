@@ -704,8 +704,7 @@ export function InvoiceReport({
                                         <TableRow key={payment.id}>
                                             <TableCell>
                                                 {formatDate(
-                                                    payment.payment_date ||
-                                                        payment.created_at,
+                                                    payment.payment_date,
                                                 )}
                                             </TableCell>
                                             <TableCell
