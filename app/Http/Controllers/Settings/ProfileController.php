@@ -59,10 +59,13 @@ class ProfileController extends Controller
                 ]);
             }
 
+            // Log out BEFORE deleting: logout() cycles the remember token
+            // and saves the user, and saving a deleted model inserts it
+            // again — the account would come straight back.
+            Auth::logout();
+
             $user->delete();
         });
-
-        Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
