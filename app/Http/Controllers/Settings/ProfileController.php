@@ -47,15 +47,22 @@ class ProfileController extends Controller
 
         // Accounts are only ever created from the server (app:create-user),
         // so deleting the last admin would lock everyone out of the app.
-        if (! User::where('role', 'admin')->whereKeyNot($user->getKey())->exists()) {
-            throw ValidationException::withMessages([
-                'password' => 'لا يمكن حذف آخر حساب مدير. أنشئ حساب مدير آخر أولاً.',
-            ]);
-        }
+        $user->getConnection()->transaction(function () use ($user) {
+            $admins = User::where('role', 'admin')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            if ($admins->where('id', '!=', $user->getKey())->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'password' => 'لا يمكن حذف آخر حساب مدير. أنشئ حساب مدير آخر أولاً.',
+                ]);
+            }
+
+            $user->delete();
+        });
 
         Auth::logout();
-
-        $user->delete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
