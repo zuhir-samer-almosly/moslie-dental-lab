@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 
@@ -14,9 +13,6 @@ use Illuminate\Support\Carbon;
  */
 class ExchangeRate extends Model
 {
-    /** @use HasFactory<\Database\Factories\ExchangeRateFactory> */
-    use HasFactory;
-
     protected $fillable = ['rate_date', 'rate', 'is_manual'];
 
     protected $casts = [

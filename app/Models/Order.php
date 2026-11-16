@@ -113,11 +113,4 @@ class Order extends Model
             ? (int) $this->original_amount
             : (int) $this->amount;
     }
-
-    protected function total(): \Illuminate\Database\Eloquent\Casts\Attribute
-    {
-        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
-            get: fn () => $this->items->sum(fn ($item) => $item->quantity * $item->price),
-        );
-    }
 }
